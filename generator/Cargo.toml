@@ -1,0 +1,16 @@
+[package]
+name = "pest-typed-generator"
+description = "Pest-typed's code generator."
+version = "0.1.0"
+edition = "2021"
+keywords = ["pest", "generator"]
+categories = ["parsing"]
+license = "MIT/Apache-2.0"
+
+[dependencies]
+pest = { version = "*" }
+pest_generator = { version = "*" }
+proc-macro2 = { version = "*" }
+pest_meta = { version = "*" }
+quote = { version = "*" }
+syn = { version = "*" }
