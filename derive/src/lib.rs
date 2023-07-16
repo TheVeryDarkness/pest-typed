@@ -9,6 +9,8 @@
 
 #![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 
+//! Derive typed nodes from pest grammar.
+
 use proc_macro::TokenStream;
 
 /// The main method that's called by the proc macro
