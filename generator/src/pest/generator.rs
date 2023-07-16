@@ -21,6 +21,7 @@ use pest_meta::optimizer::*;
 
 use super::docs::DocComment;
 use crate::{generate_rule, insert_builtin};
+use crate::generator::generate_typed_pair_from_rule;
 
 pub(crate) fn generate(
     name: Ident,
@@ -42,6 +43,8 @@ pub(crate) fn generate(
     let rule_enum = generate_enum(&rules, doc_comment, uses_eoi);
     let patterns = generate_patterns(&rules, uses_eoi);
     let skip = generate_skip(&rules);
+
+    let nodes = generate_typed_pair_from_rule(&rules);
 
     let mut rules: Vec<_> = rules.into_iter().map(generate_rule).collect();
     rules.extend(builtins.into_iter().filter_map(|(builtin, tokens)| {
@@ -94,6 +97,7 @@ pub(crate) fn generate(
         #include_fix
         #rule_enum
         #parser_impl
+        #nodes
     }
 }
 
