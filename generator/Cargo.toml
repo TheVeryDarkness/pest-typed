@@ -9,7 +9,6 @@ license = "MIT/Apache-2.0"
 
 [dependencies]
 pest = { version = "*" }
-pest_generator = { version = "*" }
 proc-macro2 = { version = "*" }
 pest_meta = { version = "*" }
 quote = { version = "*" }
