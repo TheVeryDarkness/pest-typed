@@ -162,6 +162,34 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> Debug for Skip<'i, R, Strings
     }
 }
 
+/// Skip `n` characters if there are.
+pub struct SkipChar<'i, R: RuleType, const N: usize> {
+    _phantom: PhantomData<&'i R>,
+}
+impl<'i, R: RuleType, const N: usize> From<()> for SkipChar<'i, R, N> {
+    fn from(_: ()) -> Self {
+        Self {
+            _phantom: PhantomData,
+        }
+    }
+}
+impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, R, N> {
+    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
+        mut input: Position<'i>,
+        _stack: &mut Stack<Span<'i>>,
+    ) -> Result<(Position<'i>, Self), Tracker<'i, R>> {
+        match input.skip(N) {
+            true => Ok((input, Self::from(()))),
+            false => Err(Tracker::new(input)),
+        }
+    }
+}
+impl<'i, R: RuleType, const N: usize> Debug for SkipChar<'i, R, N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Range").finish()
+    }
+}
+
 /// Match a character in the range `[min, max]`.
 /// Inclusively both below and above.
 pub struct CharRange<'i, R: RuleType, const MIN: char, const MAX: char> {

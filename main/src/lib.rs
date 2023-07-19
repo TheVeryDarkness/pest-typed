@@ -30,7 +30,7 @@ mod stack;
 
 use error::Error;
 pub use position::Position;
-pub use span::Span;
+pub use span::{merge_spans, Span};
 pub use stack::Stack;
 
 // Re-export unicode.
