@@ -110,9 +110,7 @@ impl<'i> Position<'i> {
         /* && self.input.get(self.pos..other.pos).is_some() */
         {
             // This is safe because the pos field of a Position should always be a valid str index.
-            // unsafe { span::Span::new_unchecked(self.input, self.pos, other.pos) }
-            span::Span::new(self.input, self.pos, other.pos)
-                .expect("Not a valid pair of Position to create a Span.")
+            unsafe { span::Span::new_unchecked(self.input, self.pos, other.pos) }
         } else {
             // TODO: maybe a panic if self.pos < other.pos
             panic!("span created from positions from different inputs")

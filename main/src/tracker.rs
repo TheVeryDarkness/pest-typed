@@ -14,9 +14,7 @@ use super::{
     position::Position,
 };
 use alloc::{borrow::ToOwned, format, vec, vec::Vec};
-use pest::{
-    RuleType,
-};
+use pest::RuleType;
 
 /// Error tracker.
 pub enum Tracker<'i, R: RuleType> {

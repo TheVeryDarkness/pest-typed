@@ -15,11 +15,7 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
-use proc_macro2::TokenStream;
-use syn::{Attribute, DeriveInput, Expr, ExprLit, Generics, Ident, Lit, Meta};
-
-use pest_meta::parser::{self, rename_meta_rule, Rule};
-use pest_meta::{optimizer, unwrap_or_report, validator};
+use syn::{Attribute, Expr, ExprLit, Lit, Meta};
 
 pub(crate) fn collect_data(contents: Vec<GrammarSource>) -> (String, Vec<PathBuf>) {
     let mut data = String::new();

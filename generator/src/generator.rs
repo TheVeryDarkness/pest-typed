@@ -13,15 +13,12 @@
 use std::path::PathBuf;
 
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, ToTokens, TokenStreamExt};
-use syn::{self, Generics, Ident};
+use quote::{format_ident, quote};
+use syn::{self, Ident};
 
-use pest::unicode::unicode_property_names;
-use pest_meta::ast::*;
 use pest_meta::optimizer::*;
 
 use super::docs::DocComment;
-use super::types::{box_type, option_type, result_type};
 
 /// Generate Rust `include_str!` for grammar files, then Cargo will watch changes in grammars.
 pub(crate) fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream {
