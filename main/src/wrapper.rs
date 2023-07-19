@@ -29,6 +29,7 @@ impl<T: StringWrapper> StringStorage for T {
 
 /// Rule wrapper.
 pub trait RuleWrapper<R: RuleType> {
+    /// Wrapped rule.
     const RULE: R;
 }
 

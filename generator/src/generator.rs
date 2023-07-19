@@ -25,7 +25,7 @@ fn fn_decl() -> TokenStream {
     quote! {
         #[inline]
         #[allow(unused_variables)]
-        fn try_parse_with<const ATOMIC: bool, Rule: ::pest::typed::RuleWrapper<super::Rule>>(
+        fn try_parse_with<const ATOMIC: bool, Rule: ::pest_typed::RuleWrapper<super::Rule>>(
             input: ::pest::Position<'i>,
             stack: &mut ::pest::Stack<::pest::Span<'i>>
         ) -> #result<(::pest::Position<'i>, Self), ::pest::error::Error<super::Rule>>
@@ -128,7 +128,7 @@ fn process_single(
         pub struct #name<'i> {
             #fields
         }
-        impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
+        impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for #name<'i> {
             #f {
                 #fn_def
             }
@@ -155,15 +155,15 @@ fn process_single_alias(
     let name = ident(&candidate_name);
     let type_name = match inner_spaces {
         Some(true) => {
-            quote! {::pest::typed::predefined_node::NonAtomic<'i, super::Rule, #type_name>}
+            quote! {::pest_typed::predefined_node::NonAtomic<'i, super::Rule, #type_name>}
         }
         Some(false) => {
-            quote! {::pest::typed::predefined_node::Atomic<'i, super::Rule, #type_name>}
+            quote! {::pest_typed::predefined_node::Atomic<'i, super::Rule, #type_name>}
         }
         None => type_name,
     };
     let type_name = quote! {
-        ::pest::typed::Rule<'i, super::Rule, super::Rule::#rule_name, super::Rule::EOI, #type_name>
+        ::pest_typed::Rule<'i, super::Rule, super::Rule::#rule_name, super::Rule::EOI, #type_name>
     };
     if explicit {
         let doc = format!(""); // format!("Corresponds to expression: `{}`.", expr);
@@ -227,12 +227,12 @@ fn generate_graph_node(
 
     let spaces = match inner_spaces {
         Some(true) => quote! {
-            let (next, _) = ::pest::typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<false, Rule>(input, stack);
+            let (next, _) = ::pest_typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<false, Rule>(input, stack);
             input = next;
         },
         Some(false) => quote! {},
         None => quote! {
-            let (next, _) = ::pest::typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<ATOMIC, Rule>(input, stack);
+            let (next, _) = ::pest_typed::predefined_node::Ign::<'i, super::Rule, WHITESPACE, COMMENT>::parse_with::<ATOMIC, Rule>(input, stack);
             input = next;
         },
     };
@@ -250,7 +250,7 @@ fn generate_graph_node(
             map.insert_wrapper(quote! {
                 #[doc = #doc]
                 pub struct #wrapper();
-                impl ::pest::typed::StringWrapper for #wrapper {
+                impl ::pest_typed::StringWrapper for #wrapper {
                     const CONTENT: &'static str = #content;
                 }
             });
@@ -260,7 +260,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Str::<'i, super::Rule, __pest_string_wrapper::#wrapper>
+                    ::pest_typed::predefined_node::Str::<'i, super::Rule, __pest_string_wrapper::#wrapper>
                 },
                 inner_spaces,
                 explicit,
@@ -270,7 +270,7 @@ fn generate_graph_node(
             let wrapper = format_ident!("__pest__string_wrapper_{}", candidate_name);
             map.insert_wrapper(quote! {
                 pub struct #wrapper();
-                impl ::pest::typed::StringWrapper for #wrapper {
+                impl ::pest_typed::StringWrapper for #wrapper {
                     const CONTENT: &'static str = #content;
                 }
             });
@@ -280,7 +280,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Insens::<'i, super::Rule, __pest_string_wrapper::#wrapper>
+                    ::pest_typed::predefined_node::Insens::<'i, super::Rule, __pest_string_wrapper::#wrapper>
                 },
                 inner_spaces,
                 explicit,
@@ -292,7 +292,7 @@ fn generate_graph_node(
             candidate_name,
             quote! {()},
             quote! {
-                let (input, span) = ::pest::typed::predefined_node::peek_stack_slice::<super::Rule>(input, #start, #end, stack)?;
+                let (input, span) = ::pest_typed::predefined_node::peek_stack_slice::<super::Rule>(input, #start, #end, stack)?;
                 let content = ();
             },
             &match end {
@@ -334,7 +334,7 @@ fn generate_graph_node(
             candidate_name,
             quote! {()},
             quote!(
-                let (input, span) = ::pest::typed::predefined_node::skip_until::<super::Rule>(input, &[#(#strings),*])?;
+                let (input, span) = ::pest_typed::predefined_node::skip_until::<super::Rule>(input, &[#(#strings),*])?;
                 let content = ();
             ),
             &format!(
@@ -352,7 +352,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Range::<'i, super::Rule, #start, #end>
+                    ::pest_typed::predefined_node::Range::<'i, super::Rule, #start, #end>
                 },
                 inner_spaces,
                 explicit,
@@ -365,7 +365,7 @@ fn generate_graph_node(
                 expr,
                 rule_name,
                 candidate_name,
-                quote! {::pest::typed::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
+                quote! {::pest_typed::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
                 inner_spaces,
                 explicit,
             )
@@ -387,7 +387,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Positive::<'i, super::Rule, #inner>
+                    ::pest_typed::predefined_node::Positive::<'i, super::Rule, #inner>
                 },
                 inner_spaces,
                 explicit,
@@ -410,7 +410,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Negative::<'i, super::Rule, #inner>
+                    ::pest_typed::predefined_node::Negative::<'i, super::Rule, #inner>
                 },
                 inner_spaces,
                 explicit,
@@ -433,7 +433,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Restorable::<'i, super::Rule, #inner>
+                    ::pest_typed::predefined_node::Restorable::<'i, super::Rule, #inner>
                 },
                 inner_spaces,
                 explicit,
@@ -443,7 +443,7 @@ fn generate_graph_node(
             let (nodes, names, res) = walk_tree!(Seq, Sequence);
             let docs = nodes.iter().map(|node| {
                 format!("")
-                //format!("Corresponds to: `{}`.", node)
+                // format!("Corresponds to: `{}`.", node)
             });
             let name = ident(&candidate_name);
             // eprintln!("{} contains {:?}", candidate_name, names);
@@ -458,7 +458,7 @@ fn generate_graph_node(
                             let (remained, #field) = match #name::try_parse_with::<#ispaces, Rule>(input, stack) {
                                 Ok(res) => res,
                                 Err(err) => {
-                                    let message = ::pest::typed::predefined_node::stack_error(err);
+                                    let message = ::pest_typed::predefined_node::stack_error(err);
                                     return Err(::pest::error::Error::new_from_pos(
                                         ::pest::error::ErrorVariant::CustomError {
                                             message: format!(
@@ -496,7 +496,7 @@ fn generate_graph_node(
                         pub #fields: #names
                     ),*
                 }
-                impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
+                impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
                         let start = input.clone();
                         let mut input = input;
@@ -535,7 +535,7 @@ fn generate_graph_node(
                     }
                 }
             });
-            let doc = format! {""}; //format! {"Choices. Corresponds to `{}`.", expr};
+            let doc = format! {""}; // format! {"Choices. Corresponds to `{}`.", expr};
             let def = quote! {
                 #[doc = #doc]
                 #attr
@@ -545,11 +545,11 @@ fn generate_graph_node(
                         #vars(#names)
                     ),*
                 }
-                impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
+                impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for #name<'i> {
                     #f {
                         let mut errors = vec![];
                         #(#init)*
-                        let message = ::pest::typed::predefined_node::stack_errors(errors);
+                        let message = ::pest_typed::predefined_node::stack_errors(errors);
                         return Err(::pest::error::Error::new_from_pos(
                             ::pest::error::ErrorVariant::CustomError {
                                 message: format!(
@@ -581,7 +581,7 @@ fn generate_graph_node(
                 expr,
                 rule_name,
                 candidate_name,
-                quote! {::pest::typed::predefined_node::Opt::<'i, super::Rule, #inner_name>},
+                quote! {::pest_typed::predefined_node::Opt::<'i, super::Rule, #inner_name>},
                 inner_spaces,
                 explicit,
             )
@@ -603,11 +603,11 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Rep::<
+                    ::pest_typed::predefined_node::Rep::<
                         'i,
                         super::Rule,
                         #inner_name,
-                        ::pest::typed::predefined_node::Ign::<
+                        ::pest_typed::predefined_node::Ign::<
                             'i,
                             super::Rule,
                             COMMENT::<'i>,
@@ -716,7 +716,7 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
         let name = ident(rule.name.as_str());
         quote! {
             struct #name();
-            impl ::pest::typed::RuleWrapper<super::Rule> for #name {
+            impl ::pest_typed::RuleWrapper<super::Rule> for #name {
                 const RULE: super::Rule = super::Rule::#name;
             }
         }
@@ -733,7 +733,7 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
                 #(#rule_wrappers)*
             }
             mod pairs {
-                use pest::typed::NeverFailedTypedNode as _;
+                use pest_typed::NeverFailedTypedNode as _;
                 #builtin
 
                 #pairs
@@ -741,13 +741,13 @@ pub fn generate_typed_pair_from_rule(rules: &[OptimizedRule]) -> TokenStream {
             pub use pairs::*;
         }
     };
-    // println!("{}", res);
+    println!("{}", res);
     res
 }
 
 pub fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
     let mut result = vec![quote! {
-        use ::pest::typed::predefined_node::{ANY, SOI, EOI, NEWLINE, PEEK_ALL, DROP};
+        use ::pest_typed::predefined_node::{ANY, SOI, EOI, NEWLINE, PEEK_ALL, DROP};
     }];
     macro_rules! insert_builtin {
         ($name:literal, $def:expr) => {
@@ -759,13 +759,13 @@ pub fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
     insert_builtin!(
         "WHITESPACE",
         quote! {
-            type WHITESPACE<'i> = ::pest::typed::predefined_node::AlwaysFail<'i>;
+            type WHITESPACE<'i> = ::pest_typed::predefined_node::AlwaysFail<'i>;
         }
     );
     insert_builtin!(
         "COMMENT",
         quote! {
-            type COMMENT<'i> = ::pest::typed::predefined_node::AlwaysFail<'i>;
+            type COMMENT<'i> = ::pest_typed::predefined_node::AlwaysFail<'i>;
         }
     );
     quote! {

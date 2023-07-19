@@ -1,5 +1,5 @@
 [package]
-name = "pest-typed"
+name = "pest_typed"
 description = "A statically typed version of pest."
 version = "0.1.0"
 edition = "2021"
