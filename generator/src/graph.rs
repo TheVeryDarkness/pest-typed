@@ -83,51 +83,39 @@ impl TypeNode {
             }
         }
     }
-    fn to_tree(self) -> Vec<TypeTree> {
-        match self {
-            Self::Single(id) => vec![TypeTree::root(id)],
-            Self::Multi(vec) => vec,
-        }
-    }
-    pub(super) fn merge(self, other: Self) -> TypeNode {
-        let mut a = self.to_tree();
-        let mut b = other.to_tree();
-        a.append(&mut b);
-        assert!(a.len() > 1);
-        TypeNode::Multi(a)
-    }
 }
 #[derive(Clone)]
-struct TypeTree {
-    edges: Vec<TypeEdge>,
-    node: TypeNode,
+enum TypeTree {
+    /// (path, edges, node)
+    Path(TokenStream, Vec<TypeEdge>, TypeNode),
+    /// (paths, nodes)
+    Forest(Vec<(TokenStream, TypeNode)>),
 }
 impl TypeTree {
-    pub fn expand(&self) -> TokenStream {
+    /// (path, type)
+    pub fn expand(&self) -> (TokenStream, TokenStream) {
         let opt = option_type();
         let vec = vec_type();
 
-        let mut res = self.node.expand();
-        for edge in self.edges.iter() {
-            match edge {
-                TypeEdge::Opt => res = quote! {#opt::<#res>},
-                TypeEdge::Vec => res = quote! {#vec::<#res>},
+        match self {
+            Self::Path(path, edges, node) => {
+                let mut res = node.expand();
+                for edge in edges.iter() {
+                    match edge {
+                        TypeEdge::Opt => res = quote! {#opt::<#res>},
+                        TypeEdge::Vec => res = quote! {#vec::<#res>},
+                    }
+                }
+                (path, res)
+            }
+            Self::Forest(forest) => {
+                let (paths, nodes): (Vec<_>, Vec<_>) = forest.iter().unzip();
+                (quote! {(#(#paths),*)}, quote! {(#(#nodes),*)})
             }
         }
-        res
     }
-    pub fn root(id: Ident) -> Self {
-        Self {
-            edges: vec![],
-            node: TypeNode::Single(id),
-        }
-    }
-    fn to_node(self) -> TypeNode {
-        if self.edges.is_empty() {
-            self.node
-        } else {
-            TypeNode::Multi(vec![self])
-        }
+    pub fn root(id: Ident, path: TokenStream) -> Self {
+        Self::Path(path, vec![], TypeNode::Single(id))
     }
     pub fn extend(&mut self, other: Self) {
         *self = Self {
@@ -147,6 +135,12 @@ impl TypeTree {
         }
     }
 }
+
+struct Tree {
+    path: TokenStream,
+    tree: TypeTree,
+}
+impl Tree {}
 
 struct Accesser {
     /// name -> (path, type)
@@ -228,7 +222,7 @@ impl Accesser {
                 }
             };
             // We may generate source codes to help debugging here.
-            let doc = format! {"A helper function to access [`struct@{}`].", name};
+            let doc = format! {"A helper function to access [`{}`].", name};
             quote! {
                 #[doc = #doc]
                 #src
