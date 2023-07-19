@@ -9,23 +9,21 @@
 
 //! Types for typed parser.
 #![no_std]
-#![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 
 extern crate alloc;
 extern crate core;
 
-mod pest;
+pub mod error;
 pub mod predefined_node;
 mod typed_node;
 mod wrapper;
-pub use crate::pest::{error::Error, lib::RuleType};
-use crate::pest::{position, span, stack};
+use pest::{error::Error, RuleType};
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, TypedNode};
-pub use wrapper::{RuleWrapper, StringStorage, StringWrapper};
+pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper};
 
 /// A trait with a single method that parses strings into typed concrete syntax tree.
 pub trait TypedParser<R: RuleType> {
     /// Parses a `&str` into a tree starting from T.
     #[allow(clippy::perf)]
-    fn parse<'i, T: TypedNode<'i, R>>(input: &'i str) -> Result<T, Error<R>>;
+    fn parse<'i, T: ParsableTypedNode<'i, R>>(input: &'i str) -> Result<T, Error<R>>;
 }

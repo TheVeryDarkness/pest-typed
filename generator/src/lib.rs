@@ -7,8 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-mod generator;
-mod pest;
-mod types;
-
-pub use crate::pest::derive_parser;
+mod graph;
+mod typed;
+pub use typed::derive_typed_parser;

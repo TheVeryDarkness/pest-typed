@@ -8,3 +8,4 @@ categories = ["parsing"]
 license = "MIT/Apache-2.0"
 
 [dependencies]
+pest = { path = "../../github/pest/pest", version = "*" }

@@ -10,12 +10,21 @@
 #![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 
 //! Derive typed nodes from pest grammar.
+//! Refer to https://pest.rs for pest's syntax and built-in rules.
 
 use proc_macro::TokenStream;
 
 /// The main method that's called by the proc macro
-/// (a wrapper around `pest_typed_generator::derive_parser`)
-#[proc_macro_derive(TypedParser, attributes(grammar, grammar_inline))]
+/// (a wrapper around `pest_generator::derive_typed_parser`)
+#[proc_macro_derive(
+    TypedParser,
+    attributes(
+        grammar,
+        grammar_inline,
+        emit_rule_reference,
+        emit_tagged_node_reference
+    )
+)]
 pub fn derive_typed_parser(input: TokenStream) -> TokenStream {
-    pest_typed_generator::derive_parser(input.into(), true).into()
+    pest_typed_generator::derive_typed_parser(input.into(), true).into()
 }

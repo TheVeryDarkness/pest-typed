@@ -8,7 +8,8 @@ categories = ["parsing"]
 license = "MIT/Apache-2.0"
 
 [dependencies]
-pest = { version = "*" }
+pest = { path = "../../github/pest/pest", version = "*" }
+pest_generator = { path = "../../github/pest/generator", version = "*" }
 proc-macro2 = { version = "*" }
 pest_meta = { version = "*" }
 quote = { version = "*" }
