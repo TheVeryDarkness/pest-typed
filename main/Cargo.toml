@@ -8,7 +8,10 @@ categories = ["parsing"]
 license = "MIT/Apache-2.0"
 
 [features]
-std = ["pest/std"]
+# Implements `std::error::Error` for the `Error` type
+std = ["pest/std", "ucd-trie/std", "dep:thiserror"]
 
 [dependencies]
-pest = { path = "../../github/pest/pest", version = "*" }
+pest = { version = ">=2.7.1" }
+ucd-trie = { version = "0.1.5", default-features = false }
+thiserror = { version = "1.0.37", optional = true }

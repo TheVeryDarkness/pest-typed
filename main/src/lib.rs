@@ -12,6 +12,8 @@
 
 extern crate alloc;
 extern crate core;
+#[cfg(feature = "std")]
+extern crate std;
 
 pub mod predefined_node;
 pub mod tracker;
@@ -20,6 +22,7 @@ mod wrapper;
 use pest::RuleType;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, TypedNode};
 pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper};
+use pest;
 
 // Below modules are copied from pest.
 pub mod error;

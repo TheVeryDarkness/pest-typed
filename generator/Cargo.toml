@@ -12,8 +12,8 @@ std = ["pest/std"]
 grammar-extras = ["pest_meta/grammar-extras"]
 
 [dependencies]
-pest = { path = "../../github/pest/pest", version = "*" }
+pest = { version = ">=2.7.1" }
 proc-macro2 = { version = "*" }
-pest_meta = { path = "../../github/pest/meta", version = "*" }
+pest_meta = { version = ">=2.7.1" }
 quote = { version = "*" }
 syn = { version = "*" }
