@@ -164,14 +164,14 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> Debug for Skip<'i, R, Strings
 
 /// Match a character in the range `[min, max]`.
 /// Inclusively both below and above.
-pub struct Range<'i, R: RuleType, const MIN: char, const MAX: char> {
+pub struct CharRange<'i, R: RuleType, const MIN: char, const MAX: char> {
     /// Matched character.
     pub content: char,
     _phantom: PhantomData<&'i R>,
 }
 
 impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
-    for Range<'i, R, MIN, MAX>
+    for CharRange<'i, R, MIN, MAX>
 {
     fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
         mut input: Position<'i>,
@@ -195,7 +195,7 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
     }
 }
 
-impl<'i, R: RuleType, const MIN: char, const MAX: char> Debug for Range<'i, R, MIN, MAX> {
+impl<'i, R: RuleType, const MIN: char, const MAX: char> Debug for CharRange<'i, R, MIN, MAX> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Range")
             .field("content", &self.content)
@@ -1291,19 +1291,19 @@ fn parse_partial<'i, R: RuleType, RULE: RuleWrapper<R>, _Self: TypedNode<'i, R>>
 
 /// ASCII Digit. `'0'..'9'`
 #[allow(non_camel_case_types)]
-pub type ASCII_DIGIT<'i, R> = Range<'i, R, '0', '9'>;
+pub type ASCII_DIGIT<'i, R> = CharRange<'i, R, '0', '9'>;
 
 /// Non-zero ASCII Digit. `'1'..'9'`
 #[allow(non_camel_case_types)]
-pub type ASCII_NONZERO_DIGIT<'i, R> = Range<'i, R, '1', '9'>;
+pub type ASCII_NONZERO_DIGIT<'i, R> = CharRange<'i, R, '1', '9'>;
 
 /// Binary ASCII Digit. `'0'..'1'`
 #[allow(non_camel_case_types)]
-pub type ASCII_BIN_DIGIT<'i, R> = Range<'i, R, '0', '1'>;
+pub type ASCII_BIN_DIGIT<'i, R> = CharRange<'i, R, '0', '1'>;
 
 /// Octal ASCII Digit. `'0'..'7'`
 #[allow(non_camel_case_types)]
-pub type ASCII_OCT_DIGIT<'i, R> = Range<'i, R, '0', '7'>;
+pub type ASCII_OCT_DIGIT<'i, R> = CharRange<'i, R, '0', '7'>;
 
 /// Hexadecimal ASCII Digit. `'0'..'9' | 'a'..'f' | 'A'..'F'`
 #[allow(non_camel_case_types)]
@@ -1311,16 +1311,16 @@ pub type ASCII_HEX_DIGIT<'i, R> = Choice<
     'i,
     R,
     ASCII_DIGIT<'i, R>,
-    Choice<'i, R, Range<'i, R, 'a', 'f'>, Range<'i, R, 'A', 'F'>>,
+    Choice<'i, R, CharRange<'i, R, 'a', 'f'>, CharRange<'i, R, 'A', 'F'>>,
 >;
 
 /// Lower case ASCII alphabet.
 #[allow(non_camel_case_types)]
-pub type ASCII_ALPHA_LOWER<'i, R> = Range<'i, R, 'a', 'z'>;
+pub type ASCII_ALPHA_LOWER<'i, R> = CharRange<'i, R, 'a', 'z'>;
 
 /// Upper case ASCII alphabet.
 #[allow(non_camel_case_types)]
-pub type ASCII_ALPHA_UPPER<'i, R> = Range<'i, R, 'A', 'Z'>;
+pub type ASCII_ALPHA_UPPER<'i, R> = CharRange<'i, R, 'A', 'Z'>;
 
 /// ASCII alphabet.
 #[allow(non_camel_case_types)]
@@ -1332,7 +1332,7 @@ pub type ASCII_ALPHANUMERIC<'i, R> = Choice<'i, R, ASCII_ALPHA<'i, R>, ASCII_DIG
 
 /// ASCII alphabet.
 #[allow(non_camel_case_types)]
-pub type ASCII<'i, R> = Range<'i, R, '\x00', '\x7f'>;
+pub type ASCII<'i, R> = CharRange<'i, R, '\x00', '\x7f'>;
 
 /// Match char by
 pub fn match_char_by(position: &mut Position<'_>, pred: impl FnOnce(char) -> bool) -> Option<char> {
@@ -1390,14 +1390,14 @@ mod tests {
     type WHITESPACE<'i> = AtomicRule<
         'i,
         Rule,
-        Range<'i, Rule, ' ', ' '>,
+        CharRange<'i, Rule, ' ', ' '>,
         rule_wrappers::WHITESPACE,
         rule_wrappers::EOI,
     >;
     type COMMENT<'i> = AtomicRule<
         'i,
         Rule,
-        Range<'i, Rule, '\t', '\t'>,
+        CharRange<'i, Rule, '\t', '\t'>,
         rule_wrappers::COMMENT,
         rule_wrappers::EOI,
     >;

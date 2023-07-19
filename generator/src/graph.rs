@@ -526,7 +526,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Range::<'i, super::Rule, #start, #end>
+                    #pest_typed::predefined_node::CharRange::<'i, super::Rule, #start, #end>
                 },
                 Accesser::new(),
                 inner_spaces,
