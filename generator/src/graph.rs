@@ -64,14 +64,93 @@ fn ignore() -> TokenStream {
 }
 
 #[derive(Clone)]
-enum Accessed {
+enum TypeEdge {
+    Opt,
     Vec,
-    Option,
+}
+#[derive(Clone)]
+enum TypeNode {
+    Single(Ident),
+    Multi(Vec<TypeTree>),
+}
+impl TypeNode {
+    pub fn expand(&self) -> TokenStream {
+        match self {
+            Self::Single(id) => quote! {&#id},
+            Self::Multi(tuple) => {
+                let tuple = tuple.iter().map(|item| item.expand());
+                quote! {(#(#tuple),*)}
+            }
+        }
+    }
+    fn to_tree(self) -> Vec<TypeTree> {
+        match self {
+            Self::Single(id) => vec![TypeTree::root(id)],
+            Self::Multi(vec) => vec,
+        }
+    }
+    pub(super) fn merge(self, other: Self) -> TypeNode {
+        let mut a = self.to_tree();
+        let mut b = other.to_tree();
+        a.append(&mut b);
+        assert!(a.len() > 1);
+        TypeNode::Multi(a)
+    }
+}
+#[derive(Clone)]
+struct TypeTree {
+    edges: Vec<TypeEdge>,
+    node: TypeNode,
+}
+impl TypeTree {
+    pub fn expand(&self) -> TokenStream {
+        let opt = option_type();
+        let vec = vec_type();
+
+        let mut res = self.node.expand();
+        for edge in self.edges.iter() {
+            match edge {
+                TypeEdge::Opt => res = quote! {#opt::<#res>},
+                TypeEdge::Vec => res = quote! {#vec::<#res>},
+            }
+        }
+        res
+    }
+    pub fn root(id: Ident) -> Self {
+        Self {
+            edges: vec![],
+            node: TypeNode::Single(id),
+        }
+    }
+    fn to_node(self) -> TypeNode {
+        if self.edges.is_empty() {
+            self.node
+        } else {
+            TypeNode::Multi(vec![self])
+        }
+    }
+    pub fn extend(&mut self, other: Self) {
+        *self = Self {
+            edges: vec![],
+            node: self.clone().to_node().merge(other.to_node()),
+        };
+    }
+    pub fn nest(&mut self, edge: &TypeEdge, path: &mut TokenStream) {
+        match edge {
+            TypeEdge::Opt => match self.edges.last() {
+                Some(TypeEdge::Opt) => {
+                    *path = quote! {#path .flatten()};
+                }
+                _ => self.edges.push(TypeEdge::Opt),
+            },
+            TypeEdge::Vec => self.edges.push(TypeEdge::Vec),
+        }
+    }
 }
 
 struct Accesser {
-    /// name -> [(path, type, type)]
-    accessers: Map<String, Vec<(TokenStream, Vec<Accessed>, Ident)>>,
+    /// name -> (path, type)
+    accessers: Map<String, (TokenStream, TypeTree)>,
 }
 impl Accesser {
     pub fn new() -> Self {
@@ -81,7 +160,7 @@ impl Accesser {
     }
     pub fn from_item(name: String, path: TokenStream, id: Ident) -> Self {
         let mut res = Map::new();
-        res.insert(name, vec![(path, vec![], id)]);
+        res.insert(name, (path, TypeTree::root(id)));
         Self { accessers: res }
     }
     pub fn content(self) -> Self {
@@ -91,13 +170,13 @@ impl Accesser {
         let vec = vec_type();
         self.prepend(
             |inner| quote! {.content.iter().map(|e|e #inner).collect::<#vec<_>>()},
-            Some(Accessed::Vec),
+            Some(TypeEdge::Vec),
         )
     }
     pub fn option(self, prefix: TokenStream) -> Self {
         self.prepend(
             |inner| quote! {#prefix.as_ref().and_then(|e|Some(e #inner))},
-            Some(Accessed::Option),
+            Some(TypeEdge::Opt),
         )
     }
     pub fn first(self) -> Self {
@@ -106,76 +185,46 @@ impl Accesser {
     pub fn second(self) -> Self {
         self.prepend(|inner| quote! {.second #inner}, None)
     }
+    #[inline]
     fn prepend(
         mut self,
-        fn_path: impl Fn(TokenStream) -> TokenStream,
-        nesting: Option<Accessed>,
+        f: impl Fn(&TokenStream) -> TokenStream,
+        nesting: Option<TypeEdge>,
     ) -> Self {
-        for (_, vec) in self.accessers.iter_mut() {
-            for (path, accessed, _) in vec.iter_mut() {
-                *path = fn_path(path.clone());
-                if let Some(nesting) = &nesting {
-                    if let Accessed::Option = nesting {
-                        match accessed.last() {
-                            Some(Accessed::Option) => {
-                                *path = quote! {#path.flatten()};
-                                continue;
-                            }
-                            _ => (),
-                        }
-                    }
-                    accessed.push(nesting.clone());
-                }
+        for (_, (path, tree)) in self.accessers.iter_mut() {
+            *path = f(&path);
+            if let Some(nesting) = &nesting {
+                tree.nest(nesting, path);
             }
         }
         self
     }
     pub fn join(mut self, other: Accesser) -> Accesser {
-        other.accessers.into_iter().for_each(|(name, vec)| {
-            match self.accessers.entry(name.clone()) {
-                btree_map::Entry::Vacant(entry) => {
-                    entry.insert(vec);
-                }
-                btree_map::Entry::Occupied(mut entry) => {
-                    let v = entry.get_mut();
-                    v.extend(vec.into_iter());
-                }
-            }
-        });
+        other
+            .accessers
+            .into_iter()
+            .for_each(
+                |(name, (path, tree))| match self.accessers.entry(name.clone()) {
+                    btree_map::Entry::Vacant(entry) => {
+                        entry.insert((path, tree));
+                    }
+                    btree_map::Entry::Occupied(mut entry) => {
+                        let (p, t) = entry.get_mut();
+                        t.extend(tree);
+                        *p = quote! {(#p , #path)};
+                    }
+                },
+            );
         self
     }
-    fn expand(accessed: &Vec<Accessed>, inner: &Ident) -> TokenStream {
-        let vec = vec_type();
-        let option = option_type();
-        let mut res = quote! {&#inner};
-        for accessed in accessed.iter() {
-            match accessed {
-                Accessed::Vec => res = quote! {#vec::<#res>},
-                Accessed::Option => res = quote! {#option::<#res>},
-            }
-        }
-        res
-    }
     pub fn collect(&self) -> TokenStream {
-        let accessers = self.accessers.iter().map(|(name, vec)| {
-            let (paths, types): (Vec<_>, Vec<_>) = vec
-                .iter()
-                .map(|(path, accessed, inner)| (path, Self::expand(accessed, inner)))
-                .unzip();
+        let accessers = self.accessers.iter().map(|(name, (path, tree))| {
             let id = ident(name.as_str());
-            let src = if vec.len() == 1 {
-                quote! {
-                    #[allow(non_snake_case)]
-                    pub fn #id(&self) -> #(#types)* {
-                        #( self.content #paths )*
-                    }
-                }
-            } else {
-                quote! {
-                    #[allow(non_snake_case)]
-                    pub fn #id(&self) -> ( #(#types),* ) {
-                        ( #( self.content #paths ),* )
-                    }
+            let types = tree.expand();
+            let src = quote! {
+                #[allow(non_snake_case)]
+                pub fn #id(&self) -> #types {
+                    self.content #path
                 }
             };
             // We may generate source codes to help debugging here.
