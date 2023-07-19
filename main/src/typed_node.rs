@@ -10,9 +10,12 @@
 use core::fmt::Debug;
 
 pub use alloc::rc::Rc;
-use pest::{error::Error, Position, RuleType, Span, Stack};
+use pest::RuleType;
 
-use super::{error::Tracker, wrapper::RuleWrapper};
+use super::{
+    error::Error, position::Position, span::Span, stack::Stack, tracker::Tracker,
+    wrapper::RuleWrapper,
+};
 
 /// Node of concrete syntax tree that never fails.
 pub trait NeverFailedTypedNode<'i, R: RuleType>

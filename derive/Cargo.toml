@@ -10,5 +10,12 @@ license = "MIT/Apache-2.0"
 [lib]
 proc-macro = true
 
+[features]
+std = ["pest_typed/std", "pest_typed_generator/std"]
+grammar-extras = ["pest_typed_generator/grammar-extras"]
+
 [dependencies]
 pest_typed_generator = { path = "../generator" }
+
+[dev-dependencies]
+pest_typed = { path = "../main" }

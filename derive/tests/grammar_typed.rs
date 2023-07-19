@@ -1,5 +1,5 @@
-// pest-typed. A statically typed version of pest.
-// Copyright (c) 2023 黄博奕
+// pest. The Elegant Parser
+// Copyright (c) 2018 Dragoș Tiselice
 //
 // Licensed under the Apache License, Version 2.0
 // <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
@@ -10,9 +10,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 
-extern crate pest_typed_derive;
-
-use pest::typed::ParsableTypedNode;
+use pest_typed::ParsableTypedNode;
+use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
 #[grammar = "tests/grammar.pest"]
@@ -47,8 +46,7 @@ macro_rules! parses_to {
         match pairs::$rule::parse_partial($input) {
             Ok((input, _)) => assert_eq!(input.pos(), $end),
             Err(err) => {
-                eprintln!("{}", err);
-                panic!();
+                panic!("\n{}\n", err);
             }
         }
     };

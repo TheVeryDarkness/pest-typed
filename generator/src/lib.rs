@@ -10,3 +10,9 @@
 mod graph;
 mod typed;
 pub use typed::derive_typed_parser;
+
+// Below modules are copied from pest and modified.
+mod docs;
+mod generator;
+mod types;
+mod helper;

@@ -9,11 +9,11 @@
 
 //! Adapted from [generator.rs](./generator.rs).
 
-use crate::graph::generate_typed_pair_from_rule;
-use pest_generator::docs::{consume, DocComment};
-use pest_generator::generator::{generate_enum, generate_include};
-use pest_generator::types::result_type;
-use pest_generator::{collect_data, get_attribute, GrammarSource};
+use super::docs::{consume, DocComment};
+use super::generator::{generate_enum, generate_include};
+use super::helper::{collect_data, get_attribute, GrammarSource};
+use super::types::result_type;
+use crate::graph::{generate_typed_pair_from_rule, pest, pest_typed};
 use pest_meta::optimizer::OptimizedRule;
 use pest_meta::parser::{consume_rules, parse, rename_meta_rule, Rule};
 use pest_meta::{optimizer::optimize, unwrap_or_report};
@@ -121,14 +121,17 @@ fn generate_typed(
 
     let result = result_type();
 
+    let pest_typed = pest_typed();
+    let pest = pest();
+
     let parser_impl = quote! {
         #[allow(clippy::all)]
-        impl #impl_generics ::pest::typed::TypedParser<Rule> for #name #ty_generics #where_clause {
-            fn parse<'i, T: ::pest::typed::ParsableTypedNode<'i, Rule>>(
+        impl #impl_generics #pest_typed::TypedParser<Rule> for #name #ty_generics #where_clause {
+            fn parse<'i, T: #pest_typed::ParsableTypedNode<'i, Rule>>(
                 input: &'i str
             ) -> #result<
                 T,
-                ::pest::error::Error<Rule>
+                #pest::error::Error<Rule>
             > {
                 T::parse(input)
             }

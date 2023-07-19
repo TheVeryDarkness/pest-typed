@@ -13,13 +13,28 @@
 extern crate alloc;
 extern crate core;
 
-pub mod error;
 pub mod predefined_node;
+pub mod tracker;
 mod typed_node;
 mod wrapper;
-use pest::{error::Error, RuleType};
+use pest::RuleType;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, TypedNode};
 pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper};
+
+// Below modules are copied from pest.
+pub mod error;
+mod parser_state;
+mod position;
+mod span;
+mod stack;
+
+use error::Error;
+pub use position::Position;
+pub use span::Span;
+pub use stack::Stack;
+
+// Re-export unicode.
+pub use pest::unicode;
 
 /// A trait with a single method that parses strings into typed concrete syntax tree.
 pub trait TypedParser<R: RuleType> {

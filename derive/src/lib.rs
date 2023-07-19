@@ -16,6 +16,9 @@ use proc_macro::TokenStream;
 
 /// The main method that's called by the proc macro
 /// (a wrapper around `pest_generator::derive_typed_parser`)
+///
+/// `emit_rule_reference` and `emit_tagged_node_reference` request the generator
+/// to generate corresponding functions.
 #[proc_macro_derive(
     TypedParser,
     attributes(

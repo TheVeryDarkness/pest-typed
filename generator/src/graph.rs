@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use pest_generator::types::{option_type, result_type, vec_type};
+use super::types::{option_type, result_type, vec_type};
 use pest::unicode::unicode_property_names;
 use pest_meta::optimizer::OptimizedExpr;
 use pest_meta::{ast::RuleType, optimizer::OptimizedRule};
@@ -16,6 +16,18 @@ use quote::{format_ident, quote};
 use std::collections::btree_map;
 pub use std::collections::BTreeMap as Map;
 use std::collections::BTreeSet;
+
+pub fn pest() -> TokenStream {
+    quote! {::pest_typed}
+}
+
+pub fn pest_typed() -> TokenStream {
+    quote! {::pest_typed}
+}
+
+fn pest_unicode() -> TokenStream {
+    quote! {::pest_typed::unicode}
+}
 
 fn ident(s: &str) -> Ident {
     format_ident!("r#{}", s)
@@ -40,8 +52,9 @@ fn unicode_mod() -> TokenStream {
 }
 
 fn ignore() -> TokenStream {
+    let pest_typed = pest_typed();
     quote! {
-        ::pest::typed::predefined_node::Ign::<
+        #pest_typed::predefined_node::Ign::<
             'i,
             super::Rule,
             COMMENT::<'i>,
@@ -179,7 +192,8 @@ impl Accesser {
 }
 
 fn position() -> TokenStream {
-    quote! {::pest::Position}
+    let pest = pest();
+    quote! {#pest::Position}
 }
 fn _bool() -> TokenStream {
     quote! {::core::primitive::bool}
@@ -191,10 +205,16 @@ fn _str() -> TokenStream {
     quote! {::core::primitive::str}
 }
 fn stack() -> TokenStream {
-    quote! {::pest::Stack}
+    let pest = pest();
+    quote! {#pest::Stack}
+}
+fn tracker() -> TokenStream {
+    let pest = pest();
+    quote! {#pest::tracker::Tracker}
 }
 fn _span() -> TokenStream {
-    quote! {::pest::Span}
+    let pest = pest();
+    quote! {#pest::Span}
 }
 
 fn rule(
@@ -205,15 +225,19 @@ fn rule(
     accessers: &Accesser,
     inner_spaces: Option<bool>,
 ) -> TokenStream {
+    let pest_typed = pest_typed();
     let rule_wrappers = rule_wrappers();
     let result = result_type();
     let position = position();
     let stack = stack();
-    let error = quote! {::pest::error::Error};
+    let span = _span();
+    let pest = pest();
+    let error = quote! {#pest::error::Error};
     let ignore = ignore();
     let accessers = accessers.collect();
     let _bool = _bool();
     let str = _str();
+    let tracker = tracker();
     let (atomicity, atomicity_doc) = match inner_spaces {
         Some(false) => (quote! {true}, "Atomic rule."),
         Some(true) => (quote! {false}, "Non-atomic rule."),
@@ -238,10 +262,10 @@ fn rule(
         impl<'i> #name<'i> {
             #accessers
         }
-        impl<'i> ::pest::typed::RuleWrapper<super::Rule> for #name<'i> {
+        impl<'i> #pest_typed::RuleWrapper<super::Rule> for #name<'i> {
             const RULE: super::Rule = super::Rule::#rule_name;
         }
-        impl<'i> ::pest::typed::TypeWrapper for #name<'i> {
+        impl<'i> #pest_typed::TypeWrapper for #name<'i> {
             type Inner = #type_name;
         }
         impl<'i> ::core::convert::From<#type_name> for #name<'i> {
@@ -249,17 +273,17 @@ fn rule(
                 Self { content }
             }
         }
-        impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #name<'i> {
+        impl<'i> #pest_typed::TypedNode<'i, super::Rule> for #name<'i> {
             #[inline]
-            fn try_parse_with<const ATOMIC: #_bool, _Rule: ::pest::typed::RuleWrapper<super::Rule>>(
+            fn try_parse_with<const ATOMIC: #_bool, _Rule: #pest_typed::RuleWrapper<super::Rule>>(
                 input: #position<'i>,
-                stack: &mut #stack<::pest::Span<'i>>,
-            ) -> #result<(#position<'i>, Self), ::pest::typed::error::Tracker<'i, super::Rule>> {
+                stack: &mut #stack<#span<'i>>,
+            ) -> #result<(#position<'i>, Self), #tracker<'i, super::Rule>> {
                 let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack)?;
                 Ok((input, Self::from(content)))
             }
         }
-        impl<'i> ::pest::typed::ParsableTypedNode<'i, super::Rule> for #name<'i> {
+        impl<'i> #pest_typed::ParsableTypedNode<'i, super::Rule> for #name<'i> {
             #[inline]
             fn parse(input: &'i #str) -> #result<Self, #error<super::Rule>> {
                 let mut stack = #stack::new();
@@ -369,6 +393,7 @@ fn generate_graph_node(
     emit_tagged_node_reference: bool,
 ) -> (TokenStream, Accesser) {
     let ignore = ignore();
+    let pest_typed = pest_typed();
     fn for_option(accessers: Accesser, _inner: &OptimizedExpr, prefix: TokenStream) -> Accesser {
         accessers.option(prefix)
     }
@@ -382,7 +407,7 @@ fn generate_graph_node(
                 #[doc = #doc]
                 #[allow(non_camel_case_types)]
                 pub struct #wrapper();
-                impl ::pest::typed::StringWrapper for #wrapper {
+                impl #pest_typed::StringWrapper for #wrapper {
                     const CONTENT: &'static #str = #content;
                 }
             });
@@ -392,7 +417,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Str::<'i, super::Rule, #module::#wrapper>
+                    #pest_typed::predefined_node::Str::<'i, super::Rule, #module::#wrapper>
                 },
                 Accesser::new(),
                 inner_spaces,
@@ -407,7 +432,7 @@ fn generate_graph_node(
                 #[doc = #doc]
                 #[allow(non_camel_case_types)]
                 pub struct #wrapper();
-                impl ::pest::typed::StringWrapper for #wrapper {
+                impl #pest_typed::StringWrapper for #wrapper {
                     const CONTENT: &'static #str = #content;
                 }
             });
@@ -417,7 +442,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Insens::<'i, super::Rule, #module::#wrapper>
+                    #pest_typed::predefined_node::Insens::<'i, super::Rule, #module::#wrapper>
                 },
                 Accesser::new(),
                 inner_spaces,
@@ -431,10 +456,10 @@ fn generate_graph_node(
             candidate_name,
             match end {
                 Some(end) => quote! {
-                    ::pest::typed::predefined_node::PeekSlice2::<'i, super::Rule, #start, #end>
+                    #pest_typed::predefined_node::PeekSlice2::<'i, super::Rule, #start, #end>
                 },
                 None => quote! {
-                    ::pest::typed::predefined_node::PeekSlice1::<'i, super::Rule, #start>
+                    #pest_typed::predefined_node::PeekSlice1::<'i, super::Rule, #start>
                 },
             },
             Accesser::new(),
@@ -460,7 +485,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Push::<'i, super::Rule, #inner>
+                    #pest_typed::predefined_node::Push::<'i, super::Rule, #inner>
                 },
                 accesser.content(),
                 inner_spaces,
@@ -475,7 +500,7 @@ fn generate_graph_node(
                 #[doc = #doc]
                 #[allow(non_camel_case_types)]
                 pub struct #wrapper();
-                impl ::pest::typed::StringArrayWrapper for #wrapper {
+                impl #pest_typed::StringArrayWrapper for #wrapper {
                     const CONTENT: &'static[&'static #str] = &[ #(#strings),* ];
                 }
             });
@@ -485,7 +510,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Skip::<'i, super::Rule, #module::#wrapper>
+                    #pest_typed::predefined_node::Skip::<'i, super::Rule, #module::#wrapper>
                 },
                 Accesser::new(),
                 inner_spaces,
@@ -501,7 +526,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Range::<'i, super::Rule, #start, #end>
+                    #pest_typed::predefined_node::Range::<'i, super::Rule, #start, #end>
                 },
                 Accesser::new(),
                 inner_spaces,
@@ -520,7 +545,7 @@ fn generate_graph_node(
                 expr,
                 rule_name,
                 candidate_name,
-                quote! {::pest::typed::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
+                quote! {#pest_typed::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
                 accessers,
                 inner_spaces,
                 explicit,
@@ -545,7 +570,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Positive::<'i, super::Rule, #inner>
+                    #pest_typed::predefined_node::Positive::<'i, super::Rule, #inner>
                 },
                 accessers.content(),
                 inner_spaces,
@@ -572,7 +597,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Negative::<'i, super::Rule, #inner>
+                    #pest_typed::predefined_node::Negative::<'i, super::Rule, #inner>
                 },
                 Accesser::new(),
                 inner_spaces,
@@ -599,7 +624,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Restorable::<'i, super::Rule, #inner>
+                    #pest_typed::predefined_node::Restorable::<'i, super::Rule, #inner>
                 },
                 accessers,
                 inner_spaces,
@@ -637,7 +662,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Seq::<
+                    #pest_typed::predefined_node::Seq::<
                         'i,
                         super::Rule,
                         #first,
@@ -683,7 +708,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Choice::<
+                    #pest_typed::predefined_node::Choice::<
                         'i,
                         super::Rule,
                         #first,
@@ -714,7 +739,7 @@ fn generate_graph_node(
                 expr,
                 rule_name,
                 candidate_name,
-                quote! {::pest::typed::predefined_node::Opt::<'i, super::Rule, #inner_name>},
+                quote! {#pest_typed::predefined_node::Opt::<'i, super::Rule, #inner_name>},
                 accessers,
                 inner_spaces,
                 explicit,
@@ -739,7 +764,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    ::pest::typed::predefined_node::Rep::<
+                    #pest_typed::predefined_node::Rep::<
                         'i,
                         super::Rule,
                         #inner_name,
@@ -863,12 +888,13 @@ pub fn generate_typed_pair_from_rule(
 ) -> TokenStream {
     // let names: Vec<_> = rules.iter().map(|rule| &rule.name).collect();
     // eprintln!("{:#?}", names);
+    let pest_typed = pest_typed();
     let graph = generate_graph(rules, emit_rule_reference, emit_tagged_node_reference);
     let as_wrapper = |name: &Ident| {
         quote! {
             #[allow(non_camel_case_types)]
             pub struct #name;
-            impl ::pest::typed::RuleWrapper<super::Rule> for #name {
+            impl #pest_typed::RuleWrapper<super::Rule> for #name {
                 const RULE: super::Rule = super::Rule::#name;
             }
         }
@@ -899,7 +925,7 @@ pub fn generate_typed_pair_from_rule(
         }
         #[doc = "Definitions of statically typed nodes generated by pest-generator."]
         pub mod pairs {
-            use ::pest::typed::NeverFailedTypedNode as _;
+            use #pest_typed::NeverFailedTypedNode as _;
             #builtin
 
             #pairs
@@ -911,11 +937,15 @@ pub fn generate_typed_pair_from_rule(
 
 fn generate_unicode(rule_names: &BTreeSet<&str>) -> TokenStream {
     let mut results = vec![];
+    let pest_typed = pest_typed();
+    let pest_unicode = pest_unicode();
     let bool = _bool();
     let result = result_type();
     let position = position();
     let stack = stack();
+    let span = _span();
     let char = _char();
+    let tracker = tracker();
 
     for property in unicode_property_names() {
         let property_ident: Ident = syn::parse_str(property).unwrap();
@@ -939,17 +969,17 @@ fn generate_unicode(rule_names: &BTreeSet<&str>) -> TokenStream {
                         }
                     }
                 }
-                impl<'i> ::pest::typed::TypedNode<'i, super::Rule> for #property_ident<'i> {
+                impl<'i> #pest_typed::TypedNode<'i, super::Rule> for #property_ident<'i> {
                     #[inline]
-                    fn try_parse_with<const ATOMIC: #bool, _Rule: ::pest::typed::RuleWrapper<super::Rule>>(
+                    fn try_parse_with<const ATOMIC: #bool, _Rule: #pest_typed::RuleWrapper<super::Rule>>(
                         mut input: #position<'i>,
-                        _stack: &mut #stack<::pest::Span<'i>>,
-                    ) -> #result<(#position<'i>, Self), ::pest::typed::error::Tracker<'i, super::Rule>> {
-                        match ::pest::typed::predefined_node::match_char_by(&mut input, ::pest::unicode::#property_ident) {
+                        _stack: &mut #stack<#span<'i>>,
+                    ) -> #result<(#position<'i>, Self), #tracker<'i, super::Rule>> {
+                        match #pest_typed::predefined_node::match_char_by(&mut input, #pest_unicode::#property_ident) {
                             Some(content) => {
                                 Ok((input, Self::from(content)))
                             }
-                            None => Err(::pest::typed::error::Tracker::new(input))
+                            None => Err(#tracker::new(input))
                         }
                     }
                 }
@@ -969,10 +999,11 @@ fn generate_unicode(rule_names: &BTreeSet<&str>) -> TokenStream {
 }
 
 fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
+    let pest_typed = pest_typed();
     let unicode = unicode_mod();
     let mut results = vec![quote! {
-        use ::pest::typed::TypedNode as _;
-        use std::ops::Deref as _;
+        use #pest_typed::TypedNode as _;
+        use ::core::ops::Deref as _;
         use super::#unicode::*;
     }];
     macro_rules! insert_builtin {
@@ -980,7 +1011,7 @@ fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
             if !rule_names.contains($name) {
                 let id = ident($name);
                 results.push(quote! {
-                    type #id<'i> = ::pest::typed::predefined_node::$def;
+                    type #id<'i> = #pest_typed::predefined_node::$def;
                 });
             }
         };

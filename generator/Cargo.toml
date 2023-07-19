@@ -7,10 +7,13 @@ keywords = ["pest", "generator"]
 categories = ["parsing"]
 license = "MIT/Apache-2.0"
 
+[features]
+std = ["pest/std"]
+grammar-extras = ["pest_meta/grammar-extras"]
+
 [dependencies]
 pest = { path = "../../github/pest/pest", version = "*" }
-pest_generator = { path = "../../github/pest/generator", version = "*" }
 proc-macro2 = { version = "*" }
-pest_meta = { version = "*" }
+pest_meta = { path = "../../github/pest/meta", version = "*" }
 quote = { version = "*" }
 syn = { version = "*" }

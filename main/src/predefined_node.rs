@@ -13,10 +13,13 @@ use core::{fmt, fmt::Debug, marker::PhantomData};
 
 use alloc::vec::Vec;
 
-use pest::{error::Error, parser_state::constrain_idxs, Position, RuleType, Span, Stack};
+use pest::RuleType;
+
+use super::{error::Error, parser_state::constrain_idxs, position::Position, stack::Stack};
 
 use super::{
-    error::Tracker,
+    span::Span,
+    tracker::Tracker,
     typed_node::{NeverFailedTypedNode, ParsableTypedNode},
     wrapper::{RuleWrapper, StringArrayWrapper, StringWrapper, TypeWrapper},
     TypedNode,
@@ -200,7 +203,7 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> Debug for Range<'i, R, M
     }
 }
 
-/// Normalize stack slice.
+/// Try to create stack slice.
 #[inline]
 fn stack_slice<'i, 's, R: RuleType>(
     input: Position<'i>,
