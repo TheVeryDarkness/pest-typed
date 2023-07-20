@@ -64,87 +64,178 @@ fn ignore() -> TokenStream {
 }
 
 #[derive(Clone)]
-enum TypeEdge {
-    Opt,
-    Vec,
+enum Edge {
+    // Type remained.
+    First,
+    Second,
+    Content,
+    // Type wrapped by Option.
+    GetFirst,
+    GetSecond,
+    OptionalContent,
+    // Type wrapped by Option.
+    Contents,
 }
 #[derive(Clone)]
-enum TypeNode {
-    Single(Ident),
-    Multi(Vec<TypeTree>),
+enum Node {
+    /// - Type: `&#ident`
+    /// - Path: `.content.deref()`
+    Leaf(Ident),
+    // Type remained.
+    /// - Type: `#inner`
+    /// - Path: `.first`
+    First(Box<Node>),
+    /// - Type: `#inner`
+    /// - Path: `.second`
+    Second(Box<Node>),
+    /// - Type: `#inner`
+    /// - Path: `.content`
+    Content(Box<Node>),
+    // Type wrapped by Option.
+    /// - Type: `#opt::<#inner>`
+    /// - Path: `.get_first().as_ref().and_then(|e|Some(e #inner)) #flat`
+    GetFirst(bool, Box<Node>),
+    /// - Type: `#opt::<#inner>`
+    /// - Path: `.get_second().as_ref().and_then(|e|Some(e #inner)) #flat`
+    GetSecond(bool, Box<Node>),
+    /// - Type: `#opt::<#inner>`
+    /// - Path: `.content.as_ref().and_then(|e|Some(e #inner)) #flat`
+    OptionalContent(bool, Box<Node>),
+    // Type wrapped by Vec.
+    /// - Type: `#vec::<#inner>`
+    /// - Path: `.content.iter().map(|e|e #inner).collect::<#vec<_>>()`
+    Contents(Box<Node>),
+    // Type wrapped by tuple.
+    /// - Type: `(#(#inner),*)`
+    /// - Path: `(#(#inner),*)`
+    Tuple(Vec<Node>),
 }
-impl TypeNode {
-    pub fn expand(&self) -> TokenStream {
-        match self {
-            Self::Single(id) => quote! {&#id},
-            Self::Multi(tuple) => {
-                let tuple = tuple.iter().map(|item| item.expand());
-                quote! {(#(#tuple),*)}
-            }
-        }
-    }
-}
-#[derive(Clone)]
-enum TypeTree {
-    /// (path, edges, node)
-    Path(TokenStream, Vec<TypeEdge>, TypeNode),
-    /// (paths, nodes)
-    Forest(Vec<(TokenStream, TypeNode)>),
-}
-impl TypeTree {
-    /// (path, type)
-    pub fn expand(&self) -> (TokenStream, TokenStream) {
-        let opt = option_type();
-        let vec = vec_type();
 
+impl Node {
+    pub fn root(id: Ident) -> Self {
+        Self::Leaf(id)
+    }
+    fn flattenable(&self) -> bool {
         match self {
-            Self::Path(path, edges, node) => {
-                let mut res = node.expand();
-                for edge in edges.iter() {
-                    match edge {
-                        TypeEdge::Opt => res = quote! {#opt::<#res>},
-                        TypeEdge::Vec => res = quote! {#vec::<#res>},
-                    }
-                }
-                (path, res)
-            }
-            Self::Forest(forest) => {
-                let (paths, nodes): (Vec<_>, Vec<_>) = forest.iter().unzip();
-                (quote! {(#(#paths),*)}, quote! {(#(#nodes),*)})
-            }
+            Node::Leaf(_) => false,
+            Node::First(inner) | Node::Second(inner) | Node::Content(inner) => inner.flattenable(),
+            Node::GetFirst(false, _)
+            | Node::GetSecond(false, _)
+            | Node::OptionalContent(false, _) => true,
+            Node::GetFirst(true, inner)
+            | Node::GetSecond(true, inner)
+            | Node::OptionalContent(true, inner) => inner.flattenable(),
+            Node::Contents(_) | Node::Tuple(_) => false,
         }
     }
-    pub fn root(id: Ident, path: TokenStream) -> Self {
-        Self::Path(path, vec![], TypeNode::Single(id))
-    }
-    pub fn extend(&mut self, other: Self) {
-        *self = Self {
-            edges: vec![],
-            node: self.clone().to_node().merge(other.to_node()),
-        };
-    }
-    pub fn nest(&mut self, edge: &TypeEdge, path: &mut TokenStream) {
+    pub fn wrap(self, edge: Edge) -> Self {
         match edge {
-            TypeEdge::Opt => match self.edges.last() {
-                Some(TypeEdge::Opt) => {
-                    *path = quote! {#path .flatten()};
+            Edge::First => Self::First(Box::new(self)),
+            Edge::Second => Self::Second(Box::new(self)),
+            Edge::Content => Self::Content(Box::new(self)),
+            Edge::GetFirst => Self::GetFirst(self.flattenable(), Box::new(self)),
+            Edge::GetSecond => Self::GetSecond(self.flattenable(), Box::new(self)),
+            Edge::OptionalContent => Self::OptionalContent(self.flattenable(), Box::new(self)),
+            Edge::Contents => Self::Contents(Box::new(self)),
+        }
+    }
+    pub fn merge(self, other: Self) -> Self {
+        match self {
+            Node::Tuple(vec) => match other {
+                Node::Tuple(mut v) => {
+                    let mut vec = vec;
+                    vec.append(&mut v);
+                    Node::Tuple(vec)
                 }
-                _ => self.edges.push(TypeEdge::Opt),
+                _ => {
+                    let mut vec = vec;
+                    vec.push(other);
+                    Node::Tuple(vec)
+                }
             },
-            TypeEdge::Vec => self.edges.push(TypeEdge::Vec),
+            _ => match other {
+                Node::Tuple(mut v) => {
+                    let mut vec = vec![self];
+                    vec.append(&mut v);
+                    Node::Tuple(vec)
+                }
+                _ => Node::Tuple(vec![self, other]),
+            },
+        }
+    }
+    pub fn expand(&self) -> (TokenStream, TokenStream) {
+        let flat = |flatten: &bool| {
+            if *flatten {
+                quote! {.flatten}
+            } else {
+                quote! {}
+            }
+        };
+        let opt = |flatten: &bool, inner: TokenStream| {
+            let opt = option_type();
+            if *flatten {
+                quote! {#inner}
+            } else {
+                quote! {#opt::<#inner>}
+            }
+        };
+        let vec = vec_type();
+        match self {
+            Node::Leaf(id) => (quote! {.content.deref()}, quote! {&#id}),
+            Node::First(inner) => {
+                let (pa, ty) = inner.expand();
+                (quote! {.first #pa}, quote! {#ty})
+            }
+            Node::Second(inner) => {
+                let (pa, ty) = inner.expand();
+                (quote! {.second #pa}, quote! {#ty})
+            }
+            Node::Content(inner) => {
+                let (pa, ty) = inner.expand();
+                (quote! {.content #pa}, quote! {#ty})
+            }
+            Node::OptionalContent(flatten, inner) => {
+                let (pa, ty) = inner.expand();
+                let flat = flat(flatten);
+                (
+                    quote! {.content.deref().and_then(|e| e. #pa) #flat},
+                    opt(flatten, ty),
+                )
+            }
+            Node::GetFirst(flatten, inner) => {
+                let (pa, ty) = inner.expand();
+                let flat = flat(flatten);
+                (
+                    quote! {.get_first().deref().and_then(|e| e. #pa) #flat},
+                    opt(flatten, ty),
+                )
+            }
+            Node::GetSecond(flatten, inner) => {
+                let (pa, ty) = inner.expand();
+                let flat = flat(flatten);
+                (
+                    quote! {.get_second().deref().and_then(|e| e #pa) #flat},
+                    opt(flatten, ty),
+                )
+            }
+            Node::Contents(inner) => {
+                let (pa, ty) = inner.expand();
+                (
+                    quote! {.content().map(|e| e #pa).collect::<#vec>()},
+                    quote! {#vec::<#ty>},
+                )
+            }
+            Node::Tuple(tuple) => {
+                let (pa, ty): (Vec<_>, Vec<_>) = tuple.iter().map(|e| e.expand()).unzip();
+                (quote! {(#(#pa),*)}, quote! {(#(#ty),*)})
+            }
         }
     }
 }
-
-struct Tree {
-    path: TokenStream,
-    tree: TypeTree,
-}
-impl Tree {}
 
 struct Accesser {
     /// name -> (path, type)
-    accessers: Map<String, (TokenStream, TypeTree)>,
+    accessers: Map<String, Node>,
 }
 impl Accesser {
     pub fn new() -> Self {
@@ -152,73 +243,64 @@ impl Accesser {
             accessers: Map::new(),
         }
     }
-    pub fn from_item(name: String, path: TokenStream, id: Ident) -> Self {
+    pub fn from_item(name: String, id: Ident) -> Self {
         let mut res = Map::new();
-        res.insert(name, (path, TypeTree::root(id)));
+        res.insert(name, Node::root(id));
         Self { accessers: res }
     }
     pub fn content(self) -> Self {
-        self.prepend(|path| quote! {.content #path}, None)
+        self.prepend(Edge::Content)
     }
     pub fn contents(self) -> Self {
-        let vec = vec_type();
-        self.prepend(
-            |inner| quote! {.content.iter().map(|e|e #inner).collect::<#vec<_>>()},
-            Some(TypeEdge::Vec),
-        )
+        self.prepend(Edge::Contents)
     }
-    pub fn option(self, prefix: TokenStream) -> Self {
-        self.prepend(
-            |inner| quote! {#prefix.as_ref().and_then(|e|Some(e #inner))},
-            Some(TypeEdge::Opt),
-        )
+    pub fn optional_content(self) -> Self {
+        self.prepend(Edge::OptionalContent)
+    }
+    pub fn optional_first(self) -> Self {
+        self.prepend(Edge::GetFirst)
+    }
+    pub fn optional_second(self) -> Self {
+        self.prepend(Edge::GetSecond)
     }
     pub fn first(self) -> Self {
-        self.prepend(|inner| quote! {.first #inner}, None)
+        self.prepend(Edge::First)
     }
     pub fn second(self) -> Self {
-        self.prepend(|inner| quote! {.second #inner}, None)
+        self.prepend(Edge::Second)
     }
     #[inline]
-    fn prepend(
-        mut self,
-        f: impl Fn(&TokenStream) -> TokenStream,
-        nesting: Option<TypeEdge>,
-    ) -> Self {
-        for (_, (path, tree)) in self.accessers.iter_mut() {
-            *path = f(&path);
-            if let Some(nesting) = &nesting {
-                tree.nest(nesting, path);
-            }
+    fn prepend(mut self, edge: Edge) -> Self {
+        for (_, node) in self.accessers.iter_mut() {
+            // TODO: Ellide clone here.
+            *node = node.clone().wrap(edge.clone());
         }
         self
     }
     pub fn join(mut self, other: Accesser) -> Accesser {
-        other
-            .accessers
-            .into_iter()
-            .for_each(
-                |(name, (path, tree))| match self.accessers.entry(name.clone()) {
-                    btree_map::Entry::Vacant(entry) => {
-                        entry.insert((path, tree));
-                    }
-                    btree_map::Entry::Occupied(mut entry) => {
-                        let (p, t) = entry.get_mut();
-                        t.extend(tree);
-                        *p = quote! {(#p , #path)};
-                    }
-                },
-            );
+        other.accessers.into_iter().for_each(|(name, tree)| {
+            let entry = self.accessers.entry(name.clone());
+            match entry {
+                btree_map::Entry::Vacant(entry) => {
+                    entry.insert(tree);
+                }
+                btree_map::Entry::Occupied(mut entry) => {
+                    // TODO: Ellide clone here.
+                    let t = entry.get_mut();
+                    *t = t.clone().merge(tree);
+                }
+            }
+        });
         self
     }
     pub fn collect(&self) -> TokenStream {
-        let accessers = self.accessers.iter().map(|(name, (path, tree))| {
+        let accessers = self.accessers.iter().map(|(name, node)| {
             let id = ident(name.as_str());
-            let types = tree.expand();
+            let (paths, types) = node.expand();
             let src = quote! {
                 #[allow(non_snake_case)]
                 pub fn #id(&self) -> #types {
-                    self.content #path
+                    self.content #paths
                 }
             };
             // We may generate source codes to help debugging here.
@@ -437,9 +519,6 @@ fn generate_graph_node(
 ) -> (TokenStream, Accesser) {
     let ignore = ignore();
     let pest_typed = pest_typed();
-    fn for_option(accessers: Accesser, _inner: &OptimizedExpr, prefix: TokenStream) -> Accesser {
-        accessers.option(prefix)
-    }
     // Still some compile-time information not taken.
     match expr {
         OptimizedExpr::Str(content) => {
@@ -579,7 +658,7 @@ fn generate_graph_node(
         OptimizedExpr::Ident(id) => {
             let inner = ident(id);
             let accessers = if emit_rule_reference {
-                Accesser::from_item(id.clone(), quote! {.content.deref()}, inner.clone())
+                Accesser::from_item(id.clone(), inner.clone())
             } else {
                 Accesser::new()
             };
@@ -731,7 +810,7 @@ fn generate_graph_node(
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
-            let acc_first = for_option(acc_first, lhs, quote! {.get_first()});
+            let acc_first = acc_first.optional_first();
             let (second, acc_second) = generate_graph_node(
                 rhs,
                 rule_name,
@@ -744,7 +823,7 @@ fn generate_graph_node(
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
-            let acc_second = for_option(acc_second, rhs, quote! {.get_second()});
+            let acc_second = acc_second.optional_second();
             process_single_alias(
                 map,
                 expr,
@@ -776,7 +855,7 @@ fn generate_graph_node(
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
-            let accessers = for_option(accessers, inner, quote! {.content});
+            let accessers = accessers.optional_content();
             process_single_alias(
                 map,
                 expr,
