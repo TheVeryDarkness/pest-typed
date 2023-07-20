@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Copied from pest/pest/src/error.rs (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
+//! and modified.
 //! Types for different kinds of parsing failures.
 
 use alloc::borrow::Cow;
