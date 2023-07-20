@@ -166,7 +166,7 @@ impl Node {
     pub fn expand(&self) -> (TokenStream, TokenStream) {
         let flat = |flatten: &bool| {
             if *flatten {
-                quote! {.flatten}
+                quote! {.flatten()}
             } else {
                 quote! {}
             }
@@ -198,7 +198,7 @@ impl Node {
                 let (pa, ty) = inner.expand();
                 let flat = flat(flatten);
                 (
-                    quote! {.content.deref().and_then(|e| e. #pa) #flat},
+                    quote! {.content.as_ref().and_then(|e| Some(e #pa)) #flat},
                     opt(flatten, ty),
                 )
             }
@@ -206,7 +206,7 @@ impl Node {
                 let (pa, ty) = inner.expand();
                 let flat = flat(flatten);
                 (
-                    quote! {.get_first().deref().and_then(|e| e. #pa) #flat},
+                    quote! {.get_first().as_ref().and_then(|e| Some(e #pa)) #flat},
                     opt(flatten, ty),
                 )
             }
@@ -214,14 +214,14 @@ impl Node {
                 let (pa, ty) = inner.expand();
                 let flat = flat(flatten);
                 (
-                    quote! {.get_second().deref().and_then(|e| e #pa) #flat},
+                    quote! {.get_second().as_ref().and_then(|e| Some(e #pa)) #flat},
                     opt(flatten, ty),
                 )
             }
             Node::Contents(inner) => {
                 let (pa, ty) = inner.expand();
                 (
-                    quote! {.content().map(|e| e #pa).collect::<#vec>()},
+                    quote! {.content.iter().map(|e| e #pa).collect::<#vec<_>>()},
                     quote! {#vec::<#ty>},
                 )
             }
