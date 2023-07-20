@@ -9,6 +9,8 @@
 
 //! Extracted from **pest/generator/src/generator.rs** (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
 //! and modified.
+//!
+//! It's for convenient use of types in standard library whether or not feature **std** is enabled.
 
 use proc_macro2::TokenStream;
 use quote::quote;

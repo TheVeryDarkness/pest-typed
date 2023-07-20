@@ -7,7 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! Types for typed parser.
+//! Types for statically typed nodes and parser.
+
 #![no_std]
 
 extern crate alloc;
@@ -19,10 +20,10 @@ pub mod predefined_node;
 pub mod tracker;
 mod typed_node;
 mod wrapper;
+use pest;
 use pest::RuleType;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, TypedNode};
 pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper};
-use pest;
 
 // Below modules are copied from pest.
 pub mod error;

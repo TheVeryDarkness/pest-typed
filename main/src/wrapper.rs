@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Wrappers of constants and types, so that they can be used in generics easier.
+
 use crate::RuleType;
 
 /// An object containing a constant.
@@ -43,7 +45,7 @@ pub trait RuleWrapper<R: RuleType> {
     const RULE: R;
 }
 
-/// Type wrapper
+/// Type wrapper.
 pub trait TypeWrapper {
     /// Wrapped type.
     type Inner;

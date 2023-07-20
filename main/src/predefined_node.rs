@@ -7,7 +7,9 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! Predefined tree nodes.
+//! Predefined tree nodes generics.
+//! The generator may use this for convenience.
+//! Normally you don't need to reference this module by yourself.
 
 use core::{fmt, fmt::Debug, marker::PhantomData};
 
@@ -25,7 +27,9 @@ use super::{
     TypedNode,
 };
 
-/// Match given string.
+/// Match given string case sensitively.
+///
+/// See [`Insens`] for case-insensitive matching.
 pub struct Str<'i, R: RuleType, T: StringWrapper> {
     _phantom: PhantomData<(&'i R, &'i T)>,
 }
@@ -58,6 +62,8 @@ impl<'i, R: RuleType, T: StringWrapper> Debug for Str<'i, R, T> {
 }
 
 /// Match given string case insensitively.
+///
+/// See [`Str`] for case-sensitive matching.
 pub struct Insens<'i, R: RuleType, T: StringWrapper> {
     /// Matched content.
     pub content: &'i str,
@@ -190,7 +196,7 @@ impl<'i, R: RuleType, const N: usize> Debug for SkipChar<'i, R, N> {
     }
 }
 
-/// Match a character in the range `[min, max]`.
+/// Match a character in the range `[MIN, MAX]`.
 /// Inclusively both below and above.
 pub struct CharRange<'i, R: RuleType, const MIN: char, const MAX: char> {
     /// Matched character.
@@ -250,7 +256,7 @@ fn stack_slice<'i, 's, R: RuleType>(
     Ok(stack[range].iter())
 }
 
-/// Match a part of the stack.
+/// Match a part of the stack without popping.
 /// Will match (consume) input.
 #[inline]
 fn peek_spans<'s, 'i: 's, R: RuleType, Rule: RuleWrapper<R>>(
@@ -365,7 +371,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
     }
 }
 
-/// Match start of input.
+/// Match the start of input.
 pub struct SOI<'i> {
     _phantom: PhantomData<&'i str>,
 }
@@ -393,7 +399,7 @@ impl<'i> Debug for SOI<'i> {
     }
 }
 
-/// Match end of input.
+/// Match the end of input.
 ///
 /// [`EOI`] will record its rule if not matched.
 pub struct EOI<'i> {
@@ -423,7 +429,8 @@ impl<'i> Debug for EOI<'i> {
     }
 }
 
-/// Match a new line.
+/// Match a new line character.
+/// A built-in rule. Equivalent to `"\r\n" | "\n" | "\r"`.
 #[derive(Debug)]
 pub struct NEWLINE<'i> {
     /// Pair span.
@@ -451,7 +458,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
     }
 }
 
-/// Peek all reversely in stack.
+/// Peek all spans in stack reversely.
 /// Will consume input.
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
@@ -471,7 +478,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
     }
 }
 
-/// Peek all in stack.
+/// Peek top span in stack.
 /// Will consume input.
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
@@ -539,7 +546,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Opt<'i, R, T> {
     }
 }
 
-/// Ignore comments or white spaces if there is any.
+/// Skip comments (by rule `COMMENT`) or white spaces (by rule `WHITESPACE`) if there is any.
 /// Never fail.
 pub struct Ign<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> {
     _phantom: PhantomData<(&'i R, &'i COMMENT, &'i WHITESPACE)>,
@@ -660,7 +667,7 @@ impl<
     }
 }
 
-/// Match either of two expressions
+/// Match either of two expressions.
 pub enum Choice<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> {
     /// Matched first expression.
     First(T1, PhantomData<&'i R>),
@@ -713,7 +720,7 @@ impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> Debug for Choi
 
 /// Repeatably match `T`.
 pub struct Rep<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> {
-    /// Matched pairs.
+    /// Matched nodes.
     pub content: Vec<T>,
     _phantom: PhantomData<(&'i R, &'i IGNORED)>,
 }
@@ -768,7 +775,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>>
     }
 }
 
-/// Drops the top of the stack.
+/// Drop the top of the stack.
+/// Fail if there is no span in the stack.
 pub struct DROP<'i> {
     _phantom: PhantomData<&'i str>,
 }
@@ -796,7 +804,7 @@ impl<'i> Debug for DROP<'i> {
     }
 }
 
-/// Match and pop the top of the stack.
+/// Match and pop the top span of the stack.
 pub struct POP<'i> {
     /// Matched span.
     pub span: Span<'i>,
@@ -828,7 +836,7 @@ impl<'i> Debug for POP<'i> {
     }
 }
 
-/// Match and pop all elements in the stack.
+/// Match and pop all spans in the stack in top-to-bottom-order.
 #[allow(non_camel_case_types)]
 #[derive(Debug)]
 pub struct POP_ALL<'i> {
@@ -941,7 +949,7 @@ impl<'i> Debug for AlwaysFail<'i> {
     }
 }
 
-/// Start point of a rule.
+/// Start point of an atomic rule.
 ///
 /// Force inner tokens to be atomic.
 ///
@@ -1002,7 +1010,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapp
     }
 }
 
-/// Start point of a rule.
+/// Start point of a non-atomic rule.
 ///
 /// Force inner tokens to be not atomic.
 ///
@@ -1121,7 +1129,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Push<'i, R, T> {
     }
 }
 
-/// Match `START`..`END` of the stack.
+/// Match `[START:END]` in top-to-bottom order of the stack.
 pub struct PeekSlice2<'i, R: RuleType, const START: i32, const END: i32> {
     _phantom: PhantomData<&'i R>,
 }
@@ -1149,7 +1157,7 @@ impl<'i, R: RuleType, const START: i32, const END: i32> Debug for PeekSlice2<'i,
     }
 }
 
-/// Match `START`..`END` of the stack.
+/// Match `[START:END]` in top-to-bottom order of the stack.
 pub struct PeekSlice1<'i, R: RuleType, const START: i32> {
     _phantom: PhantomData<&'i R>,
 }
@@ -1175,7 +1183,7 @@ impl<'i, R: RuleType, const START: i32> Debug for PeekSlice1<'i, R, START> {
     }
 }
 
-/// Start point of a rule.
+/// Start point of a normal rule.
 ///
 /// Will not change atomicity.
 ///
@@ -1362,7 +1370,9 @@ pub type ASCII_ALPHANUMERIC<'i, R> = Choice<'i, R, ASCII_ALPHA<'i, R>, ASCII_DIG
 #[allow(non_camel_case_types)]
 pub type ASCII<'i, R> = CharRange<'i, R, '\x00', '\x7f'>;
 
-/// Match char by
+/// Match char by a predicate.
+///
+/// Return Some(char) if matched.
 pub fn match_char_by(position: &mut Position<'_>, pred: impl FnOnce(char) -> bool) -> Option<char> {
     let mut res = None;
     position.match_char_by(|c| {

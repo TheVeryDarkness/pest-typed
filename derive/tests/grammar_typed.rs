@@ -7,6 +7,10 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Copied from **pest/derive/tests/grammar.rs** (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
+//! and modified.
+//! Overried the macro [`parses_to`].
+
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 

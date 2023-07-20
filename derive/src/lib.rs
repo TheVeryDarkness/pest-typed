@@ -9,16 +9,25 @@
 
 #![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
 
-//! Derive typed nodes from pest grammar.
-//! Refer to https://pest.rs for pest's syntax and built-in rules.
+//! Derive statically typed nodes and parser from pest grammar.
+//! Aimed to add enhancement to pest for those in need.
+//!
+//! When using this crate, remember to add **pest_typed** as a dependency.
+//!
+//! - Refer to <https://pest.rs> for pest's syntax and built-in rules.
+//! - Refer to [`pest_typed_generator`] to see the rule of type generation.
+//! - Refer to [`derive_typed_parser`] to see how to use the macro.
 
 use proc_macro::TokenStream;
 
-/// The main method that's called by the proc macro
-/// (a wrapper around `pest_generator::derive_typed_parser`)
+/// The main method that's called by the proc macro [`pest_typed_generator::derive_typed_parser`].
 ///
-/// `emit_rule_reference` and `emit_tagged_node_reference` request the generator
-/// to generate corresponding functions.
+/// Attributes (see [pest](https://pest.rs) for more information):
+/// - `grammar`: specify grammar file path.
+/// - `grammar`: provide grammars in an inline string.
+/// - `emit_rule_reference`: emit helper functions to access those rules referenced by current rule.
+/// - `emit_tagged_node_reference`: emit help functions to access those nodes with tags referenced by current rule.
+///   Only takes effect when node tags are enabled (currently controlled by feature **grammar-extras**.).
 #[proc_macro_derive(
     TypedParser,
     attributes(

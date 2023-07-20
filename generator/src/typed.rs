@@ -1,3 +1,12 @@
+// pest. The Elegant Parser
+// Copyright (c) 2018 Dragoș Tiselice
+//
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
+
 // pest-typed. A statically typed version of pest.
 // Copyright (c) 2023 黄博奕
 //
@@ -7,7 +16,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! Adapted from [generator.rs](./generator.rs).
+//! Adapted from [generator.rs](./generator.rs) (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7).
 
 use super::docs::{consume, DocComment};
 use super::generator::{generate_enum, generate_include};
@@ -27,7 +36,11 @@ use syn::{Attribute, DeriveInput};
 /// on the parsed grammar. If `include_grammar` is set to true, it'll generate an explicit
 /// "include_str" statement (done in pest_derive, but turned off in the local bootstrap).
 ///
-/// Add attributes `emit_rule_reference` and `emit_tagged_node_reference`.
+/// Attributes:
+/// - `grammar` and `grammar_inline`: see [`mod@pest`].
+/// - `emit_rule_reference`: emit helper functions to access those rules referenced by current rule.
+/// - `emit_tagged_node_reference`: emit help functions to access those nodes with tags referenced by current rule.
+///   Only takes effect when node tags are enabled (currently controlled by feature **grammar-extras**. See [`mod@pest`]).
 pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
     let (name, generics, contents, emit_rule_reference, emit_tagged_node_reference) =

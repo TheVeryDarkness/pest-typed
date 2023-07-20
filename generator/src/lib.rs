@@ -7,6 +7,16 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! A code generator based on [`pest`].
+//!
+//! It can create corresponding type definitions from pest grammar files.
+//!
+//! Here is a table that shows the generation rule.
+//!
+//! |    Syntax    |  Used generics |
+//! |:------------:|:--------------:|
+//! | Exact string | [`pest_typed`] |
+
 mod graph;
 mod typed;
 pub use typed::derive_typed_parser;
@@ -14,5 +24,5 @@ pub use typed::derive_typed_parser;
 // Below modules are copied from pest and modified.
 mod docs;
 mod generator;
-pub mod types;
 mod helper;
+pub mod types;

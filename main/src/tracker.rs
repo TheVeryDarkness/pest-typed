@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! Types for Parsing failures.
+//! Tracker for parsing failures.
 
 use super::{
     error::{Error, ErrorVariant},
