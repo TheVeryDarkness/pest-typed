@@ -922,7 +922,6 @@ fn generate_graph(
     emit_rule_reference: bool,
     emit_tagged_node_reference: bool,
 ) -> Output {
-    // println!("{:#?}", rules);
     let mut res = Output::new();
     for rule in rules.iter() {
         let rule_name = rule.name.as_str();
