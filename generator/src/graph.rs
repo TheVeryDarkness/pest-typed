@@ -181,24 +181,24 @@ impl Node {
         };
         let vec = vec_type();
         match self {
-            Node::Leaf(id) => (quote! {.content.deref()}, quote! {&#id}),
+            Node::Leaf(id) => (quote! {{let res = res.content.deref(); res}}, quote! {&#id}),
             Node::First(inner) => {
                 let (pa, ty) = inner.expand();
-                (quote! {.first #pa}, quote! {#ty})
+                (quote! {{let res = &res.first; #pa}}, quote! {#ty})
             }
             Node::Second(inner) => {
                 let (pa, ty) = inner.expand();
-                (quote! {.second #pa}, quote! {#ty})
+                (quote! {{let res = &res.second; #pa}}, quote! {#ty})
             }
             Node::Content(inner) => {
                 let (pa, ty) = inner.expand();
-                (quote! {.content #pa}, quote! {#ty})
+                (quote! {{let res = &res.content; #pa}}, quote! {#ty})
             }
             Node::OptionalContent(flatten, inner) => {
                 let (pa, ty) = inner.expand();
                 let flat = flat(flatten);
                 (
-                    quote! {.content.as_ref().and_then(|e| Some(e #pa)) #flat},
+                    quote! {{let res = res.content.as_ref().and_then(|res| Some(#pa)) #flat; res}},
                     opt(flatten, ty),
                 )
             }
@@ -206,7 +206,7 @@ impl Node {
                 let (pa, ty) = inner.expand();
                 let flat = flat(flatten);
                 (
-                    quote! {.get_first().as_ref().and_then(|e| Some(e #pa)) #flat},
+                    quote! {{let res = res.get_first().as_ref().and_then(|res| Some(#pa)) #flat; res}},
                     opt(flatten, ty),
                 )
             }
@@ -214,20 +214,20 @@ impl Node {
                 let (pa, ty) = inner.expand();
                 let flat = flat(flatten);
                 (
-                    quote! {.get_second().as_ref().and_then(|e| Some(e #pa)) #flat},
+                    quote! {{let res = res.get_second().as_ref().and_then(|res| Some(#pa)) #flat; res}},
                     opt(flatten, ty),
                 )
             }
             Node::Contents(inner) => {
                 let (pa, ty) = inner.expand();
                 (
-                    quote! {.content.iter().map(|e| e #pa).collect::<#vec<_>>()},
+                    quote! {{let res = res.content.iter().map(|res| #pa).collect::<#vec<_>>(); res}},
                     quote! {#vec::<#ty>},
                 )
             }
             Node::Tuple(tuple) => {
                 let (pa, ty): (Vec<_>, Vec<_>) = tuple.iter().map(|e| e.expand()).unzip();
-                (quote! {(#(#pa),*)}, quote! {(#(#ty),*)})
+                (quote! {{let res = (#(#pa),*); res}}, quote! {(#(#ty),*)})
             }
         }
     }
@@ -300,7 +300,8 @@ impl Accesser {
             let src = quote! {
                 #[allow(non_snake_case)]
                 pub fn #id(&self) -> #types {
-                    self.content #paths
+                    let res = &self.content;
+                    #paths
                 }
             };
             // We may generate source codes to help debugging here.
