@@ -31,8 +31,8 @@ use pest_meta::{optimizer::optimize, unwrap_or_report};
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::path::PathBuf;
+use syn::DeriveInput;
 use syn::{self, Generics, Ident};
-use syn::{Attribute, DeriveInput};
 
 /// Processes the derive/proc macro input and generates the corresponding typed parser and nodes
 /// based on the parsed grammar. It will generate an explicit "include_str" statement.

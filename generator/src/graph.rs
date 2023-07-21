@@ -18,7 +18,6 @@ use quote::{format_ident, quote};
 use std::collections::btree_map;
 pub use std::collections::BTreeMap as Map;
 use std::collections::BTreeSet;
-use std::ops::Deref;
 
 pub fn pest() -> TokenStream {
     quote! {::pest_typed}
@@ -532,7 +531,7 @@ impl Output {
     }
 }
 
-/// Returns type name.
+/// Returns (type name, accesser).
 fn process_single_alias(
     map: &mut Output,
     expr: &OptimizedExpr,
@@ -990,18 +989,45 @@ fn generate_graph_node(
             )
         }
         #[cfg(feature = "grammar-extras")]
-        OptimizedExpr::NodeTag(inner_expr, _tag) => {
-            generate_graph_node(
+        OptimizedExpr::NodeTag(inner_expr, tag) => {
+            let (inner, accesser) = generate_graph_node(
                 inner_expr,
                 rule_name,
-                format!("{}_0", candidate_name),
+                format!("{}", candidate_name),
                 map,
                 explicit,
                 inner_spaces,
                 emission,
                 config,
             );
-            todo!()
+            let id = ident(tag.as_str());
+            let accesser = if config.emit_tagged_node_reference {
+                let new_accesser = Accesser::from_item(tag.clone(), id);
+                if config.truncate_accesser_at_node_tag {
+                    let accessers = accesser.collect();
+                    map.insert(quote! {
+                        impl<'i> #inner {
+                            #accessers
+                        }
+                    });
+                    new_accesser
+                } else {
+                    new_accesser.join(accesser)
+                }
+            } else {
+                accesser
+            };
+            process_single_alias(
+                map,
+                inner_expr,
+                rule_name,
+                candidate_name,
+                inner,
+                accesser,
+                inner_spaces,
+                emission,
+                explicit,
+            )
         }
     }
 }
