@@ -15,10 +15,13 @@ Attributes:
   - `grammar`: specify grammar file path.
   - `grammar`: provide grammars in an inline string.
 - Generation option:
-  - `emit_rule_reference`: emit [accesser functions](#accesser-functions) for those rules referenced by current rule.
-  - `emit_tagged_node_reference`: emit [accesser functions](#accesser-functions) for those tagged nodes referenced by current rule.
-    Only takes effect when node tags are enabled (currently controlled by feature **grammar-extras** of [pest](https://docs.rs/pest/latest/pest/).).
-  - `do_not_emit_span`: never emit field `span` for rules.
+
+  |         Attribute name          | Default value |                                                                                                                      Meaning                                                                                                                      |
+  | :-----------------------------: | :-----------: | :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+  |      `emit_rule_reference`      |     false     |                                                                            Emit [accesser functions](#accesser-functions) for those rules referenced by current rule.                                                                             |
+  |  `emit_tagged_node_reference`   |     false     | Emit [accesser functions](#accesser-functions) for those tagged nodes referenced by current rule. Only takes effect when node tags are enabled (currently controlled by feature **grammar-extras** of [pest](https://docs.rs/pest/latest/pest/)). |
+  |       `do_not_emit_span`        |     false     |                                                                                                        Never emit field `span` for rules.                                                                                                         |
+  | `truncate_accesser_at_node_tag` |     true      |                                                              Generated [accesser functions](#accesser-functions) won't contain those referenced rules or tags inside a tagged node.                                                               |
 
 ## Accesser functions
 
