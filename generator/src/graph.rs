@@ -999,8 +999,7 @@ fn generate_graph_node(
                 explicit,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             todo!()
         }
