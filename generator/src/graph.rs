@@ -1008,8 +1008,6 @@ pub fn generate_typed_pair_from_rule(
     emit_rule_reference: bool,
     emit_tagged_node_reference: bool,
 ) -> TokenStream {
-    // let names: Vec<_> = rules.iter().map(|rule| &rule.name).collect();
-    // eprintln!("{:#?}", names);
     let pest_typed = pest_typed();
     let graph = generate_graph(rules, emit_rule_reference, emit_tagged_node_reference);
     let as_wrapper = |name: &Ident| {
