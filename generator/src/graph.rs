@@ -343,13 +343,22 @@ fn _span() -> TokenStream {
     quote! {#pest::Span}
 }
 
+#[derive(Clone, Copy)]
+enum Emission {
+    Nothing,
+    Span,
+    InnerToken,
+}
+
 fn rule(
-    name: &Ident,
+    name: &str,
+    id: &Ident,
     type_name: &TokenStream,
     rule_name: &Ident,
     doc: &String,
     accessers: &Accesser,
     inner_spaces: Option<bool>,
+    emission: Emission,
 ) -> TokenStream {
     let pest_typed = pest_typed();
     let rule_wrappers = rule_wrappers();
@@ -376,40 +385,81 @@ fn rule(
             let (input, _) = #ignore::parse_with::<false, #rule_wrappers::EOI>(input, &mut stack);
         }
     };
+    let (fields, parse_impl, debug_impl) = match emission {
+        Emission::Nothing => (
+            quote! {
+                _phantom: ::core::marker::PhantomData<&'i #type_name>,
+            },
+            quote! {
+                let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack)?;
+                Ok((input, Self { _phantom: ::core::marker::PhantomData }))
+            },
+            quote! {
+                f.debug_struct(#name)
+                    .finish()
+            },
+        ),
+        Emission::Span => (
+            quote! {
+                #[doc = "Matched content."]
+                pub content: #type_name,
+                pub span: #span<'i>,
+            },
+            quote! {
+                let start = input.clone();
+                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack)?;
+                let span = start.span(&input);
+                Ok((input, Self { content, span }))
+            },
+            quote! {
+                f.debug_struct(#name)
+                    .field("content", &self.content)
+                    .field("span", &self.span)
+                    .finish()
+            },
+        ),
+        Emission::InnerToken => (
+            quote! {
+                #[doc = "Matched content."]
+                pub content: #type_name,
+            },
+            quote! {
+                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack)?;
+                Ok((input, Self { content }))
+            },
+            quote! {
+                f.debug_struct(#name)
+                    .field("content", &self.content)
+                    .finish()
+            },
+        ),
+    };
     quote! {
         #[doc = #doc]
         #[doc = #atomicity_doc]
         #[allow(non_camel_case_types)]
-        #[derive(Debug)]
-        pub struct #name<'i> {
-            #[doc = "Matched content."]
-            pub content: #type_name,
+        pub struct #id<'i> {
+            #fields
         }
-        impl<'i> #name<'i> {
+        impl<'i> #id<'i> {
             #accessers
         }
-        impl<'i> #pest_typed::RuleWrapper<super::Rule> for #name<'i> {
+        impl<'i> #pest_typed::RuleWrapper<super::Rule> for #id<'i> {
             const RULE: super::Rule = super::Rule::#rule_name;
         }
-        impl<'i> #pest_typed::TypeWrapper for #name<'i> {
+        impl<'i> #pest_typed::TypeWrapper for #id<'i> {
             type Inner = #type_name;
         }
-        impl<'i> ::core::convert::From<#type_name> for #name<'i> {
-            fn from(content: #type_name) -> Self {
-                Self { content }
-            }
-        }
-        impl<'i> #pest_typed::TypedNode<'i, super::Rule> for #name<'i> {
+        impl<'i> #pest_typed::TypedNode<'i, super::Rule> for #id<'i> {
             #[inline]
             fn try_parse_with<const ATOMIC: #_bool, _Rule: #pest_typed::RuleWrapper<super::Rule>>(
                 input: #position<'i>,
                 stack: &mut #stack<#span<'i>>,
             ) -> #result<(#position<'i>, Self), #tracker<'i, super::Rule>> {
-                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack)?;
-                Ok((input, Self::from(content)))
+                #parse_impl
             }
         }
-        impl<'i> #pest_typed::ParsableTypedNode<'i, super::Rule> for #name<'i> {
+        impl<'i> #pest_typed::ParsableTypedNode<'i, super::Rule> for #id<'i> {
             #[inline]
             fn parse(input: &'i #str) -> #result<Self, #error<super::Rule>> {
                 let mut stack = #stack::new();
@@ -433,6 +483,11 @@ fn rule(
                     Ok((input, res)) => Ok((input, res)),
                     Err(e) => return Err(e.collect()),
                 }
+            }
+        }
+        impl<'i> ::core::fmt::Debug for #id<'i> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                #debug_impl
             }
         }
     }
@@ -483,6 +538,7 @@ fn process_single_alias(
     type_name: TokenStream,
     accessers: Accesser,
     inner_spaces: Option<bool>,
+    emission: Emission,
     explicit: bool,
 ) -> (TokenStream, Accesser) {
     let rule_name = ident(rule_name);
@@ -490,12 +546,14 @@ fn process_single_alias(
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
         let def = rule(
+            candidate_name.as_str(),
             &name,
             &type_name,
             &rule_name,
             &doc,
             &accessers,
             inner_spaces,
+            emission,
         );
         map.insert(def);
         (quote! {#name::<'i>}, accessers)
@@ -513,8 +571,7 @@ fn generate_graph_node(
     map: &mut Output,
     explicit: bool,
     inner_spaces: Option<bool>,
-    inner_tokens: bool,
-    silent: bool,
+    emission: Emission,
     emit_rule_reference: bool,
     emit_tagged_node_reference: bool,
 ) -> (TokenStream, Accesser) {
@@ -544,6 +601,7 @@ fn generate_graph_node(
                 },
                 Accesser::new(),
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -569,6 +627,7 @@ fn generate_graph_node(
                 },
                 Accesser::new(),
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -587,6 +646,7 @@ fn generate_graph_node(
             },
             Accesser::new(),
             inner_spaces,
+            emission,
             explicit,
         ),
         OptimizedExpr::Push(expr) => {
@@ -597,8 +657,7 @@ fn generate_graph_node(
                 map,
                 false,
                 inner_spaces,
-                inner_tokens,
-                silent,
+                emission,
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
@@ -612,6 +671,7 @@ fn generate_graph_node(
                 },
                 accesser.content(),
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -637,6 +697,7 @@ fn generate_graph_node(
                 },
                 Accesser::new(),
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -653,6 +714,7 @@ fn generate_graph_node(
                 },
                 Accesser::new(),
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -671,6 +733,7 @@ fn generate_graph_node(
                 quote! {#pest_typed::predefined_node::Box::<'i, super::Rule, #inner::<'i>>},
                 accessers,
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -682,8 +745,7 @@ fn generate_graph_node(
                 map,
                 false,
                 inner_spaces,
-                inner_tokens,
-                silent,
+                emission,
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
@@ -697,6 +759,7 @@ fn generate_graph_node(
                 },
                 accessers.content(),
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -709,8 +772,7 @@ fn generate_graph_node(
                 map,
                 false,
                 inner_spaces,
-                inner_tokens,
-                silent,
+                emission,
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
@@ -724,6 +786,7 @@ fn generate_graph_node(
                 },
                 Accesser::new(),
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -735,8 +798,7 @@ fn generate_graph_node(
                 map,
                 false,
                 inner_spaces,
-                inner_tokens,
-                silent,
+                emission,
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
@@ -751,6 +813,7 @@ fn generate_graph_node(
                 },
                 accessers,
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -762,8 +825,7 @@ fn generate_graph_node(
                 map,
                 false,
                 inner_spaces,
-                inner_tokens,
-                silent,
+                emission,
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
@@ -774,8 +836,7 @@ fn generate_graph_node(
                 map,
                 false,
                 inner_spaces,
-                inner_tokens,
-                silent,
+                emission,
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
@@ -795,6 +856,7 @@ fn generate_graph_node(
                 },
                 acc_first.first().join(acc_second.second()),
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -806,8 +868,7 @@ fn generate_graph_node(
                 map,
                 false,
                 inner_spaces,
-                inner_tokens,
-                silent,
+                emission,
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
@@ -819,8 +880,7 @@ fn generate_graph_node(
                 map,
                 false,
                 inner_spaces,
-                inner_tokens,
-                silent,
+                emission,
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
@@ -840,6 +900,7 @@ fn generate_graph_node(
                 },
                 acc_first.join(acc_second),
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -851,8 +912,7 @@ fn generate_graph_node(
                 map,
                 false,
                 inner_spaces,
-                inner_tokens,
-                silent,
+                emission,
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
@@ -865,6 +925,7 @@ fn generate_graph_node(
                 quote! {#pest_typed::predefined_node::Opt::<'i, super::Rule, #inner_name>},
                 accessers,
                 inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -876,8 +937,7 @@ fn generate_graph_node(
                 map,
                 false,
                 inner_spaces,
-                inner_tokens,
-                silent,
+                emission,
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
@@ -896,6 +956,45 @@ fn generate_graph_node(
                 },
                 accessers.contents(),
                 inner_spaces,
+                emission,
+                explicit,
+            )
+        }
+        #[cfg(feature = "grammar-extras")]
+        OptimizedExpr::RepOnce(inner) => {
+            let (inner_name, accessers) = generate_graph_node(
+                inner,
+                rule_name,
+                format!("{}_ro", candidate_name),
+                map,
+                false,
+                inner_spaces,
+                emission,
+                emit_rule_reference,
+                emit_tagged_node_reference,
+            );
+            process_single_alias(
+                map,
+                expr,
+                rule_name,
+                candidate_name,
+                quote! {
+                    #pest_typed::predefined_node::Seq::<
+                        'i,
+                        super::Rule,
+                        #inner_name,
+                        #pest_typed::predefined_node::Rep::<
+                            'i,
+                            super::Rule,
+                            #inner_name,
+                            #ignore,
+                        >,
+                        #ignore
+                    >
+                },
+                accessers.contents(),
+                inner_spaces,
+                emission,
                 explicit,
             )
         }
@@ -908,8 +1007,7 @@ fn generate_graph_node(
                 map,
                 explicit,
                 inner_spaces,
-                inner_tokens,
-                silent,
+                emission,
                 emit_rule_reference,
                 emit_tagged_node_reference,
             );
@@ -936,8 +1034,7 @@ fn generate_graph(
                     &mut res,
                     true,
                     None,
-                    true,
-                    false,
+                    Emission::InnerToken,
                     emit_rule_reference,
                     emit_tagged_node_reference,
                 );
@@ -950,8 +1047,7 @@ fn generate_graph(
                     &mut res,
                     true,
                     None,
-                    true,
-                    true,
+                    Emission::Nothing,
                     emit_rule_reference,
                     emit_tagged_node_reference,
                 );
@@ -964,8 +1060,7 @@ fn generate_graph(
                     &mut res,
                     true,
                     Some(true),
-                    true,
-                    true,
+                    Emission::InnerToken,
                     emit_rule_reference,
                     emit_tagged_node_reference,
                 );
@@ -978,8 +1073,7 @@ fn generate_graph(
                     &mut res,
                     true,
                     Some(false),
-                    true,
-                    false,
+                    Emission::InnerToken,
                     emit_rule_reference,
                     emit_tagged_node_reference,
                 );
@@ -992,8 +1086,7 @@ fn generate_graph(
                     &mut res,
                     true,
                     Some(false),
-                    false,
-                    false,
+                    Emission::Span,
                     emit_rule_reference,
                     emit_tagged_node_reference,
                 );
