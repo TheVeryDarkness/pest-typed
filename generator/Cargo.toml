@@ -13,7 +13,7 @@ grammar-extras = ["pest_meta/grammar-extras"]
 
 [dependencies]
 pest = { version = ">=2.7.1" }
-proc-macro2 = { version = "*" }
+proc-macro2 = { version = "^1.0.66" }
 pest_meta = { version = ">=2.7.1" }
-quote = { version = "*" }
-syn = { version = "*" }
+quote = { version = "^1.0.31" }
+syn = { version = "^2.0.26" }
