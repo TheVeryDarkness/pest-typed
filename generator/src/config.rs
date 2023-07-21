@@ -12,6 +12,7 @@ pub(crate) struct Config {
     pub emit_rule_reference: bool,
     pub emit_tagged_node_reference: bool,
     pub do_not_emit_span: bool,
+    pub truncate_accesser_at_node_tag: bool,
 }
 impl Config {
     pub fn default() -> Self {
@@ -19,6 +20,7 @@ impl Config {
             emit_rule_reference: false,
             emit_tagged_node_reference: false,
             do_not_emit_span: false,
+            truncate_accesser_at_node_tag: true,
         }
     }
 }

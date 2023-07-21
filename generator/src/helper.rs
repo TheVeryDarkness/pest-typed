@@ -69,22 +69,30 @@ pub(crate) enum GrammarSource {
     Inline(String),
 }
 
-pub(crate) fn get_attribute(attr: &Attribute) -> GrammarSource {
+pub(crate) fn get_string(attr: &Attribute) -> String {
     match &attr.meta {
         Meta::NameValue(name_value) => match &name_value.value {
             Expr::Lit(ExprLit {
                 lit: Lit::Str(string),
                 ..
-            }) => {
-                if name_value.path.is_ident("grammar") {
-                    GrammarSource::File(string.value())
-                } else {
-                    GrammarSource::Inline(string.value())
-                }
-            }
+            }) => string.value(),
             _ => panic!("grammar attribute must be a string"),
         },
         _ => panic!("grammar attribute must be of the form `grammar = \"...\"`"),
+    }
+}
+
+pub(crate) fn get_bool(attr: &Attribute) -> bool {
+    match &attr.meta {
+        Meta::Path(_) => true,
+        Meta::NameValue(name_value) => match &name_value.value {
+            Expr::Lit(ExprLit {
+                lit: Lit::Bool(val),
+                ..
+            }) => val.value(),
+            _ => panic!("flag attribute must be a boolean value."),
+        },
+        _ => panic!("flag attribute must be of the form `flag`, `flag = true` or `flag = false`"),
     }
 }
 

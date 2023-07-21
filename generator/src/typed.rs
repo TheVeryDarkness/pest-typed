@@ -20,10 +20,11 @@
 
 use super::docs::{consume, DocComment};
 use super::generator::{generate_enum, generate_include};
-use super::helper::{collect_data, get_attribute, GrammarSource};
+use super::helper::{collect_data, get_string, GrammarSource};
 use super::types::result_type;
 use crate::config::Config;
 use crate::graph::{generate_typed_pair_from_rule, pest, pest_typed};
+use crate::helper::get_bool;
 use pest_meta::optimizer::OptimizedRule;
 use pest_meta::parser::{consume_rules, parse, rename_meta_rule, Rule};
 use pest_meta::{optimizer::optimize, unwrap_or_report};
@@ -67,37 +68,29 @@ fn parse_typed_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>,
     let name = ast.ident;
     let generics = ast.generics;
 
-    let grammar: Vec<&Attribute> = ast
-        .attrs
-        .iter()
-        .filter(|attr| {
-            let path = attr.meta.path();
-            path.is_ident("grammar") || path.is_ident("grammar_inline")
-        })
-        .collect();
-
-    if grammar.is_empty() {
-        panic!("a grammar file needs to be provided with the #[grammar = \"PATH\"] or #[grammar_inline = \"GRAMMAR CONTENTS\"] attribute");
-    }
-
-    let mut grammar_sources = Vec::with_capacity(grammar.len());
-    for attr in grammar {
-        grammar_sources.push(get_attribute(attr))
-    }
-
+    let mut grammar_sources = vec![];
     let mut config = Config::default();
     for attr in ast.attrs.iter() {
-        let path = attr.path();
-        if path.is_ident("emit_rule_reference") {
-            config.emit_rule_reference = true;
-        }
-        if path.is_ident("emit_tagged_node_reference") {
-            config.emit_tagged_node_reference = true;
-        }
-        if path.is_ident("do_not_emit_span") {
-            config.do_not_emit_span = true;
+        let path = attr.meta.path();
+        if path.is_ident("grammar") {
+            grammar_sources.push(GrammarSource::File(get_string(attr)));
+        } else if path.is_ident("grammar_inline") {
+            grammar_sources.push(GrammarSource::Inline(get_string(attr)));
+        } else if path.is_ident("emit_rule_reference") {
+            config.emit_rule_reference = get_bool(&attr);
+        } else if path.is_ident("emit_tagged_node_reference") {
+            config.emit_tagged_node_reference = get_bool(&attr);
+        } else if path.is_ident("do_not_emit_span") {
+            config.do_not_emit_span = get_bool(&attr);
+        } else if path.is_ident("truncate_accesser_at_node_tag") {
+            config.truncate_accesser_at_node_tag = get_bool(&attr);
         }
     }
+
+    if grammar_sources.is_empty() {
+        panic!("A grammar file needs to be provided with the #[grammar = \"PATH\"] or #[grammar_inline = \"GRAMMAR CONTENTS\"] attribute.");
+    }
+
     (name, generics, grammar_sources, config)
 }
 
