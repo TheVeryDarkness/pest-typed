@@ -8,6 +8,12 @@
 // modified, or distributed except according to those terms.
 
 //! Types for statically typed nodes and parser.
+//!
+//! Modules:
+//!
+//! - [Predefined generics](`predefined_node`).
+//! - [Error tracker](`tracker`).
+//! - [Error type](`error`) (copied from [`pest`]).
 
 #![no_std]
 

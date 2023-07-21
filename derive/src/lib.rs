@@ -15,19 +15,48 @@
 //! When using this crate, remember to add **pest_typed** as a dependency.
 //!
 //! - Refer to <https://pest.rs> for pest's syntax and built-in rules.
-//! - Refer to [`pest_typed_generator`] to see the rule of type generation.
+//! - Refer to [`pest_typed_generator`] for how it generates codes.
 //! - Refer to [`derive_typed_parser`] to see how to use the macro.
 
 use proc_macro::TokenStream;
 
 /// The main method that's called by the proc macro [`pest_typed_generator::derive_typed_parser`].
 ///
+/// ## Basic usage
+///
+/// ```
+/// #[doc="See https://datatracker.ietf.org/doc/html/rfc4180.html"]
+/// #[derive(TypedParser)]
+/// #[grammar_inline("../tests/csv.pest")]
+/// struct Parser;
+///
+/// # fn main() -> core::result::Result<(); error::Error<Rule>> {
+/// let input = "name,age\nTom,10\nJerry,20";
+/// let file = pairs::file::parse(input)?;
+/// let (first_row, following_rows) = file.row();
+/// let rows = core::iter::once(first_row).chain(following_rows.iter());
+/// # }
+/// ```
+///
+/// ## Generated contents
+///
+/// This derive macro will:
+/// - Implement [`pest_typed::TypedParser`] for dervied struct.
+/// - Generate several modules.
+///
+/// ## Attributes
+///
 /// Attributes (see [pest](https://pest.rs) for more information):
 /// - `grammar`: specify grammar file path.
 /// - `grammar`: provide grammars in an inline string.
-/// - `emit_rule_reference`: emit helper functions to access those rules referenced by current rule.
-/// - `emit_tagged_node_reference`: emit help functions to access those nodes with tags referenced by current rule.
+/// - `emit_rule_reference`: emit [accesser functions](#accesser-functions) for those rules referenced by current rule.
+/// - `emit_tagged_node_reference`: emit [accesser functions](#accesser-functions) for those tagged nodes referenced by current rule.
 ///   Only takes effect when node tags are enabled (currently controlled by feature **grammar-extras**.).
+///
+/// ## Accesser functions
+///
+/// An accesser function is
+///
 #[proc_macro_derive(
     TypedParser,
     attributes(

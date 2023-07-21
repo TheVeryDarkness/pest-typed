@@ -11,11 +11,7 @@
 //!
 //! It can create corresponding type definitions from pest grammar files.
 //!
-//! Here is a table that shows the generation rule.
-//!
-//! |    Syntax    |  Used generics |
-//! |:------------:|:--------------:|
-//! | Exact string | [`pest_typed`] |
+//! See <https://docs.rs/pest_typed/latest/pest_typed/predefined_node/> for generated types.
 
 mod graph;
 mod typed;
