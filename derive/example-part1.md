@@ -1,11 +1,13 @@
-## Basic usage
-
 Note: to use **pest_typed_derive** as a dependency, **pest_typed** is also needed.
+
+## Basic example
+
+Here is a basic example:
 
 ```rust
 extern crate alloc;
-use core::{iter, result::Result};
 use alloc::vec::Vec;
+use core::{iter, result::Result};
 use pest_typed_derive::TypedParser;
 use pest_typed::{ParsableTypedNode as _, TypedParser as _, error::Error};
 
@@ -33,7 +35,3 @@ fn main() -> Result<(), Error<Rule>> {
     Ok(())
 }
 ```
-
-## Generated contents
-
-This derive macro will:

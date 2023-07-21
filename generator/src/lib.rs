@@ -11,7 +11,7 @@
 //!
 //! It can create corresponding type definitions from pest grammar files.
 //!
-//! See <https://docs.rs/pest_typed/latest/pest_typed/predefined_node/> for generated types.
+//! See [pest_typed](https://docs.rs/pest_typed/latest/pest_typed/) for related traits and types.
 
 mod config;
 mod graph;

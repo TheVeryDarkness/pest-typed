@@ -18,11 +18,14 @@
 //! - Refer to [`pest_typed_generator`] for how it generates codes.
 //! - Refer to [`derive_typed_parser`] to see how to use the macro.
 
+#![doc = include_str!("../example-part1.md")]
+#![doc = include_str!("../example-part2.md")]
+
 use proc_macro::TokenStream;
 
 /// The main method that's called by the proc macro [`pest_typed_generator::derive_typed_parser`].
-#[doc = include_str!("../Usage-1.md")]
-#[doc = include_str!("../Usage-2.md")]
+#[doc = include_str!("../usage-part1.md")]
+#[doc = include_str!("../usage-part2.md")]
 #[proc_macro_derive(
     TypedParser,
     attributes(
