@@ -35,12 +35,7 @@ use syn::{Attribute, DeriveInput};
 /// Processes the derive/proc macro input and generates the corresponding typed parser and nodes
 /// based on the parsed grammar. It will generate an explicit "include_str" statement.
 ///
-/// Attributes:
-/// - `grammar` and `grammar_inline`: see [`mod@pest`].
-/// - `emit_rule_reference`: emit helper functions to access those rules referenced by current rule.
-/// - `emit_tagged_node_reference`: emit help functions to access those nodes with tags referenced by current rule.
-///   Only takes effect when node tags are enabled (currently controlled by feature **grammar-extras**. See [`mod@pest`]).
-/// - `do_not_emit_span`: emit `fn span()` to access span of each node.
+#[doc = include_str!("../Usage.md")]
 pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
     let (name, generics, contents, emit_rule_reference, emit_tagged_node_reference) =
