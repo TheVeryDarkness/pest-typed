@@ -52,7 +52,6 @@ pub(crate) fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream
 pub(crate) fn generate_enum(
     rules: &[OptimizedRule],
     doc_comment: &DocComment,
-    uses_eoi: bool,
 ) -> TokenStream {
     let rules = rules.iter().map(|rule| {
         let rule_name = format_ident!("r#{}", rule.name);
@@ -69,19 +68,12 @@ pub(crate) fn generate_enum(
     });
 
     let grammar_doc = &doc_comment.grammar_doc;
-    let eoi_def = if uses_eoi {
-        quote! {
-            EOI,
-        }
-    } else {
-        quote! {}
-    };
     quote! {
         #[doc = #grammar_doc]
         #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
         #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
         pub enum Rule {
-            #eoi_def
+            EOI,
             #( #rules ),*
         }
     }

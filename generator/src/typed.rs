@@ -127,7 +127,7 @@ fn generate_typed(
     } else {
         quote!()
     };
-    let rule_enum = generate_enum(&rules, doc_comment, true);
+    let rule_enum = generate_enum(&rules, doc_comment);
     let pairs =
         generate_typed_pair_from_rule(&rules, emit_rule_reference, emit_tagged_node_reference);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
