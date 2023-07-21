@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use crate::config::Config;
+
 use super::types::{option_type, result_type, vec_type};
 use pest::unicode::unicode_property_names;
 use pest_meta::optimizer::OptimizedExpr;
@@ -16,6 +18,7 @@ use quote::{format_ident, quote};
 use std::collections::btree_map;
 pub use std::collections::BTreeMap as Map;
 use std::collections::BTreeSet;
+use std::ops::Deref;
 
 pub fn pest() -> TokenStream {
     quote! {::pest_typed}
@@ -572,8 +575,7 @@ fn generate_graph_node(
     explicit: bool,
     inner_spaces: Option<bool>,
     emission: Emission,
-    emit_rule_reference: bool,
-    emit_tagged_node_reference: bool,
+    config: Config,
 ) -> (TokenStream, Accesser) {
     let ignore = ignore();
     let pest_typed = pest_typed();
@@ -658,8 +660,7 @@ fn generate_graph_node(
                 false,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             process_single_alias(
                 map,
@@ -720,7 +721,7 @@ fn generate_graph_node(
         }
         OptimizedExpr::Ident(id) => {
             let inner = ident(id);
-            let accessers = if emit_rule_reference {
+            let accessers = if config.emit_rule_reference {
                 Accesser::from_item(id.clone(), inner.clone())
             } else {
                 Accesser::new()
@@ -746,8 +747,7 @@ fn generate_graph_node(
                 false,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             process_single_alias(
                 map,
@@ -773,8 +773,7 @@ fn generate_graph_node(
                 false,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             process_single_alias(
                 map,
@@ -799,8 +798,7 @@ fn generate_graph_node(
                 false,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             let accessers = accessers.content();
             process_single_alias(
@@ -826,8 +824,7 @@ fn generate_graph_node(
                 false,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             let (second, acc_second) = generate_graph_node(
                 rhs,
@@ -837,8 +834,7 @@ fn generate_graph_node(
                 false,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             process_single_alias(
                 map,
@@ -869,8 +865,7 @@ fn generate_graph_node(
                 false,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             let acc_first = acc_first.optional_first();
             let (second, acc_second) = generate_graph_node(
@@ -881,8 +876,7 @@ fn generate_graph_node(
                 false,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             let acc_second = acc_second.optional_second();
             process_single_alias(
@@ -913,8 +907,7 @@ fn generate_graph_node(
                 false,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             let accessers = accessers.optional_content();
             process_single_alias(
@@ -938,8 +931,7 @@ fn generate_graph_node(
                 false,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             process_single_alias(
                 map,
@@ -970,8 +962,7 @@ fn generate_graph_node(
                 false,
                 inner_spaces,
                 emission,
-                emit_rule_reference,
-                emit_tagged_node_reference,
+                config,
             );
             process_single_alias(
                 map,
@@ -1016,11 +1007,7 @@ fn generate_graph_node(
     }
 }
 
-fn generate_graph(
-    rules: &[OptimizedRule],
-    emit_rule_reference: bool,
-    emit_tagged_node_reference: bool,
-) -> Output {
+fn generate_graph(rules: &[OptimizedRule], config: Config) -> Output {
     let mut res = Output::new();
     for rule in rules.iter() {
         let rule_name = rule.name.as_str();
@@ -1035,8 +1022,7 @@ fn generate_graph(
                     true,
                     None,
                     Emission::InnerToken,
-                    emit_rule_reference,
-                    emit_tagged_node_reference,
+                    config,
                 );
             }
             RuleType::Silent => {
@@ -1048,8 +1034,7 @@ fn generate_graph(
                     true,
                     None,
                     Emission::Nothing,
-                    emit_rule_reference,
-                    emit_tagged_node_reference,
+                    config,
                 );
             }
             RuleType::NonAtomic => {
@@ -1061,8 +1046,7 @@ fn generate_graph(
                     true,
                     Some(true),
                     Emission::InnerToken,
-                    emit_rule_reference,
-                    emit_tagged_node_reference,
+                    config,
                 );
             }
             RuleType::CompoundAtomic => {
@@ -1074,8 +1058,7 @@ fn generate_graph(
                     true,
                     Some(false),
                     Emission::InnerToken,
-                    emit_rule_reference,
-                    emit_tagged_node_reference,
+                    config,
                 );
             }
             RuleType::Atomic => {
@@ -1087,8 +1070,7 @@ fn generate_graph(
                     true,
                     Some(false),
                     Emission::Span,
-                    emit_rule_reference,
-                    emit_tagged_node_reference,
+                    config,
                 );
             }
         }
@@ -1096,13 +1078,12 @@ fn generate_graph(
     res
 }
 
-pub fn generate_typed_pair_from_rule(
+pub(crate) fn generate_typed_pair_from_rule(
     rules: &[OptimizedRule],
-    emit_rule_reference: bool,
-    emit_tagged_node_reference: bool,
+    config: Config,
 ) -> TokenStream {
     let pest_typed = pest_typed();
-    let graph = generate_graph(rules, emit_rule_reference, emit_tagged_node_reference);
+    let graph = generate_graph(rules, config);
     let as_wrapper = |name: &Ident| {
         quote! {
             #[allow(non_camel_case_types)]

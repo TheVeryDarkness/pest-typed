@@ -22,6 +22,7 @@ use super::docs::{consume, DocComment};
 use super::generator::{generate_enum, generate_include};
 use super::helper::{collect_data, get_attribute, GrammarSource};
 use super::types::result_type;
+use crate::config::Config;
 use crate::graph::{generate_typed_pair_from_rule, pest, pest_typed};
 use pest_meta::optimizer::OptimizedRule;
 use pest_meta::parser::{consume_rules, parse, rename_meta_rule, Rule};
@@ -38,8 +39,7 @@ use syn::{Attribute, DeriveInput};
 #[doc = include_str!("../Usage.md")]
 pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
-    let (name, generics, contents, emit_rule_reference, emit_tagged_node_reference) =
-        parse_typed_derive(ast);
+    let (name, generics, contents, config) = parse_typed_derive(ast);
 
     let (data, paths) = collect_data(contents);
 
@@ -59,12 +59,11 @@ pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenSt
         optimized,
         &doc_comment,
         include_grammar,
-        emit_rule_reference,
-        emit_tagged_node_reference,
+        config,
     )
 }
 
-fn parse_typed_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>, bool, bool) {
+fn parse_typed_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>, Config) {
     let name = ast.ident;
     let generics = ast.generics;
 
@@ -86,24 +85,20 @@ fn parse_typed_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>,
         grammar_sources.push(get_attribute(attr))
     }
 
-    let mut emit_rule_reference = false;
-    let mut emit_tagged_node_reference = false;
+    let mut config = Config::default();
     for attr in ast.attrs.iter() {
         let path = attr.path();
         if path.is_ident("emit_rule_reference") {
-            emit_rule_reference = true;
+            config.emit_rule_reference = true;
         }
         if path.is_ident("emit_tagged_node_reference") {
-            emit_tagged_node_reference = true;
+            config.emit_tagged_node_reference = true;
+        }
+        if path.is_ident("do_not_emit_span") {
+            config.do_not_emit_span = true;
         }
     }
-    (
-        name,
-        generics,
-        grammar_sources,
-        emit_rule_reference,
-        emit_tagged_node_reference,
-    )
+    (name, generics, grammar_sources, config)
 }
 
 /// Generate codes for Parser.
@@ -114,8 +109,7 @@ fn generate_typed(
     rules: Vec<OptimizedRule>,
     doc_comment: &DocComment,
     include_grammar: bool,
-    emit_rule_reference: bool,
-    emit_tagged_node_reference: bool,
+    config: Config,
 ) -> TokenStream {
     let include_fix = if include_grammar {
         generate_include(&name, paths)
@@ -123,8 +117,7 @@ fn generate_typed(
         quote!()
     };
     let rule_enum = generate_enum(&rules, doc_comment);
-    let pairs =
-        generate_typed_pair_from_rule(&rules, emit_rule_reference, emit_tagged_node_reference);
+    let pairs = generate_typed_pair_from_rule(&rules, config);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let result = result_type();
