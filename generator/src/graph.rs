@@ -381,7 +381,7 @@ fn rule(
     };
     let accessers = match emission {
         Emission::InnerToken => accessers.collect(),
-        Emission::Silent | Emission::Span => quote! {},
+        Emission::Nothing | Emission::Span => quote! {},
     };
     let stmt_ign = if let Some(false) = inner_spaces {
         quote! {}
