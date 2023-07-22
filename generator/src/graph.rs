@@ -406,8 +406,26 @@ fn rule(
         ),
         Emission::Span => (
             quote! {
+                #[doc = "Matched span."]
+                pub span: #span<'i>,
+            },
+            quote! {
+                let start = input.clone();
+                let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack)?;
+                let span = start.span(&input);
+                Ok((input, Self { span }))
+            },
+            quote! {
+                f.debug_struct(#name)
+                    .field("span", &self.span)
+                    .finish()
+            },
+        ),
+        Emission::InnerToken => (
+            quote! {
                 #[doc = "Matched content."]
                 pub content: #type_name,
+                #[doc = "Matched span."]
                 pub span: #span<'i>,
             },
             quote! {
@@ -420,21 +438,6 @@ fn rule(
                 f.debug_struct(#name)
                     .field("content", &self.content)
                     .field("span", &self.span)
-                    .finish()
-            },
-        ),
-        Emission::InnerToken => (
-            quote! {
-                #[doc = "Matched content."]
-                pub content: #type_name,
-            },
-            quote! {
-                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack)?;
-                Ok((input, Self { content }))
-            },
-            quote! {
-                f.debug_struct(#name)
-                    .field("content", &self.content)
                     .finish()
             },
         ),
