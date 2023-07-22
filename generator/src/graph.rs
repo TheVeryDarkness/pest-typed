@@ -371,7 +371,6 @@ fn rule(
     let pest = pest();
     let error = quote! {#pest::error::Error};
     let ignore = ignore();
-    let accessers = accessers.collect();
     let _bool = _bool();
     let str = _str();
     let tracker = tracker();
@@ -379,6 +378,10 @@ fn rule(
         Some(false) => (quote! {true}, "Atomic rule."),
         Some(true) => (quote! {false}, "Non-atomic rule."),
         None => (quote! {ATOMIC}, "Normal rule."),
+    };
+    let accessers = match emission {
+        Emission::InnerToken => accessers.collect(),
+        Emission::Silent | Emission::Span => quote! {},
     };
     let stmt_ign = if let Some(false) = inner_spaces {
         quote! {}
