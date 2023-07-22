@@ -1,5 +1,13 @@
 ## Extra examples
 
+### Silent rule and atomic rule
+
+There are three cases related to code generation:
+
+- Emit inner nodes and a span (normal rule, non-atomic rule and normal rule in **pest**).
+- Emit a whole span (atomic rule in **pest**).
+- Emit nothing (silent rule in **pest**). Just parse and drop.
+
 ### Node tags
 
 An example using node tags.

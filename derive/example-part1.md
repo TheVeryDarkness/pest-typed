@@ -2,7 +2,7 @@ Note: to use **pest_typed_derive** as a dependency, **pest_typed** is also neede
 
 ## Basic example
 
-Here is a basic example:
+Here is a basic example on how to access and process those rules in a rule:
 
 ```rust
 extern crate alloc;
