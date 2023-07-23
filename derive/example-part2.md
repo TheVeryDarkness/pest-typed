@@ -26,7 +26,7 @@ fn parse(input: &'static str) -> Result<(), pest_typed::error::Error<Rule>> {
     if let Some(b) = a.b() {
         // `b` is a silent rule, it contains nothing.
         assert_eq!(std::mem::size_of_val(b), 0);
-    } else if let Some(c) = a.c() { 
+    } else if let Some(c) = a.c() {
         assert_eq!(c.span.as_str(), "c");
     }
     let d = a.d();
@@ -38,32 +38,6 @@ fn parse(input: &'static str) -> Result<(), pest_typed::error::Error<Rule>> {
 fn main() -> Result<(), pest_typed::error::Error<Rule>> {
     parse("bd")?;
     parse("cd")?;
-    Ok(())
-}
-```
-
-### Node tags
-
-An example using node tags.
-
-```rust
-use pest_typed_derive::TypedParser;
-use pest_typed::{ParsableTypedNode as _, TypedParser as _, error::Error};
-
-#[derive(TypedParser)]
-#[grammar_inline = r#"a = { "a" ~ #b = (b1 | b2) } b1 = { "bbb" } b2 = { "cc" } "#]
-#[emit_rule_reference]
-#[emit_tagged_node_reference]
-struct Parser;
-
-fn main() -> Result<(), pest_typed::error::Error<Rule>> {
-    let a = pairs::a::parse("abbb")?;
-    let b = a.b();
-    if let Some(b1) = b.b1() {
-        assert_eq!(b1.span.as_str(), "bbb");
-    } else if let Some(b2) = b.b2() {
-        assert_eq!(b2.span.as_str(), "cc");
-    }
     Ok(())
 }
 ```
