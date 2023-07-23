@@ -43,6 +43,7 @@ impl<T: StringArrayWrapper> Storage<&'static [&'static str]> for T {
 pub trait RuleWrapper<R: RuleType> {
     /// Wrapped rule.
     const RULE: R;
+    type Rule;
 }
 
 /// Type wrapper.

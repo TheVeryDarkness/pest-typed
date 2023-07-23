@@ -1403,6 +1403,7 @@ mod tests {
                     pub struct $ids {}
                     impl super::RuleWrapper<super::Rule> for $ids {
                         const RULE:super::Rule = super::Rule::$ids;
+                        type Rule = super::Rule;
                     }
                 )*
             }
@@ -1423,6 +1424,7 @@ mod tests {
     }
     impl RuleWrapper<Rule> for Foo {
         const RULE: Rule = Rule::Foo;
+        type Rule = Rule;
     }
 
     type WHITESPACE<'i> = AtomicRule<
