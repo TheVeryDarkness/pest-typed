@@ -200,10 +200,10 @@ impl Node {
         match self {
             Node::Rule(t) => (
                 quote! {{let res = res.content.deref(); res}},
-                quote! {&#root::#t},
+                quote! {&#root::#t::<'i>},
             ),
             #[cfg(feature = "grammar-extras")]
-            Node::Tag(t) => (quote! {res}, quote! {&#root::#t}),
+            Node::Tag(t) => (quote! {res}, quote! {&#root::#t::<'i>}),
             Node::First(inner) => {
                 let (pa, ty) = inner.expand(&root);
                 (quote! {{let res = &res.first; #pa}}, quote! {#ty})
