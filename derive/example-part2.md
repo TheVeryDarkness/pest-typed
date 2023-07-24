@@ -1,16 +1,4 @@
-## Extra examples
-
-### Auto-skipped rules
-
-When a rule is not atomic, inner contents that match `COMMENT` or `WHITESPACE` will be skipped automatically.
-
-### Generation of inner content
-
-There are three cases related to code generation:
-
-- Emit inner nodes and a span (normal rule, non-atomic rule and compound atomic rule in **pest**).
-- Emit a whole span (atomic rule in **pest**).
-- Emit nothing (silent rule in **pest**). Just parse and drop.
+### Emitted Fields of Rule Structs
 
 ```rust
 use pest_typed_derive::TypedParser;

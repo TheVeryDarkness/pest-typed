@@ -1,6 +1,8 @@
+## Examples
+
 Note: to use **pest_typed_derive** as a dependency, **pest_typed** is also needed.
 
-## Basic example
+### Basic
 
 Here is a basic example on how to access and process those rules in a rule:
 

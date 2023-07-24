@@ -1,4 +1,4 @@
-### Node tags
+### Emitted Fields of Tag Structs
 
 An example using node tags.
 
