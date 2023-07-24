@@ -407,6 +407,7 @@ fn create(
     quote! {
         #(#[doc = #doc])*
         #[allow(non_camel_case_types)]
+        #[derive(Clone)]
         pub struct #id<'i> {
             #fields
         }
