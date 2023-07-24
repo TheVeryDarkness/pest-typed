@@ -568,10 +568,11 @@ impl Output {
             tagged_nodes: BTreeMap::new(),
         }
     }
+    /// Insert rule struct to rule module.
     fn insert(&mut self, tokens: TokenStream) {
         self.content.push(tokens);
     }
-    /// Insert tag module.
+    /// Insert tag struct to tag module.
     /// Return the module path relative to `pairs` module.
     #[cfg(feature = "grammar-extras")]
     fn insert_tag(&mut self, rule_name: &Ident, tokens: TokenStream) -> TokenStream {
