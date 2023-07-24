@@ -200,10 +200,10 @@ impl Node {
         match self {
             Node::Rule(t) => (
                 quote! {{let res = res.content.deref(); res}},
-                quote! {&#root::#t::<'i>},
+                quote! {&'s #root::#t::<'i>},
             ),
             #[cfg(feature = "grammar-extras")]
-            Node::Tag(t) => (quote! {res}, quote! {&#root::#t::<'i>}),
+            Node::Tag(t) => (quote! {res}, quote! {&'s #root::#t::<'i>}),
             Node::First(inner) => {
                 let (pa, ty) = inner.expand(&root);
                 (quote! {{let res = &res.first; #pa}}, quote! {#ty})
@@ -327,7 +327,7 @@ impl Accesser {
             let (paths, types) = node.expand(root);
             let src = quote! {
                 #[allow(non_snake_case)]
-                pub fn #id(&self) -> #types {
+                pub fn #id<'s>(&'s self) -> #types {
                     let res = &self.content;
                     #paths
                 }
