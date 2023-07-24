@@ -40,14 +40,14 @@ impl<T: StringArrayWrapper> Storage<&'static [&'static str]> for T {
 }
 
 /// Rule wrapper.
-pub trait RuleWrapper<R: RuleType> {
+pub trait RuleWrapper<R: RuleType>: Clone {
     /// Wrapped rule.
     const RULE: R;
     type Rule;
 }
 
 /// Type wrapper.
-pub trait TypeWrapper {
+pub trait TypeWrapper: Clone {
     /// Wrapped type.
     type Inner;
 }

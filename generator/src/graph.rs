@@ -691,6 +691,7 @@ fn generate_graph_node(
             let module = map.insert_wrapper(quote! {
                 #[doc = #doc]
                 #[allow(non_camel_case_types)]
+                #[derive(Clone)]
                 pub struct #wrapper();
                 impl #pest_typed::StringWrapper for #wrapper {
                     const CONTENT: &'static #str = #content;
@@ -718,6 +719,7 @@ fn generate_graph_node(
             let module = map.insert_wrapper(quote! {
                 #[doc = #doc]
                 #[allow(non_camel_case_types)]
+                #[derive(Clone)]
                 pub struct #wrapper();
                 impl #pest_typed::StringWrapper for #wrapper {
                     const CONTENT: &'static #str = #content;
@@ -791,6 +793,7 @@ fn generate_graph_node(
             let module = map.insert_wrapper(quote! {
                 #[doc = #doc]
                 #[allow(non_camel_case_types)]
+                #[derive(Clone)]
                 pub struct #wrapper();
                 impl #pest_typed::StringArrayWrapper for #wrapper {
                     const CONTENT: &'static[&'static #str] = &[ #(#strings),* ];
@@ -1235,6 +1238,7 @@ pub(crate) fn generate_typed_pair_from_rule(
     let as_wrapper = |name: &Ident| {
         quote! {
             #[allow(non_camel_case_types)]
+            #[derive(Clone)]
             pub struct #name;
             impl #pest_typed::RuleWrapper<super::Rule> for #name {
                 const RULE: super::Rule = super::Rule::#name;
@@ -1292,6 +1296,7 @@ fn generate_unicode(rule_names: &BTreeSet<&str>) -> TokenStream {
             results.push(quote! {
                 #[allow(non_camel_case_types)]
                 #[doc = #doc]
+                #[derive(Clone)]
                 pub struct #property_ident<'i> {
                     pub content: #char,
                     _phantom: ::core::marker::PhantomData<&'i #char>

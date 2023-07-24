@@ -20,7 +20,7 @@ use super::{
 /// Node of concrete syntax tree that never fails.
 pub trait NeverFailedTypedNode<'i, R: RuleType>
 where
-    Self: Sized + Debug,
+    Self: Sized + Debug + Clone,
 {
     /// Create typed node.
     /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
@@ -33,7 +33,7 @@ where
 /// Node of concrete syntax tree.
 pub trait TypedNode<'i, R: RuleType>
 where
-    Self: Sized + Debug,
+    Self: Sized + Debug + Clone,
 {
     /// Create typed node.
     /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
