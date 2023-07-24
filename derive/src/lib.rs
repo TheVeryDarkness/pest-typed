@@ -56,6 +56,7 @@ use proc_macro::TokenStream;
         emit_rule_reference,
         emit_tagged_node_reference,
         do_not_emit_span,
+        no_warnigs,
     )
 )]
 pub fn derive_typed_parser(input: TokenStream) -> TokenStream {

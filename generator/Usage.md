@@ -25,6 +25,9 @@ Attributes:
 
   See [pest_typed_derive](https://docs.rs/pest_typed_derive/latest/pest_typed_derive/) for more examples.
 
+- Processing option:
+  - `no_warnings`: do not show warnings.
+
 ## Accesser functions
 
 An accesser function is a function generated to access the referenced rules or tagged nodes.

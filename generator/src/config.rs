@@ -13,14 +13,16 @@ pub(crate) struct Config {
     pub emit_tagged_node_reference: bool,
     pub do_not_emit_span: bool,
     pub truncate_accesser_at_node_tag: bool,
+    pub no_warnigs: bool,
 }
-impl Config {
-    pub fn default() -> Self {
+impl Default for Config {
+    fn default() -> Self {
         Self {
             emit_rule_reference: false,
             emit_tagged_node_reference: false,
             do_not_emit_span: false,
             truncate_accesser_at_node_tag: true,
+            no_warnigs: false,
         }
     }
 }
