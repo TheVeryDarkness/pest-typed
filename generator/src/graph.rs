@@ -381,6 +381,7 @@ enum Emission {
 fn create(
     doc: &[&str],
     id: &Ident,
+    content_type: Option<&TokenStream>,
     fields: TokenStream,
     type_name: &TokenStream,
     rule_name: &Ident,
@@ -404,16 +405,40 @@ fn create(
     let ignore = ignore(&root);
     let rule = quote! {#root::Rule};
     let pairs = pairs();
+    let (content, deref) = match content_type {
+        Some(content_type) => (
+            quote! {
+                #[doc = "Matched content."]
+                pub content: #content_type,
+            },
+            quote! {
+                impl<'i> ::core::ops::Deref for #id<'i> {
+                    type Target = #content_type;
+                    fn deref(&self) -> &Self::Target {
+                        &self.content
+                    }
+                }
+                impl<'i> ::core::ops::DerefMut for #id<'i> {
+                    fn deref_mut(&mut self) -> &mut Self::Target {
+                        &mut self.content
+                    }
+                }
+            },
+        ),
+        None => (quote! {}, quote! {}),
+    };
     quote! {
         #(#[doc = #doc])*
         #[allow(non_camel_case_types)]
         #[derive(Clone)]
         pub struct #id<'i> {
+            #content
             #fields
         }
         impl<'i> #id<'i> {
             #accessers
         }
+        #deref
         impl<'i> #pest_typed::RuleWrapper<#root::Rule> for #id<'i> {
             const RULE: #root::Rule = #root::Rule::#rule_name;
             type Rule = #root::Rule;
@@ -488,8 +513,9 @@ fn rule(
         Emission::InnerToken => accessers.collect(&root),
         Emission::Nothing | Emission::Span => quote! {},
     };
-    let (fields, parse_impl, debug_impl) = match emission {
+    let (content_type, fields, parse_impl, debug_impl) = match emission {
         Emission::Nothing => (
+            None,
             quote! {
                 _phantom: ::core::marker::PhantomData<&'i #type_name>,
             },
@@ -503,6 +529,7 @@ fn rule(
             },
         ),
         Emission::Span => (
+            None,
             quote! {
                 #[doc = "Matched span."]
                 pub span: #span<'i>,
@@ -520,9 +547,8 @@ fn rule(
             },
         ),
         Emission::InnerToken => (
+            Some(type_name),
             quote! {
-                #[doc = "Matched content."]
-                pub content: #type_name,
                 #[doc = "Matched span."]
                 pub span: #span<'i>,
             },
@@ -543,6 +569,7 @@ fn rule(
     create(
         &[doc, atomicity_doc],
         id,
+        content_type,
         fields,
         type_name,
         rule_name,
@@ -1145,7 +1172,7 @@ fn generate_graph_node(
                     new_root,
                 );
                 let fields = quote! {
-                    pub content: #inner,
+                    /// Matched span.
                     pub span: #span<'i>,
                 };
                 let parse_impl = quote! {
@@ -1163,6 +1190,7 @@ fn generate_graph_node(
                 let def = create(
                     &[format!("Tag {} referenced by {}", tag, rule_name).as_str()],
                     &tag_id,
+                    Some(&inner),
                     fields,
                     &inner,
                     &ident(rule_name),

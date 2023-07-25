@@ -11,6 +11,7 @@
 //! The generator may use this for convenience.
 //! Normally you don't need to reference this module by yourself.
 
+use core::ops::{Deref, DerefMut};
 use core::{fmt, fmt::Debug, marker::PhantomData};
 
 use alloc::vec::Vec;
@@ -977,6 +978,28 @@ pub struct Box<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Boxed content.
     pub content: ::alloc::boxed::Box<T>,
     _phantom: PhantomData<&'i R>,
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Box<'i, R, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.content.as_ref()
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Box<'i, R, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.content.as_mut()
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> AsRef<T> for Box<'i, R, T> {
+    fn as_ref(&self) -> &T {
+        &self.content
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> AsMut<T> for Box<'i, R, T> {
+    fn as_mut(&mut self) -> &mut T {
+        &mut self.content
+    }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Box<'i, R, T> {
     #[inline]
