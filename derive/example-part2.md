@@ -7,7 +7,12 @@ use pest_typed_derive::TypedParser;
 use pest_typed::{ParsableTypedNode as _, Storage as _, TypedParser as _, error::Error};
 
 #[derive(TypedParser)]
-#[grammar_inline = r#"a = { (b | c) ~ d } b = _{ "b" } c = @{ "c" } d = ${ "d" }"#]
+#[grammar_inline = r#"
+a = { (b | c) ~ d }
+b = _{ "b" }
+c = @{ "c" }
+d = ${ "d" }
+"#]
 #[emit_rule_reference]
 struct Parser;
 

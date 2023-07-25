@@ -9,7 +9,11 @@ use pest_typed_derive::TypedParser;
 use pest_typed::{error::Error, ParsableTypedNode as _};
 
 #[derive(TypedParser)]
-#[grammar_inline = r#"a = { "a" ~ (b1 | b2) } b1 = { "bbb" } b2 = { "cc" } "#]
+#[grammar_inline = r#"
+a = { "a" ~ (b1 | b2) }
+b1 = { "bbb" }
+b2 = { "cc" }
+"#]
 #[emit_rule_reference]
 struct Parser;
 
