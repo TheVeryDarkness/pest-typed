@@ -20,7 +20,7 @@ grammar-extras = ["pest_typed_generator/grammar-extras"]
 all-features = true
 
 [dependencies]
-pest_typed_generator = { path = "../generator", version = "0.1.9" }
+pest_typed_generator = { path = "../generator", version = "0.1.10" }
 
 [dev-dependencies]
-pest_typed = { path = "../main", version = "0.1.9" }
+pest_typed = { path = "../main", version = "0.1.10" }
