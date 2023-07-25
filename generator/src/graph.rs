@@ -451,7 +451,8 @@ fn create(
             fn try_parse_with<const ATOMIC: #_bool, _Rule: #pest_typed::RuleWrapper<#rule>>(
                 input: #position<'i>,
                 stack: &mut #stack<#span<'i>>,
-            ) -> #result<(#position<'i>, Self), #tracker<'i, #rule>> {
+                tracker: &mut #tracker<'i, #rule>,
+            ) -> #result<(#position<'i>, Self), ()> {
                 #parse_impl
             }
         }
@@ -459,15 +460,17 @@ fn create(
             #[inline]
             fn parse(input: &'i #str) -> #result<Self, #error<#rule>> {
                 let mut stack = #stack::new();
+                let input = #position::from_start(input);
+                let mut tracker = #tracker::new(input);
                 let (input, res) =
-                    match Self::try_parse_with::<false, #rule_wrappers::#rule_name>(#position::from_start(input), &mut stack) {
+                    match Self::try_parse_with::<false, #rule_wrappers::#rule_name>(input, &mut stack, &mut tracker) {
                         Ok((input, res)) => (input, res),
-                        Err(e) => return Err(e.collect()),
+                        Err(_) => return Err(tracker.collect()),
                     };
                 let (input, _) = #ignore::parse_with::<false, #rule_wrappers::EOI>(input, &mut stack);
-                let (_, _) = match #root::#pairs::EOI::try_parse_with::<false, #rule_wrappers::EOI>(input, &mut stack) {
+                let (_, _) = match #root::#pairs::EOI::try_parse_with::<false, #rule_wrappers::EOI>(input, &mut stack, &mut tracker) {
                     Ok((input, res)) => (input, res),
-                    Err(e) => return Err(e.collect()),
+                    Err(_) => return Err(tracker.collect()),
                 };
                 Ok(res)
             }
@@ -475,9 +478,11 @@ fn create(
             #[inline]
             fn parse_partial(input: &'i #str) -> #result<(#position<'i>, Self), #error<#rule>> {
                 let mut stack = #stack::new();
-                match Self::try_parse_with::<false, #rule_wrappers::#rule_name>(#position::from_start(input), &mut stack) {
+                let input = #position::from_start(input);
+                let mut tracker = #tracker::new(input);
+                match Self::try_parse_with::<false, #rule_wrappers::#rule_name>(input, &mut stack, &mut tracker) {
                     Ok((input, res)) => Ok((input, res)),
-                    Err(e) => return Err(e.collect()),
+                    Err(_) => return Err(tracker.collect()),
                 }
             }
         }
@@ -520,7 +525,7 @@ fn rule(
                 _phantom: ::core::marker::PhantomData<&'i #type_name>,
             },
             quote! {
-                let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack)?;
+                let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
                 Ok((input, Self { _phantom: ::core::marker::PhantomData }))
             },
             quote! {
@@ -536,7 +541,7 @@ fn rule(
             },
             quote! {
                 let start = input.clone();
-                let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack)?;
+                let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
                 let span = start.span(&input);
                 Ok((input, Self { span }))
             },
@@ -554,7 +559,7 @@ fn rule(
             },
             quote! {
                 let start = input.clone();
-                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack)?;
+                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
                 let span = start.span(&input);
                 Ok((input, Self { content, span }))
             },
@@ -1177,7 +1182,7 @@ fn generate_graph_node(
                 };
                 let parse_impl = quote! {
                     let start = input.clone();
-                    let (input, content) = #inner::try_parse_with::<ATOMIC, #rule_wrappers::#rule_id>(input, stack)?;
+                    let (input, content) = #inner::try_parse_with::<ATOMIC, #rule_wrappers::#rule_id>(input, stack, tracker)?;
                     let span = start.span(&input);
                     Ok((input, Self { content, span }))
                 };
@@ -1376,12 +1381,15 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
                     fn try_parse_with<const ATOMIC: #bool, _Rule: #pest_typed::RuleWrapper<super::Rule>>(
                         mut input: #position<'i>,
                         _stack: &mut #stack<#span<'i>>,
-                    ) -> #result<(#position<'i>, Self), #tracker<'i, super::Rule>> {
+                        tracker: &mut #tracker<'i, super::Rule>,
+                    ) -> #result<(#position<'i>, Self), ()> {
                         match #pest_typed::predefined_node::match_char_by(&mut input, #pest_unicode::#property_ident) {
                             Some(content) => {
                                 Ok((input, Self::from(content)))
                             }
-                            None => Err(#tracker::new(input))
+                            None => {
+                                Err(())
+                            }
                         }
                     }
                 }

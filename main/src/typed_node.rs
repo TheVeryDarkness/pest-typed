@@ -40,7 +40,8 @@ where
     fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
-    ) -> Result<(Position<'i>, Self), Tracker<'i, R>>;
+        tracker: &mut Tracker<'i, R>,
+    ) -> Result<(Position<'i>, Self), ()>;
 }
 
 /// Node of concrete syntax tree.

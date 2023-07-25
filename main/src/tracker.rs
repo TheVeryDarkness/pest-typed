@@ -9,6 +9,8 @@
 
 //! Tracker for parsing failures.
 
+use core::cmp::Ordering;
+
 use super::{
     error::{Error, ErrorVariant},
     position::Position,
@@ -16,124 +18,137 @@ use super::{
 use alloc::{borrow::ToOwned, format, vec, vec::Vec};
 use pest::RuleType;
 
-/// Error tracker.
-pub enum Tracker<'i, R: RuleType> {
-    /// Positive attempts, negative attempts, position.
-    Attempts(Vec<R>, Vec<R>, Position<'i>),
+enum SpecialError {
     /// Peek slice out of bound.
-    SliceOutOfBound(i32, Option<i32>, Position<'i>),
+    SliceOutOfBound(i32, Option<i32>),
     /// Repeat too many times.
-    RepeatTooManyTimes(Position<'i>),
+    RepeatTooManyTimes,
     /// Accessing elements in empty stack, such as Drop or Pop.
-    EmptyStack(Position<'i>),
+    EmptyStack,
+}
+
+/// Error tracker.
+pub struct Tracker<'i, R: RuleType> {
+    position: Position<'i>,
+    positive: bool,
+    positives: Vec<R>,
+    negatives: Vec<R>,
+    special: Vec<SpecialError>,
 }
 impl<'i, R: RuleType> Tracker<'i, R> {
     /// Create an empty tracker for attempts.
     pub fn new(pos: Position<'i>) -> Self {
-        Self::Attempts(vec![], vec![], pos)
-    }
-    /// Create a tracker with positive attempts.
-    pub fn new_positive(positives: R, pos: Position<'i>) -> Self {
-        Self::Attempts(vec![positives], vec![], pos)
-    }
-    /// Create a tracker with negative attempts.
-    pub fn new_negative(negatives: R, pos: Position<'i>) -> Self {
-        Self::Attempts(vec![], vec![negatives], pos)
-    }
-    /// Get position.
-    pub fn position(self) -> Position<'i> {
-        match self {
-            Tracker::Attempts(_, _, pos) => pos,
-            Tracker::SliceOutOfBound(_, _, pos) => pos,
-            Tracker::RepeatTooManyTimes(pos) => pos,
-            Tracker::EmptyStack(pos) => pos,
+        Self {
+            position: pos,
+            positive: true,
+            positives: vec![],
+            negatives: vec![],
+            special: vec![],
         }
     }
-    /// Get position.
-    pub fn ref_position(&self) -> &Position<'i> {
-        match self {
-            Tracker::Attempts(_, _, pos) => pos,
-            Tracker::SliceOutOfBound(_, _, pos) => pos,
-            Tracker::RepeatTooManyTimes(pos) => pos,
-            Tracker::EmptyStack(pos) => pos,
+    fn clear(&mut self) {
+        self.positives.clear();
+        self.negatives.clear();
+        self.special.clear();
+    }
+    fn prepare(&mut self, pos: Position<'i>) -> bool {
+        match pos.cmp(&self.position) {
+            Ordering::Less => false,
+            Ordering::Equal => true,
+            Ordering::Greater => {
+                self.clear();
+                true
+            }
         }
     }
-    /// Handle attempts in nested rules.
-    /// If the nested rule don't make progress, it will be ignored.
-    /// See [`pest`](crate::pest)
-    pub fn nest(self, rule: R, pos: Position<'i>) -> Self {
-        if self.ref_position() == &pos {
-            Tracker::new_positive(rule, pos)
-        } else {
-            self
+    fn during<Ret, const POSTIVE: bool>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
+        let original = self.positive;
+        self.positive = POSTIVE;
+        let res = f(self);
+        self.positive = original;
+        res
+    }
+    pub fn positive_during<Ret>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
+        self.during::<Ret, true>(f)
+    }
+    pub fn negative_during<Ret>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
+        self.during::<Ret, false>(f)
+    }
+    pub fn repeat_too_many_times(&mut self, pos: Position<'i>) {
+        if self.prepare(pos) {
+            self.special.push(SpecialError::RepeatTooManyTimes);
         }
     }
-    /// Merge attempts in two tracker in different choices.
-    /// Only further tracker will be stored if they don't point to the same position.
-    /// `other` has higher priority if we encoutered unexpected errors.
-    pub fn merge(mut self, mut other: Self) -> Self {
-        match &mut other {
-            Tracker::Attempts(_positive, _negative, _pos) => match &mut self {
-                Tracker::Attempts(positive, negative, pos) => {
-                    if pos == _pos {
-                        _positive.append(positive);
-                        _negative.append(negative);
-                        other
-                    } else if pos < _pos {
-                        other
-                    } else {
-                        self
-                    }
-                }
-                _ => self,
-            },
-            _ => other,
+    pub fn out_of_bound(&mut self, pos: Position<'i>, start: i32, end: Option<i32>) {
+        if self.prepare(pos) {
+            self.special.push(SpecialError::SliceOutOfBound(start, end));
         }
     }
-    /// Invert attempts.
-    pub fn to_negative(self) -> Self {
-        match self {
-            Self::Attempts(p, n, pos) => Self::Attempts(n, p, pos),
-            _ => self,
+    pub fn empty_stack(&mut self, pos: Position<'i>) {
+        if self.prepare(pos) {
+            self.special.push(SpecialError::EmptyStack);
+        }
+    }
+    pub fn record(&mut self, rule: R, pos: Position<'i>) {
+        if self.prepare(pos) {
+            if self.positive {
+                self.positives.push(rule);
+            } else {
+                self.negatives.push(rule);
+            }
         }
     }
     /// Collect attempts to `pest::error::Error<R>`
     pub fn collect(self) -> Error<R> {
-        match self {
-            Self::Attempts(mut positives, mut negatives, pos) => {
-                positives.sort();
-                positives.dedup();
-                negatives.sort();
-                negatives.dedup();
-                Error::new_from_pos(
-                    ErrorVariant::ParsingError {
-                        positives,
-                        negatives,
+        let pos = self.position;
+        let mut positives = self.positives;
+        let mut negatives = self.negatives;
+        positives.sort();
+        positives.dedup();
+        negatives.sort();
+        negatives.dedup();
+        if !positives.is_empty() || !negatives.is_empty() {
+            return Error::new_from_pos(
+                ErrorVariant::ParsingError {
+                    positives,
+                    negatives,
+                },
+                pos,
+            );
+        }
+
+        for special in self.special {
+            return match special {
+                SpecialError::SliceOutOfBound(start, end) => Error::new_from_pos(
+                    ErrorVariant::CustomError {
+                        message: match end {
+                            Some(end) => format!("Peek slice {}..{} out of bound.", start, end),
+                            None => format!("Peek slice {}.. out of bound.", start),
+                        },
                     },
                     pos,
-                )
-            }
-            Self::SliceOutOfBound(start, end, pos) => Error::new_from_pos(
-                ErrorVariant::CustomError {
-                    message: match end {
-                        Some(end) => format!("Peek slice {}..{} out of bound.", start, end),
-                        None => format!("Peek slice {}.. out of bound.", start),
+                ),
+                SpecialError::RepeatTooManyTimes => Error::new_from_pos(
+                    ErrorVariant::CustomError {
+                        message: "Repeated too many times.".to_owned(),
                     },
-                },
-                pos,
-            ),
-            Self::RepeatTooManyTimes(pos) => Error::new_from_pos(
-                ErrorVariant::CustomError {
-                    message: "Repeated too many times.".to_owned(),
-                },
-                pos,
-            ),
-            Self::EmptyStack(pos) => Error::new_from_pos(
-                ErrorVariant::CustomError {
-                    message: "Nothing to pop or drop.".to_owned(),
-                },
-                pos,
-            ),
+                    pos,
+                ),
+                SpecialError::EmptyStack => Error::new_from_pos(
+                    ErrorVariant::CustomError {
+                        message: "Nothing to pop or drop.".to_owned(),
+                    },
+                    pos,
+                ),
+            };
         }
+
+        Error::new_from_pos(
+            ErrorVariant::ParsingError {
+                positives: vec![],
+                negatives: vec![],
+            },
+            pos,
+        )
     }
 }
