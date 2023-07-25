@@ -8,7 +8,7 @@ use pest_typed::{ParsableTypedNode as _, Storage as _, TypedParser as _, error::
 
 #[derive(TypedParser)]
 #[grammar_inline = r#"
-a = { (b | c) ~ d }
+a =  { (b | c) ~ d }
 b = _{ "b" }
 c = @{ "c" }
 d = ${ "d" }

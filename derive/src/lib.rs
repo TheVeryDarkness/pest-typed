@@ -24,19 +24,27 @@
 //!
 //! When a rule is not atomic, inner contents that match `COMMENT` or `WHITESPACE` will be skipped automatically, and `COMMENT` is prior to `WHITESPACE`.
 //!
-//! ### Generation
+//! ## Generation
 //!
-//! #### Enumeration of Rules
+//! We generate documents for automatically generated types, just hover on those types or view them in documents of your project to see them!
 //!
-//! #### Structs that are Generated for Rules
+//! ### Enumeration of Rules
 //!
-//! ##### Fields
+//! The same with [pest](https://docs.rs/pest).
+//!
+//! It implement `Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd`.
+//!
+//! ### Structs that are Generated for Rules
+//!
+//! We generate a **Rule Struct** for each rule.
+//!
+//! #### Fields
 //!
 //! There are three cases related to fields of a generated `struct`:
 //!
 //! - Emit inner nodes and a span (normal rule, non-atomic rule and compound atomic rule in **pest**).
 //! - Emit a span (atomic rule in **pest**).
-//! - Emit nothing (silent rule in **pest**). Just parse and drop.
+//! - Emit nothing (silent rule in **pest**, but note that this is not like what `Pair`/`Pairs` API does in **pest**). Just parse and drop.
 //!
 //! ## Examples
 //!

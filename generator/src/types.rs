@@ -15,6 +15,7 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
+/// `Box` in corresponding context.
 pub fn box_type() -> TokenStream {
     #[cfg(feature = "std")]
     quote! { ::std::boxed::Box }
@@ -23,6 +24,7 @@ pub fn box_type() -> TokenStream {
     quote! { ::alloc::boxed::Box }
 }
 
+/// `Result` in corresponding context.
 pub fn result_type() -> TokenStream {
     #[cfg(feature = "std")]
     quote! { ::std::result::Result }
@@ -31,6 +33,7 @@ pub fn result_type() -> TokenStream {
     quote! { ::core::result::Result }
 }
 
+/// `Option` in corresponding context.
 pub fn option_type() -> TokenStream {
     #[cfg(feature = "std")]
     quote! { ::std::option::Option }
@@ -39,6 +42,7 @@ pub fn option_type() -> TokenStream {
     quote! { ::core::option::Option }
 }
 
+/// `Vec` in corresponding context.
 pub fn vec_type() -> TokenStream {
     #[cfg(feature = "std")]
     quote! { ::std::vec::Vec }

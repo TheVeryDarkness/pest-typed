@@ -2,6 +2,10 @@
 
 We can handle complexer problems with lower-level API (also named **Structual API**).
 
+But note that the structure of a **Rule Struct** depends on the optimizer in **pest**, so it may change in the future.
+
+Maybe we can use [`pest_meta::ast::Expr`](https://docs.rs/pest_meta/latest/pest_meta/ast/enum.Expr.html) by default in the future.
+
 |            Node Type            |                                        Fields                                         |                                              Functions                                               |
 | :-----------------------------: | :-----------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
 |         Non-silent rule         | Matched `content`, which can be used to access nodes mentioned below. Matched `span`. |                                  See [Accesser API](#accesser-api)                                   |
@@ -16,7 +20,23 @@ For multi-elements sequence and multi-branches choices, its underlying implement
 
 #### Sequence
 
-One can use `next(&self)` of the `Seq` to access the first element of it.
+One can use `next(&self)` of the `Seq` to access the first element and remained part of it.
+
+Using `next`, one can iterate those elements one by one in order.
+
+#### Choices
+
+We provide several functions that simulate control structure like `if` (`if_then(f)`), `else-if` (`else_if(f)`) and `else` (`else_then(f)`).
+
+Each of those functions accept a function `f` as argument, if and only if the branch is the cactual case, `f` is called.
+
+The structure must start with `if_then(f)`. And `else_if` is only available when there are at least two cases that haven't been handled, so if it's the last case, use `else_then(f)` instead.
+
+Except that `else_then(f)` returns the final result, `if_then(f)` and `else_if(f)` will return a temporary helper object.
+
+Using these functions, one can handle those cases one by one in order.
+
+#### Example
 
 ```rust
 use core::ops::Deref;
@@ -39,11 +59,11 @@ fn parse(input: &str) -> Result<(), pest_typed::error::Error<Rule>> {
     assert_eq!(str_a.get_content(), "a");
     let (var_b, c) = a.next();
     var_b
-        .if_then(|b1| println!("b1: {}", b1.get_content()))
-        .else_if(|b2| println!("b2: {}", b2.get_content()))
-        .else_then(|b3| println!("b3: {}", b3.get_content()));
-    println!("c: {}", c.content);
-    println!();
+        .if_then(|b1| assert_eq!(b1.get_content(), "bbb"))
+        .else_if(|b2| assert_eq!(b2.get_content(), "cc"))
+        .else_then(|b3| assert_eq!(b3.get_content(), "d"));
+    assert_eq!(c.get_content(), "c");
+    assert!(c.content == "C" || c.content == "c");
     Ok(())
 }
 
