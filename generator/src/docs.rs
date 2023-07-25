@@ -22,7 +22,7 @@ pub(crate) struct DocComment {
 ///
 /// a pest file:
 ///
-/// ```ignore
+/// ```pest
 /// //! This is a grammar doc
 /// /// line doc 1
 /// /// line doc 2
@@ -34,7 +34,7 @@ pub(crate) struct DocComment {
 ///
 /// Then will get:
 ///
-/// ```ignore
+/// ```js
 /// grammar_doc = "This is a grammar doc"
 /// line_docs = { "foo": "line doc 1\nline doc 2", "bar": "line doc 3" }
 /// ```
