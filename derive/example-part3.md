@@ -45,9 +45,9 @@ fn main() -> Result<(), pest_typed::error::Error<Rule>> {
     let c = b.c();
     assert_eq!(c.span.as_str(), "bbbbb");
     let b2 = c.b2();
-    assert_eq!(c.span.as_str(), "bb");
+    assert_eq!(b2.span.as_str(), "bb");
     let b3 = c.b3();
-    assert_eq!(c.span.as_str(), "bbb");
+    assert_eq!(b3.span.as_str(), "bbb");
     Ok(())
 }
 ```
