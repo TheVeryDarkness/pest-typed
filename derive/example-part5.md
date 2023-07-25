@@ -1,0 +1,1 @@
+### Emitted Functions of Nodes

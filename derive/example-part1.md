@@ -2,9 +2,15 @@
 
 Note: to use **pest_typed_derive** as a dependency, **pest_typed** is also needed.
 
-### Basic
+### Accesser API
 
-Here is a basic example on how to access and process those rules in a rule:
+Accesser API is a group of functions, called **Accesser Functions**, to access referenced rules (or tags, if enabled).
+
+Accesser function is named with the same name of the rule that it's accessing.
+
+See [`fn@derive_typed_parser`] for how to enable Accesser API.
+
+Here is a basic example on how to access and process referenced rules in a rule using Accesser API:
 
 ```rust
 extern crate alloc;
