@@ -689,8 +689,8 @@ impl<
         IGNORED: NeverFailedTypedNode<'i, R>,
     > Seq<'i, R, T1, T2, IGNORED>
 {
-    pub fn next(self) -> (T1, T2) {
-        (self.first, self.second)
+    pub fn next(&self) -> (&T1, &T2) {
+        (&self.first, &self.second)
     }
 }
 impl<
