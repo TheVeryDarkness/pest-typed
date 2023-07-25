@@ -1230,6 +1230,31 @@ fn generate_graph(rules: &[OptimizedRule], config: Config) -> Output {
     res
 }
 
+fn collect_used_rule<'s>(rule: &'s OptimizedRule, res: &mut BTreeSet<&'s str>) {
+    let mut exprs = vec![&rule.expr];
+    while let Some(expr) = exprs.pop() {
+        match expr {
+            OptimizedExpr::Str(_) | OptimizedExpr::Insens(_) | OptimizedExpr::Range(_, _) => (),
+            OptimizedExpr::Ident(rule_name) => {
+                res.insert(rule_name.as_str());
+            }
+            OptimizedExpr::PeekSlice(_, _) => (),
+            OptimizedExpr::PosPred(expr) | OptimizedExpr::NegPred(expr) => exprs.push(expr),
+            OptimizedExpr::Seq(lhs, rhs) | OptimizedExpr::Choice(lhs, rhs) => {
+                exprs.push(lhs);
+                exprs.push(rhs);
+            }
+            OptimizedExpr::Opt(expr) | OptimizedExpr::Rep(expr) => exprs.push(expr),
+            #[cfg(feature = "grammar-extras")]
+            OptimizedExpr::RepOnce(expr) => exprs.push(expr),
+            OptimizedExpr::Skip(_) => (),
+            OptimizedExpr::Push(expr) | OptimizedExpr::RestoreOnErr(expr) => exprs.push(expr),
+            #[cfg(feature = "grammar-extras")]
+            OptimizedExpr::NodeTag(expr, _) => exprs.push(expr),
+        }
+    }
+}
+
 pub(crate) fn generate_typed_pair_from_rule(
     rules: &[OptimizedRule],
     config: Config,
@@ -1252,15 +1277,22 @@ pub(crate) fn generate_typed_pair_from_rule(
         as_wrapper(&name)
     });
     let eoi = as_wrapper(&ident("EOI"));
-    let rule_names: BTreeSet<&str> = rules.iter().map(|rule| rule.name.as_str()).collect();
-    let builtin = generate_builtin(&rule_names);
+    let defined_rules: BTreeSet<&str> = rules.iter().map(|rule| rule.name.as_str()).collect();
+    let builtin = generate_builtin(&defined_rules);
     graph.insert(quote! {
         use #pest_typed::NeverFailedTypedNode as _;
         #builtin
     });
     let mods = graph.collect();
     let unicode = unicode_mod();
-    let unicode_rule = generate_unicode(&rule_names);
+    let referenced_rules = {
+        let mut res = BTreeSet::new();
+        for rule in rules {
+            collect_used_rule(rule, &mut res)
+        }
+        res
+    };
+    let unicode_rule = generate_unicode(&defined_rules, &referenced_rules);
     let res = quote! {
         #[doc(hidden)]
         mod rule_wrappers {
@@ -1275,7 +1307,7 @@ pub(crate) fn generate_typed_pair_from_rule(
     res
 }
 
-fn generate_unicode(rule_names: &BTreeSet<&str>) -> TokenStream {
+fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) -> TokenStream {
     let mut results = vec![];
     let pest_typed = pest_typed();
     let pest_unicode = pest_unicode();
@@ -1293,7 +1325,7 @@ fn generate_unicode(rule_names: &BTreeSet<&str>) -> TokenStream {
 
         let doc = format!("Auto generated. Unicode property {}.", property);
 
-        if !rule_names.contains(property) {
+        if !rule_names.contains(property) && referenced.contains(property) {
             results.push(quote! {
                 #[allow(non_camel_case_types)]
                 #[doc = #doc]
