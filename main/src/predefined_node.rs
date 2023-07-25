@@ -687,6 +687,18 @@ impl<
         T1: TypedNode<'i, R>,
         T2: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
+    > Seq<'i, R, T1, T2, IGNORED>
+{
+    pub fn next(self) -> (T1, T2) {
+        (self.first, self.second)
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        T1: TypedNode<'i, R>,
+        T2: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
     > TypedNode<'i, R> for Seq<'i, R, T1, T2, IGNORED>
 {
     #[inline]
@@ -727,6 +739,36 @@ impl<
     }
 }
 
+/// Help to invoke if-else-if-else-if-else structure.
+pub struct ChoiceHelper<'n, T, Ret> {
+    result: Result<Ret, &'n T>,
+}
+impl<'n, T, Ret> ChoiceHelper<'n, T, Ret> {
+    pub(super) fn from(value: &'n T) -> Self {
+        Self { result: Err(value) }
+    }
+    pub fn else_then(self, f: impl FnOnce(&T) -> Ret) -> Ret {
+        match self.result {
+            Ok(ret) => ret,
+            Err(r) => f(r),
+        }
+    }
+}
+impl<'i, 'n, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>, Ret>
+    ChoiceHelper<'n, Choice<'i, R, T1, T2>, Ret>
+{
+    pub fn else_if(self, f: impl FnOnce(&T1) -> Ret) -> ChoiceHelper<'n, T2, Ret> {
+        match self.result {
+            Err(Choice::First(first, _)) => {
+                let result = f(first);
+                ChoiceHelper { result: Ok(result) }
+            }
+            Err(Choice::Second(second, _)) => ChoiceHelper::from(second),
+            Ok(ret) => ChoiceHelper { result: Ok(ret) },
+        }
+    }
+}
+
 /// Match either of two expressions.
 #[derive(Clone)]
 pub enum Choice<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> {
@@ -751,6 +793,10 @@ impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> Choice<'i, R, 
             Self::First(_, _) => None,
             Self::Second(res, _) => Some(res),
         }
+    }
+    /// Invoke if is not None and is the first case.
+    pub fn if_then<Ret>(&self, f: impl FnOnce(&T1) -> Ret) -> ChoiceHelper<T2, Ret> {
+        ChoiceHelper::from(self).else_if(f)
     }
 }
 impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> TypedNode<'i, R>
