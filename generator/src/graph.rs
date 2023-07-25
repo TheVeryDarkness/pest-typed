@@ -573,7 +573,7 @@ impl Output {
         self.content.push(tokens);
     }
     /// Insert tag struct to tag module.
-    /// Return the module path relative to `pairs` module.
+    /// Return the module path relative to module root.
     #[cfg(feature = "grammar-extras")]
     fn insert_tag(&mut self, rule_name: &Ident, tokens: TokenStream) -> TokenStream {
         let entry = self.tagged_nodes.entry(rule_name.clone());
@@ -586,14 +586,14 @@ impl Output {
                 vec.push(tokens);
             }
         }
-        quote! { super::tags::#rule_name }
+        quote! { tags::#rule_name }
     }
     /// Insert to wrapper module.
-    /// Return the module path relative to `pairs` module.
+    /// Return the module path relative to module root.
     fn insert_wrapper(&mut self, tokens: TokenStream) -> TokenStream {
         self.wrappers.push(tokens);
         let wrappers = constant_wrappers();
-        quote! { super::#wrappers }
+        quote! { #wrappers }
     }
     /// (nodes, wrappers)
     fn collect(&self) -> TokenStream {
@@ -704,7 +704,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Str::<'i, #root::Rule, #module::#wrapper>
+                    #pest_typed::predefined_node::Str::<'i, #root::Rule, #root::#module::#wrapper>
                 },
                 Accesser::new(),
                 root,
@@ -732,7 +732,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Insens::<'i, #root::Rule, #module::#wrapper>
+                    #pest_typed::predefined_node::Insens::<'i, #root::Rule, #root::#module::#wrapper>
                 },
                 Accesser::new(),
                 root,
@@ -806,7 +806,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Skip::<'i, #root::Rule, #module::#wrapper>
+                    #pest_typed::predefined_node::Skip::<'i, #root::Rule, #root::#module::#wrapper>
                 },
                 Accesser::new(),
                 root,
@@ -1173,7 +1173,7 @@ fn generate_graph_node(
                 let rule_id = ident(rule_name);
                 let tag_module = map.insert_tag(&rule_id, def);
                 let accesser = Accesser::from_tag(tag.clone(), quote! {tags::#rule_id::#tag_id});
-                (quote! {#tag_module::#tag_id::<'i>}, accesser)
+                (quote! {#root::#tag_module::#tag_id::<'i>}, accesser)
             } else {
                 let (inner, accesser) = generate_graph_node(
                     inner_expr,
