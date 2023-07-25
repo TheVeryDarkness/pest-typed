@@ -1,9 +1,9 @@
 // See https://datatracker.ietf.org/doc/html/rfc4180.html.
-file = { row ~ (NEWLINE ~ row)* ~ NEWLINE? }
-row = { item ~ (comma ~ item)* }
-item = @{ escaped_item | non_escaped_item }
-escaped_item = { double_quote ~ (legal_ascii | comma | NEWLINE | double_quote{2})* ~ double_quote }
-non_escaped_item = { legal_ascii* }
-legal_ascii = { '\x20'..'\x21' | '\x23'..'\x2B' | '\x2D'..'\x7E' }
-comma = { "," }
-double_quote = { "\"" }
+file             =  { row ~ (NEWLINE ~ row)* ~ NEWLINE? }
+row              =  { item ~ (comma ~ item)* }
+item             = @{ escaped_item | non_escaped_item }
+escaped_item     =  { double_quote ~ (legal_ascii | comma | NEWLINE | double_quote{2})* ~ double_quote }
+non_escaped_item =  { legal_ascii* }
+legal_ascii      =  { '\x20'..'\x21' | '\x23'..'\x2B' | '\x2D'..'\x7E' }
+comma            =  { "," }
+double_quote     =  { "\"" }
