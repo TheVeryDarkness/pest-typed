@@ -90,6 +90,7 @@
 #![doc = include_str!("../example-part2.md")]
 #![cfg_attr(feature = "grammar-extras", doc = include_str!("../example-part3.md"))]
 #![doc = include_str!("../example-part4.md")]
+#![doc = include_str!("../example-part5.md")]
 
 use proc_macro::TokenStream;
 

@@ -21,7 +21,7 @@ use pest_typed::{error::Error, ParsableTypedNode as _, Storage as _};
 
 #[derive(TypedParser)]
 #[grammar_inline = r#"
-a = { "a" ~ (b1 | b2) ~ ^"c" }
+a  = { "a" ~ (b1 | b2) ~ ^"c" }
 b1 = { "bbb" }
 b2 = { "cc" }
 b3 = { "d" }
