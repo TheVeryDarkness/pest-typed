@@ -621,6 +621,7 @@ impl Output {
         #[cfg(not(feature = "grammar-extras"))]
         let mod_tags = quote! {};
         quote! {
+            #[doc(hidden)]
             mod #wrapper_mod {
                 #(#wrappers)*
             }
