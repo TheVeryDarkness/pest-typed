@@ -57,6 +57,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             Ordering::Equal => true,
             Ordering::Greater => {
                 self.clear();
+                self.position = pos;
                 true
             }
         }
