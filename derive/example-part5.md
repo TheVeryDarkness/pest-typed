@@ -6,15 +6,15 @@ But note that the structure of a **Rule Struct** depends on the optimizer in **p
 
 Maybe we can use [`pest_meta::ast::Expr`](https://docs.rs/pest_meta/latest/pest_meta/ast/enum.Expr.html) by default in the future.
 
-|            Node Type            |                                        Fields                                         |                                              Functions                                               |
-| :-----------------------------: | :-----------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
-|         Non-silent rule         | Matched `content`, which can be used to access nodes mentioned below. Matched `span`. |                                  See [Accesser API](#accesser-api)                                   |
-|  Exact string (case-sensitive)  |                                                                                       | Original string to match, `const fn get_content(&self)`, which requires trait `pest_typed::Storage`. |
-| Exact string (case-insensitive) |                           Matched `content` (an `&'i str`).                           | Original string to match, `const fn get_content(&self)`, which requires trait `pest_typed::Storage`. |
-|      Sequence `T, Res...`       |              `first` and `second` (not recommended to be used directly).              |                           `next(&self)`, which returns `(&first, &second)`                           |
-|       Choices `T, Res...`       |        Two variant `First` and `Second` (not recommended to be used directly).        |                                           `if_then(&self)`                                           |
-|            Optional             |                      Matched `content` wrapped in a [`Option`].                       |
-|        Repetition of `T`        |                           Matched `content` (an `Vec<T>`).                            |
+|            Node Type            |                                      Fields                                      |                                              Functions                                               |
+| :-----------------------------: | :------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
+|         Non-silent rule         | Matched `content`, which can be used to access match expression; matched `span`. |                                  See [Accesser API](#accesser-api)                                   |
+|  Exact string (case-sensitive)  |                                                                                  | Original string to match, `const fn get_content(&self)`, which requires trait `pest_typed::Storage`. |
+| Exact string (case-insensitive) |                        Matched `content` (an `&'i str`).                         | Original string to match, `const fn get_content(&self)`, which requires trait `pest_typed::Storage`. |
+|      Sequence `T, Res...`       |           `first` and `second` (not recommended to be used directly).            |                           `next(&self)`, which returns `(&first, &second)`                           |
+|       Choices `T, Res...`       |     Two variant `First` and `Second` (not recommended to be used directly).      |                                           `if_then(&self)`                                           |
+|            Optional             |                    Matched `content` wrapped in a [`Option`].                    |
+|        Repetition of `T`        |                         Matched `content` (an `Vec<T>`).                         |
 
 For multi-elements sequence and multi-branches choices, its underlying implementation is like a list in functional programing. Those fields or variants are not so easy to read and use, and it's recommended to use function API.
 
@@ -28,7 +28,7 @@ Using `next`, one can iterate those elements one by one in order.
 
 We provide several functions that simulate control structure like `if` (`if_then(f)`), `else-if` (`else_if(f)`) and `else` (`else_then(f)`).
 
-Each of those functions accept a function `f` as argument, if and only if the branch is the cactual case, `f` is called.
+Each of those functions accept a function `f` as argument, if and only if the branch is the actual case, `f` is called.
 
 The structure must start with `if_then(f)`. And `else_if` is only available when there are at least two cases that haven't been handled, so if it's the last case, use `else_then(f)` instead.
 
