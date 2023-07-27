@@ -1202,7 +1202,7 @@ fn generate_graph_node(
                     let (input, content) = match #inner::try_parse_with::<ATOMIC, #rule_wrappers::#rule_id>(input, stack, tracker) {
                         Ok(ok) => ok,
                         Err(_) => {
-                            tracker.record(super::Rule::#rule_name, input);
+                            tracker.record(super::super::Rule::#rule_id, input);
                             return Err(());
                         }
                     };
