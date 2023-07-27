@@ -30,6 +30,7 @@ use pest;
 use pest::RuleType;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, TypedNode};
 pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper};
+mod pratt;
 
 // Below modules are copied from pest.
 pub mod error;
