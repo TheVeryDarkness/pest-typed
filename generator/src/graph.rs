@@ -525,8 +525,13 @@ fn rule(
                 _phantom: ::core::marker::PhantomData<&'i #type_name>,
             },
             quote! {
-                let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
-                Ok((input, Self { _phantom: ::core::marker::PhantomData }))
+                match #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker) {
+                    Ok((input, _)) => Ok((input, Self { _phantom: ::core::marker::PhantomData })),
+                    Err(_) => {
+                        tracker.record(super::Rule::#rule_name, input);
+                        Err(())
+                    }
+                }
             },
             quote! {
                 f.debug_struct(#name)
@@ -541,7 +546,13 @@ fn rule(
             },
             quote! {
                 let start = input.clone();
-                let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
+                let (input, _) = match #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker) {
+                    Ok(ok) => ok,
+                    Err(_) => {
+                        tracker.record(super::Rule::#rule_name, input);
+                        return Err(());
+                    }
+                };
                 let span = start.span(&input);
                 Ok((input, Self { span }))
             },
@@ -559,7 +570,13 @@ fn rule(
             },
             quote! {
                 let start = input.clone();
-                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
+                let (input, content) = match #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker) {
+                    Ok(ok) => ok,
+                    Err(_) => {
+                        tracker.record(super::Rule::#rule_name, input);
+                        return Err(());
+                    }
+                };
                 let span = start.span(&input);
                 Ok((input, Self { content, span }))
             },
@@ -1182,7 +1199,13 @@ fn generate_graph_node(
                 };
                 let parse_impl = quote! {
                     let start = input.clone();
-                    let (input, content) = #inner::try_parse_with::<ATOMIC, #rule_wrappers::#rule_id>(input, stack, tracker)?;
+                    let (input, content) = match #inner::try_parse_with::<ATOMIC, #rule_wrappers::#rule_id>(input, stack, tracker) {
+                        Ok(ok) => ok,
+                        Err(_) => {
+                            tracker.record(super::Rule::#rule_name, input);
+                            return Err(());
+                        }
+                    };
                     let span = start.span(&input);
                     Ok((input, Self { content, span }))
                 };
