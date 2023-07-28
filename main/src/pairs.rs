@@ -7,6 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+#![allow(unused)]
 //! Simulate [`pest::iterators::Pair`] and [`pest::iterators::Pairs`] with **pest_typed**.
 
 use crate::{RuleType, Span};
@@ -69,7 +70,7 @@ impl<'i: 'n, 'n, R: RuleType> DoubleEndedIterator for FlatPairs<'i, 'n, R> {
 }
 
 /// A matching pair of [`pest::Token`]s.
-pub trait Pair<'i, R: RuleType>: Debug {
+pub trait Pair<'i, R: RuleType>: Debug + Node<'i, R> {
     fn as_span(&self) -> Span<'i>;
     fn as_rule(&self) -> R;
     fn as_str(&self) -> &'i str {
@@ -78,34 +79,36 @@ pub trait Pair<'i, R: RuleType>: Debug {
     fn get_input(&self) -> &'i str {
         self.as_str()
     }
-    /// None by default. Override if is a tag.
-    fn get_node_tag(&self) -> Option<&str> {
-        None
-    }
-    /// Atomic pairs.
-    fn units(&self) -> Vec<&dyn Pair<'i, R>>;
-    fn tokens(&self) -> Tokens<'i, R>;
-    /// Not a member of [`pest::iterators::Pair`].
-    fn find_first_tagged(&self, tag: &'i str) -> Option<&dyn Pair<'i, R>>;
-    fn into_inner(self) -> Pairs<'i, R>;
     fn line_col(&self) -> (usize, usize) {
         self.as_span().start_pos().line_col()
     }
 }
 
-pub trait Node<'i: 'n, 'n, R: RuleType + 'i> {
-    // Returned type. Must be an iterator.
-    // type Ret: Iterator<Item = &'n dyn Pair<'i, R>> + 'n;
-    fn iterate(&'n self) -> Vec<&'n dyn Pair<'i, R>>;
+/// Nodes inside a rule.
+pub trait Node<'i, R: RuleType> {
+    /// None by default. Override if is a tag.
+    fn get_node_tag(&self) -> Option<&str> {
+        None
+    }
+    /// Atomic pairs.
+    fn units<'n>(&'n self) -> Vec<&'n dyn Pair<'i, R>>;
+    fn tokens(&self) -> Tokens<'i, R>;
+    /// Not a member of [`pest::iterators::Pair`].
+    fn find_first_tagged(&self, tag: &'i str) -> Option<&dyn Pair<'i, R>>;
+    fn into_inner<'n>(&'n self) -> Pairs<'i, 'n, R>;
 }
 
-pub struct Pairs<'i, R: RuleType> {
-    span: Span<'i>,
-    pairs: Vec<Box<dyn Pair<'i, R>>>,
+pub struct Pairs<'i: 'n, 'n, R: RuleType> {
+    pairs: Vec<&'n dyn Pair<'i, R>>,
 }
-impl<'i, R: RuleType> Pairs<'i, R> {
+impl<'i: 'n, 'n, R: RuleType> Pairs<'i, 'n, R> {
+    pub fn as_span(&self) -> Span<'i> {
+        let start = self.pairs.first().expect("Pairs can't be empty.");
+        let end = self.pairs.last().expect("Pairs can't be empty.");
+        start.as_span().start_pos().span(&end.as_span().end_pos())
+    }
     pub fn as_str(&self) -> &'i str {
-        self.span.as_str()
+        self.as_span().as_str()
     }
     pub fn get_input(&self) -> &'i str {
         self.as_str()
@@ -117,7 +120,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
             .collect::<Vec<_>>()
             .concat()
     }
-    pub fn flatten<'n>(&'n self) -> FlatPairs<'i, 'n, R> {
+    pub fn flatten(&'n self) -> FlatPairs<'i, 'n, R> {
         let iter = self.pairs.iter().flat_map(|pair| pair.units());
         FlatPairs::new(iter)
     }
@@ -130,7 +133,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
         None
     }
     pub fn peek(&self) -> Option<&dyn Pair<'i, R>> {
-        self.pairs.first().map(|boxed| boxed.as_ref())
+        self.pairs.first().map(|boxed| *boxed)
     }
 }
 
@@ -138,39 +141,109 @@ impl<'i, R: RuleType> Pairs<'i, R> {
 mod nodes {
     use super::*;
     use crate::{
-        predefined_node::{Choice, Seq},
-        NeverFailedTypedNode, TypedNode,
+        predefined_node::{AtomicRule, Choice, Seq},
+        NeverFailedTypedNode, RuleWrapper, TypedNode,
     };
+    use alloc::vec;
 
     impl<
-            'i: 'n,
-            'n,
+            'i,
             R: RuleType,
-            T1: TypedNode<'i, R> + Node<'i, 'n, R>,
-            T2: TypedNode<'i, R> + Node<'i, 'n, R>,
+            T1: TypedNode<'i, R> + Node<'i, R>,
+            T2: TypedNode<'i, R> + Node<'i, R>,
             IGNORED: NeverFailedTypedNode<'i, R>,
-        > Node<'i, 'n, R> for Seq<'i, R, T1, T2, IGNORED>
+        > Node<'i, R> for Seq<'i, R, T1, T2, IGNORED>
     {
-        fn iterate(&'n self) -> Vec<&'n dyn Pair<'i, R>> {
-            let mut res = self.first.iterate();
-            res.append(&mut self.second.iterate());
+        fn units<'n>(&'n self) -> Vec<&'n dyn Pair<'i, R>> {
+            let mut res = self.first.units();
+            res.append(&mut self.second.units());
             res
+        }
+
+        fn tokens(&self) -> Tokens<'i, R> {
+            todo!()
+        }
+
+        fn find_first_tagged(&self, tag: &'i str) -> Option<&dyn Pair<'i, R>> {
+            if let Some(tagged) = self.first.find_first_tagged(tag) {
+                Some(tagged)
+            } else if let Some(tagged) = self.second.find_first_tagged(tag) {
+                Some(tagged)
+            } else {
+                None
+            }
+        }
+
+        fn into_inner<'n>(&'n self) -> Pairs<'i, 'n, R> {
+            todo!()
         }
     }
 
     impl<
-            'i: 'n,
-            'n,
+            'i,
             R: RuleType,
-            T1: TypedNode<'i, R> + Node<'i, 'n, R>,
-            T2: TypedNode<'i, R> + Node<'i, 'n, R>,
-        > Node<'i, 'n, R> for Choice<'i, R, T1, T2>
+            T1: TypedNode<'i, R> + Node<'i, R>,
+            T2: TypedNode<'i, R> + Node<'i, R>,
+        > Node<'i, R> for Choice<'i, R, T1, T2>
     {
-        fn iterate(&'n self) -> Vec<&'n dyn Pair<'i, R>> {
+        fn units<'n>(&'n self) -> Vec<&'n dyn Pair<'i, R>> {
             match self {
-                Self::First(first, _) => first.iterate(),
-                Self::Second(second, _) => second.iterate(),
+                Self::First(first, _) => first.units(),
+                Self::Second(second, _) => second.units(),
             }
+        }
+
+        fn tokens(&self) -> Tokens<'i, R> {
+            todo!()
+        }
+
+        fn find_first_tagged(&self, tag: &'i str) -> Option<&dyn Pair<'i, R>> {
+            todo!()
+        }
+
+        fn into_inner<'n>(&'n self) -> Pairs<'i, 'n, R> {
+            todo!()
+        }
+    }
+
+    impl<
+            'i,
+            R: RuleType,
+            T: TypedNode<'i, R> + Node<'i, R>,
+            RULE: RuleWrapper<R>,
+            _EOI: RuleWrapper<R>,
+        > Node<'i, R> for AtomicRule<'i, R, T, RULE, _EOI>
+    {
+        fn units<'n>(&'n self) -> Vec<&'n dyn Pair<'i, R>> {
+            vec![self]
+        }
+
+        fn tokens(&self) -> Tokens<'i, R> {
+            todo!()
+        }
+
+        fn find_first_tagged(&self, tag: &'i str) -> Option<&dyn Pair<'i, R>> {
+            todo!()
+        }
+
+        fn into_inner<'n>(&'n self) -> Pairs<'i, 'n, R> {
+            todo!()
+        }
+    }
+    impl<
+            'i,
+            R: RuleType,
+            T: TypedNode<'i, R> + Node<'i, R>,
+            RULE: RuleWrapper<R>,
+            _EOI: RuleWrapper<R>,
+        > Pair<'i, R> for AtomicRule<'i, R, T, RULE, _EOI>
+    {
+        fn as_span(&self) -> Span<'i> {
+            self.span
+        }
+
+        fn as_rule(&self) -> R {
+            RULE::RULE
         }
     }
 }
