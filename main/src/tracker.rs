@@ -11,6 +11,8 @@
 
 use core::cmp::Ordering;
 
+use crate::RuleWrapper;
+
 use super::{
     error::{Error, ErrorVariant},
     position::Position,
@@ -90,12 +92,34 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             self.special.push(SpecialError::EmptyStack);
         }
     }
-    pub fn record(&mut self, rule: R, pos: Position<'i>) {
+    #[inline]
+    fn record(&mut self, rule: R, pos: Position<'i>, succeeded: bool) {
         if self.prepare(pos) {
             if self.positive {
-                self.positives.push(rule);
+                if !succeeded {
+                    self.positives.push(rule);
+                }
             } else {
-                self.negatives.push(rule);
+                if succeeded {
+                    self.negatives.push(rule);
+                }
+            }
+        }
+    }
+    #[inline]
+    pub fn record_during<Rule: RuleWrapper<R>, T, E>(
+        &mut self,
+        pos: Position<'i>,
+        f: impl FnOnce(&mut Self) -> Result<T, E>,
+    ) -> Result<T, E> {
+        match f(self) {
+            Ok(ok) => {
+                self.record(Rule::RULE, pos, true);
+                Ok(ok)
+            }
+            Err(err) => {
+                self.record(Rule::RULE, pos, false);
+                Err(err)
             }
         }
     }
