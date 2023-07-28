@@ -22,6 +22,7 @@ extern crate core;
 #[cfg(feature = "std")]
 extern crate std;
 
+mod pairs;
 pub mod predefined_node;
 pub mod tracker;
 mod typed_node;
@@ -31,6 +32,9 @@ use pest::RuleType;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, TypedNode};
 pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper};
 mod pratt;
+pub mod iterators {
+    pub use crate::pairs::{Pair, Pairs};
+}
 
 // Below modules are copied from pest.
 pub mod error;
