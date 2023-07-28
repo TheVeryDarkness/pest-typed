@@ -354,6 +354,25 @@ pub struct Positive<'i, R: RuleType, N: TypedNode<'i, R>> {
     pub content: N,
     _phantom: PhantomData<(&'i R, &'i N)>,
 }
+impl<'i, R: RuleType, N: TypedNode<'i, R>> From<N> for Positive<'i, R, N> {
+    fn from(content: N) -> Self {
+        Self {
+            content,
+            _phantom: PhantomData,
+        }
+    }
+}
+impl<'i, R: RuleType, N: TypedNode<'i, R>> Deref for Positive<'i, R, N> {
+    type Target = N;
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+impl<'i, R: RuleType, N: TypedNode<'i, R>> DerefMut for Positive<'i, R, N> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.content
+    }
+}
 impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, N> {
     fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
         input: Position<'i>,
@@ -365,13 +384,7 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, 
             match N::try_parse_with::<ATOMIC, Rule>(input, stack, tracker) {
                 Ok((_input, content)) => {
                     stack.restore();
-                    Ok((
-                        input,
-                        Self {
-                            content,
-                            _phantom: PhantomData,
-                        },
-                    ))
+                    Ok((input, Self::from(content)))
                 }
                 Err(_) => {
                     stack.restore();
@@ -388,6 +401,8 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Positive<'i, R, N> {
 }
 
 /// Negative predicate.
+///
+/// Will not contain anything.
 #[derive(Clone)]
 pub struct Negative<'i, R: RuleType, N: TypedNode<'i, R>> {
     _phantom: PhantomData<(&'i R, &'i N)>,
