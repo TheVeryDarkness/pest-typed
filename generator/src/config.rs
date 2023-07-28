@@ -13,6 +13,7 @@ pub(crate) struct Config {
     pub emit_tagged_node_reference: bool,
     pub do_not_emit_span: bool,
     pub truncate_accesser_at_node_tag: bool,
+    pub simulate_pair_api: bool,
     pub no_warnigs: bool,
 }
 impl Default for Config {
@@ -22,6 +23,7 @@ impl Default for Config {
             emit_tagged_node_reference: false,
             do_not_emit_span: false,
             truncate_accesser_at_node_tag: true,
+            simulate_pair_api: false,
             no_warnigs: false,
         }
     }

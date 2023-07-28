@@ -113,6 +113,7 @@ use proc_macro::TokenStream;
         emit_rule_reference,
         emit_tagged_node_reference,
         do_not_emit_span,
+        simulate_pair_api,
         no_warnigs,
     )
 )]
