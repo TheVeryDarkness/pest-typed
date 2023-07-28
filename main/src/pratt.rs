@@ -35,4 +35,12 @@ impl<
 }
 
 /// Pratt parser for those nodes with prefix, infix and postfix.
-pub trait PrattPrefixInfixPostfix {}
+pub trait PrattPrefixInfixPostfix<
+    'i,
+    R: RuleType,
+    Prefix: TypedNode<'i, R>,
+    InFix: TypedNode<'i, R>,
+    Postfix: TypedNode<'i, R>,
+>
+{
+}
