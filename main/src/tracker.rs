@@ -107,18 +107,18 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         }
     }
     #[inline]
-    pub fn record_during<Rule: RuleWrapper<R>, T, E>(
+    pub fn record_during<T: RuleWrapper<R>, E>(
         &mut self,
         pos: Position<'i>,
-        f: impl FnOnce(&mut Self) -> Result<T, E>,
-    ) -> Result<T, E> {
+        f: impl FnOnce(&mut Self) -> Result<(Position<'i>, T), E>,
+    ) -> Result<(Position<'i>, T), E> {
         match f(self) {
             Ok(ok) => {
-                self.record(Rule::RULE, pos, true);
+                self.record(T::RULE, pos, true);
                 Ok(ok)
             }
             Err(err) => {
-                self.record(Rule::RULE, pos, false);
+                self.record(T::RULE, pos, false);
                 Err(err)
             }
         }

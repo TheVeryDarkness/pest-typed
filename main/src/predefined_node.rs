@@ -11,14 +11,11 @@
 //! The generator may use this for convenience.
 //! Normally you don't need to reference this module by yourself.
 
+use super::{error::Error, parser_state::constrain_idxs, position::Position, stack::Stack};
+use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut};
 use core::{fmt, fmt::Debug, marker::PhantomData};
-
-use alloc::vec::Vec;
-
 use pest::RuleType;
-
-use super::{error::Error, parser_state::constrain_idxs, position::Position, stack::Stack};
 
 use super::{
     span::Span,
@@ -1175,18 +1172,26 @@ pub struct AtomicRule<
 > {
     /// Matched content.
     pub content: T,
+    /// Matched span.
+    pub span: Span<'i>,
     _phantom: PhantomData<(&'i R, &'i RULE, &'i _EOI)>,
 }
-
-impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>> From<T>
-    for AtomicRule<'i, R, T, RULE, _EOI>
+impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>>
+    From<(T, Span<'i>)> for AtomicRule<'i, R, T, RULE, _EOI>
 {
-    fn from(content: T) -> Self {
+    fn from((content, span): (T, Span<'i>)) -> Self {
         Self {
             content,
+            span,
             _phantom: PhantomData,
         }
     }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>>
+    RuleWrapper<R> for AtomicRule<'i, R, T, RULE, _EOI>
+{
+    const RULE: R = RULE::RULE;
+    type Rule = R;
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>>
     TypedNode<'i, R> for AtomicRule<'i, R, T, RULE, _EOI>
@@ -1197,10 +1202,12 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapp
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        match T::try_parse_with::<true, RULE>(input, stack, tracker) {
-            Ok((input, res)) => Ok((input, Self::from(res))),
-            Err(_) => Err(()),
-        }
+        let start = input.clone();
+        tracker.record_during(start, |tracker| {
+            let (input, res) = T::try_parse_with::<true, RULE>(input, stack, tracker)?;
+            let res = Self::from((res, start.span(&input)));
+            Ok((input, res))
+        })
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>>
@@ -1264,6 +1271,30 @@ impl<
         RULE: RuleWrapper<R>,
         _EOI: RuleWrapper<R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
+    > RuleWrapper<R> for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
+{
+    const RULE: R = RULE::RULE;
+
+    type Rule = R;
+}
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        RULE: RuleWrapper<R>,
+        _EOI: RuleWrapper<R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > TypeWrapper for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
+{
+    type Inner = T;
+}
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        RULE: RuleWrapper<R>,
+        _EOI: RuleWrapper<R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
     > TypedNode<'i, R> for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
 {
     #[inline]
@@ -1272,10 +1303,10 @@ impl<
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        match T::try_parse_with::<false, RULE>(input, stack, tracker) {
-            Ok((input, res)) => Ok((input, Self::from(res))),
-            Err(_) => Err(()),
-        }
+        tracker.record_during(input, |tracker| {
+            let (input, res) = T::try_parse_with::<false, RULE>(input, stack, tracker)?;
+            Ok((input, Self::from(res)))
+        })
     }
 }
 impl<
@@ -1429,9 +1460,37 @@ impl<
         _EOI: RuleWrapper<R>,
         T: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
+    > From<T> for Rule<'i, R, RULE, _EOI, T, IGNORED>
+{
+    fn from(content: T) -> Self {
+        Self {
+            content,
+            _phantom: PhantomData,
+        }
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        RULE: RuleWrapper<R>,
+        _EOI: RuleWrapper<R>,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
     > TypeWrapper for Rule<'i, R, RULE, _EOI, T, IGNORED>
 {
     type Inner = T;
+}
+impl<
+        'i,
+        R: RuleType,
+        RULE: RuleWrapper<R>,
+        _EOI: RuleWrapper<R>,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > RuleWrapper<R> for Rule<'i, R, RULE, _EOI, T, IGNORED>
+{
+    const RULE: R = RULE::RULE;
+    type Rule = R;
 }
 impl<
         'i,
@@ -1448,16 +1507,10 @@ impl<
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        match T::try_parse_with::<ATOMIC, RULE>(input, stack, tracker) {
-            Ok((input, res)) => Ok((
-                input,
-                Self {
-                    content: res,
-                    _phantom: PhantomData,
-                },
-            )),
-            Err(_) => Err(()),
-        }
+        tracker.record_during(input, |tracker| {
+            let (input, res) = T::try_parse_with::<ATOMIC, RULE>(input, stack, tracker)?;
+            Ok((input, Self::from(res)))
+        })
     }
 }
 impl<
