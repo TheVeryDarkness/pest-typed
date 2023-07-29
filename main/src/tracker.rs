@@ -9,7 +9,7 @@
 
 //! Tracker for parsing failures.
 
-use core::{cmp::Ordering, fmt::Debug};
+use core::cmp::Ordering;
 
 use crate::RuleWrapper;
 
@@ -20,7 +20,6 @@ use super::{
 use alloc::{
     borrow::{Cow, ToOwned},
     collections::BTreeMap,
-    fmt::format,
     format, vec,
     vec::Vec,
 };
