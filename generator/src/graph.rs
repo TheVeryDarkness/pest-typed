@@ -53,6 +53,12 @@ fn unicode_mod() -> TokenStream {
     }
 }
 
+fn generics() -> TokenStream {
+    quote! {
+        generics
+    }
+}
+
 fn pairs() -> TokenStream {
     quote! {pairs}
 }
@@ -60,13 +66,9 @@ fn pairs() -> TokenStream {
 fn ignore(root: &TokenStream) -> TokenStream {
     let pest_typed = pest_typed();
     let pairs = pairs();
+    let generics = generics();
     quote! {
-        #pest_typed::predefined_node::Ign::<
-            'i,
-            #root::Rule,
-            #root::#pairs::COMMENT::<'i>,
-            #root::#pairs::WHITESPACE::<'i>,
-        >
+        #root::#generics::Ignored::<'i>;
     }
 }
 
@@ -354,6 +356,9 @@ fn _bool() -> TokenStream {
 }
 fn _char() -> TokenStream {
     quote! {::core::primitive::char}
+}
+fn _i32() -> TokenStream {
+    quote! {::core::primitive::i32}
 }
 fn _str() -> TokenStream {
     quote! {::core::primitive::str}
@@ -729,8 +734,8 @@ fn generate_graph_node(
     config: Config,
     root: &TokenStream,
 ) -> (TokenStream, Accesser) {
-    let ignore = ignore(&root);
     let pest_typed = pest_typed();
+    let generics = generics();
     // Still some compile-time information not taken.
     match expr {
         OptimizedExpr::Str(content) => {
@@ -752,7 +757,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Str::<'i, #root::Rule, #root::#module::#wrapper>
+                    #root::#generics::Str::<'i, #root::#module::#wrapper>
                 },
                 Accesser::new(),
                 root,
@@ -780,7 +785,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Insens::<'i, #root::Rule, #root::#module::#wrapper>
+                    #root::#generics::Insens::<'i, #root::#module::#wrapper>
                 },
                 Accesser::new(),
                 root,
@@ -796,10 +801,10 @@ fn generate_graph_node(
             candidate_name,
             match end {
                 Some(end) => quote! {
-                    #pest_typed::predefined_node::PeekSlice2::<'i, #root::Rule, #start, #end>
+                    #root::#generics::PeekSlice2::<'i, #start, #end>
                 },
                 None => quote! {
-                    #pest_typed::predefined_node::PeekSlice1::<'i, #root::Rule, #start>
+                    #root::#generics::PeekSlice1::<'i, #start>
                 },
             },
             Accesser::new(),
@@ -826,7 +831,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Push::<'i, #root::Rule, #inner>
+                    #root::#generics::Push::<'i, #inner>
                 },
                 accesser.content(),
                 root,
@@ -854,7 +859,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Skip::<'i, #root::Rule, #root::#module::#wrapper>
+                    #root::#generics::Skip::<'i, #root::#module::#wrapper>
                 },
                 Accesser::new(),
                 root,
@@ -872,7 +877,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::CharRange::<'i, #root::Rule, #start, #end>
+                    #root::#generics::CharRange::<'i, #start, #end>
                 },
                 Accesser::new(),
                 root,
@@ -894,7 +899,7 @@ fn generate_graph_node(
                 expr,
                 rule_name,
                 candidate_name,
-                quote! {#pest_typed::predefined_node::Box::<'i, #root::Rule, #root::#pairs::#inner::<'i>>},
+                quote! {#root::#generics::Box::<'i, #root::#pairs::#inner::<'i>>},
                 accessers,
                 root,
                 inner_spaces,
@@ -920,7 +925,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Positive::<'i, #root::Rule, #inner>
+                    #root::#generics::Positive::<'i, #inner>
                 },
                 accessers.content(),
                 root,
@@ -948,7 +953,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Negative::<'i, #root::Rule, #inner>
+                    #root::#generics::Negative::<'i, #inner>
                 },
                 Accesser::new(),
                 root,
@@ -976,7 +981,7 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Restorable::<'i, #root::Rule, #inner>
+                    #root::#generics::Restorable::<'i, #inner>
                 },
                 accessers,
                 root,
@@ -1014,12 +1019,10 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Seq::<
+                    #root::#generics::Seq::<
                         'i,
-                        #root::Rule,
                         #first,
                         #second,
-                        #ignore
                     >
                 },
                 acc_first.first().join(acc_second.second()),
@@ -1060,9 +1063,8 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Choice::<
+                    #root::#generics::Choice::<
                         'i,
-                        #root::Rule,
                         #first,
                         #second,
                     >
@@ -1092,7 +1094,7 @@ fn generate_graph_node(
                 expr,
                 rule_name,
                 candidate_name,
-                quote! {#pest_typed::predefined_node::Opt::<'i, #root::Rule, #inner_name>},
+                quote! {#root::#generics::Opt::<'i, #inner_name>},
                 accessers,
                 root,
                 inner_spaces,
@@ -1118,11 +1120,9 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Rep::<
+                    #root::#generics::Rep::<
                         'i,
-                        #root::Rule,
                         #inner_name,
-                        #ignore,
                     >
                 },
                 accessers.contents(),
@@ -1151,17 +1151,13 @@ fn generate_graph_node(
                 rule_name,
                 candidate_name,
                 quote! {
-                    #pest_typed::predefined_node::Seq::<
+                    #root::#generics::Seq::<
                         'i,
-                        #root::Rule,
                         #inner_name,
-                        #pest_typed::predefined_node::Rep::<
+                        #root::#generics::Rep::<
                             'i,
-                            #root::Rule,
                             #inner_name,
-                            #ignore,
                         >,
-                        #ignore
                     >
                 },
                 accessers.contents(),
@@ -1347,16 +1343,51 @@ pub(crate) fn generate_typed_pair_from_rule(
         res
     };
     let unicode_rule = generate_unicode(&defined_rules, &referenced_rules);
+    let generics = {
+        let root = quote! {super};
+        let pairs = pairs();
+        let _i32 = _i32();
+        let char = _char();
+        quote! {
+            #[doc(hidden)]
+            mod generics {
+                use #pest_typed::{NeverFailedTypedNode, StringArrayWrapper, StringWrapper, TypedNode, predefined_node};
+                type Ignored<'i> = predefined_node::Ign::<
+                    'i,
+                    #root::Rule,
+                    #root::#pairs::COMMENT::<'i>,
+                    #root::#pairs::WHITESPACE::<'i>,
+                >;
+                pub type Str<'i, Wrapper: StringWrapper> = predefined_node::Str::<'i, #root::Rule, Wrapper>;
+                pub type Insens<'i, Wrapper: StringWrapper> = predefined_node::Insens::<'i, #root::Rule, Wrapper>;
+                pub type PeekSlice2<'i, const START: #_i32, const END: #_i32> = predefined_node::PeekSlice2::<'i, #root::Rule, START, END>;
+                pub type PeekSlice1<'i, const START: #_i32> = predefined_node::PeekSlice1::<'i, #root::Rule, START>;
+                pub type Push<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Push<'i, #root::Rule, T>;
+                pub type Skip<'i, Strings: StringArrayWrapper> = predefined_node::Skip::<'i, #root::Rule, Strings>;
+                pub type CharRange<'i, const START: #char, const END: #char> = predefined_node::CharRange::<'i, #root::Rule, START, END>;
+                pub type Box<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Box<'i, #root::Rule, T>;
+                pub type Positive<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Positive<'i, #root::Rule, T>;
+                pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<'i, #root::Rule, T>;
+                pub type Restorable<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Restorable<'i, #root::Rule, T>;
+                pub type Seq<'i, T1: TypedNode<'i, #root::Rule>, T2: TypedNode<'i, #root::Rule>> = predefined_node::Seq<'i, #root::Rule, T1, T2, Ignored<'i>>;
+                pub type Choice<'i, T1: TypedNode<'i, #root::Rule>, T2: TypedNode<'i, #root::Rule>> = predefined_node::Choice<'i, #root::Rule, T1, T2>;
+                pub type Opt<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Opt<'i, #root::Rule, T>;
+                pub type Rep<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Rep<'i, #root::Rule, T, Ignored<'i>>;
+            }
+        }
+    };
     let res = quote! {
         #[doc(hidden)]
         mod rule_wrappers {
             #(#rule_wrappers)*
             #eoi
         }
+        #[doc(hidden)]
         mod #unicode {
             #unicode_rule
         }
         #mods
+        #generics
     };
     res
 }
