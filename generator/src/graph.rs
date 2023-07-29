@@ -64,11 +64,9 @@ fn pairs() -> TokenStream {
 }
 
 fn ignore(root: &TokenStream) -> TokenStream {
-    let pest_typed = pest_typed();
-    let pairs = pairs();
     let generics = generics();
     quote! {
-        #root::#generics::Ignored::<'i>;
+        #root::#generics::Ignored::<'i>
     }
 }
 
@@ -1352,7 +1350,7 @@ pub(crate) fn generate_typed_pair_from_rule(
             #[doc(hidden)]
             mod generics {
                 use #pest_typed::{NeverFailedTypedNode, StringArrayWrapper, StringWrapper, TypedNode, predefined_node};
-                type Ignored<'i> = predefined_node::Ign::<
+                pub type Ignored<'i> = predefined_node::Ign::<
                     'i,
                     #root::Rule,
                     #root::#pairs::COMMENT::<'i>,
