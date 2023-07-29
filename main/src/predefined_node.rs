@@ -148,13 +148,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Silent<'i, R, T>
         match T::try_parse_with::<ATOMIC, Rule>(input, stack, tracker) {
             Ok((input, _)) => {
                 let span = start.span(&input);
-                Ok((
-                    input,
-                    Self {
-                        span,
-                        _phantom: PhantomData,
-                    },
-                ))
+                Ok((input, Self::from(span)))
             }
             Err(_) => Err(()),
         }

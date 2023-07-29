@@ -523,21 +523,15 @@ fn rule(
     };
     let (content_type, fields, parse_impl, debug_impl) = match emission {
         Emission::Nothing => (
-            None,
+            Some(type_name),
+            quote! {},
             quote! {
-                _phantom: ::core::marker::PhantomData<&'i #type_name>,
-            },
-            quote! {
-                tracker.record_during(
-                    input,
-                    |tracker| {
-                        let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
-                        Ok((input, Self { _phantom: ::core::marker::PhantomData }))
-                    }
-                )
+                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
+                Ok((input, Self { content }))
             },
             quote! {
                 f.debug_struct(#name)
+                    .field("content", &self.content)
                     .finish()
             },
         ),
@@ -1191,14 +1185,9 @@ fn generate_graph_node(
                 };
                 let parse_impl = quote! {
                     let start = input.clone();
-                    tracker.record_during(
-                        input,
-                        |tracker| {
-                            let (input, content) = #inner::try_parse_with::<ATOMIC, #rule_wrappers::#rule_id>(input, stack, tracker)?;
-                            let span = start.span(&input);
-                            Ok((input, Self { content, span }))
-                        }
-                    )
+                    let (input, content) = #inner::try_parse_with::<ATOMIC, #rule_wrappers::#rule_id>(input, stack, tracker)?;
+                    let span = start.span(&input);
+                    Ok((input, Self { content, span }))
                 };
                 let debug_impl = quote! {
                     f.debug_struct(#tag)
