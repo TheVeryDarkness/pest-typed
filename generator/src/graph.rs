@@ -451,7 +451,7 @@ fn create(
         }
         impl<'i> #pest_typed::TypedNode<'i, #rule> for #id<'i> {
             #[inline]
-            fn try_parse_with<const ATOMIC: #_bool, _Rule: #pest_typed::RuleWrapper<#rule>>(
+            fn try_parse_with<const ATOMIC: #_bool, UpperRule: #pest_typed::RuleWrapper<#rule>>(
                 input: #position<'i>,
                 stack: &mut #stack<#span<'i>>,
                 tracker: &mut #tracker<'i, #rule>,
@@ -530,6 +530,7 @@ fn rule(
             quote! {
                 tracker.record_during(
                     input,
+                    UpperRule::RULE,
                     |tracker| {
                         let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
                         Ok((input, Self { _phantom: ::core::marker::PhantomData }))
@@ -551,6 +552,7 @@ fn rule(
                 let start = input.clone();
                 tracker.record_during(
                     input,
+                    UpperRule::RULE,
                     |tracker| {
                         let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
                         let span = start.span(&input);
@@ -574,6 +576,7 @@ fn rule(
                 let start = input.clone();
                 tracker.record_during(
                     input,
+                    UpperRule::RULE,
                     |tracker| {
                         let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
                         let span = start.span(&input);
@@ -1193,6 +1196,7 @@ fn generate_graph_node(
                     let start = input.clone();
                     tracker.record_during(
                         input,
+                        UpperRule::RULE,
                         |tracker| {
                             let (input, content) = #inner::try_parse_with::<ATOMIC, #rule_wrappers::#rule_id>(input, stack, tracker)?;
                             let span = start.span(&input);

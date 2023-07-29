@@ -9,7 +9,7 @@
 
 //! Tracker for parsing failures.
 
-use core::cmp::Ordering;
+use core::{cmp::Ordering, fmt::Debug};
 
 use crate::RuleWrapper;
 
@@ -17,7 +17,13 @@ use super::{
     error::{Error, ErrorVariant},
     position::Position,
 };
-use alloc::{borrow::ToOwned, format, vec, vec::Vec};
+use alloc::{
+    borrow::{Cow, ToOwned},
+    collections::BTreeMap,
+    fmt::format,
+    format, vec,
+    vec::Vec,
+};
 use pest::RuleType;
 
 enum SpecialError {
@@ -33,8 +39,8 @@ enum SpecialError {
 pub struct Tracker<'i, R: RuleType> {
     position: Position<'i>,
     positive: bool,
-    positives: Vec<R>,
-    negatives: Vec<R>,
+    /// upper_rule -> (positives, negatives)
+    attempts: BTreeMap<R, (Vec<R>, Vec<R>)>,
     special: Vec<SpecialError>,
 }
 impl<'i, R: RuleType> Tracker<'i, R> {
@@ -43,14 +49,12 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         Self {
             position: pos,
             positive: true,
-            positives: vec![],
-            negatives: vec![],
+            attempts: BTreeMap::new(),
             special: vec![],
         }
     }
     fn clear(&mut self) {
-        self.positives.clear();
-        self.negatives.clear();
+        self.attempts.clear();
         self.special.clear();
     }
     fn prepare(&mut self, pos: Position<'i>) -> bool {
@@ -92,16 +96,28 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             self.special.push(SpecialError::EmptyStack);
         }
     }
+    fn same_with_last(vec: &Vec<R>, rule: R) -> bool {
+        match vec.last() {
+            Some(last) => *last == rule,
+            None => false,
+        }
+    }
     #[inline]
-    fn record(&mut self, rule: R, pos: Position<'i>, succeeded: bool) {
+    fn record(&mut self, rule: R, upper_rule: R, pos: Position<'i>, succeeded: bool) {
         if self.prepare(pos) {
             if self.positive {
                 if !succeeded {
-                    self.positives.push(rule);
+                    let (vec, _) = self.attempts.entry(upper_rule).or_default();
+                    if !Self::same_with_last(vec, rule) {
+                        vec.push(rule);
+                    }
                 }
             } else {
                 if succeeded {
-                    self.negatives.push(rule);
+                    let (_, vec) = self.attempts.entry(upper_rule).or_default();
+                    if !Self::same_with_last(vec, rule) {
+                        vec.push(rule);
+                    }
                 }
             }
         }
@@ -110,15 +126,16 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     pub fn record_during<T: RuleWrapper<R>, E>(
         &mut self,
         pos: Position<'i>,
+        upper_rule: R,
         f: impl FnOnce(&mut Self) -> Result<(Position<'i>, T), E>,
     ) -> Result<(Position<'i>, T), E> {
         match f(self) {
             Ok(ok) => {
-                self.record(T::RULE, pos, true);
+                self.record(T::RULE, upper_rule, pos, true);
                 Ok(ok)
             }
             Err(err) => {
-                self.record(T::RULE, pos, false);
+                self.record(T::RULE, upper_rule, pos, false);
                 Err(err)
             }
         }
@@ -126,20 +143,53 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     /// Collect attempts to `pest::error::Error<R>`
     pub fn collect(self) -> Error<R> {
         let pos = self.position;
-        let mut positives = self.positives;
-        let mut negatives = self.negatives;
-        positives.sort();
-        positives.dedup();
-        negatives.sort();
-        negatives.dedup();
-        if !positives.is_empty() || !negatives.is_empty() {
-            return Error::new_from_pos(
-                ErrorVariant::ParsingError {
-                    positives,
-                    negatives,
-                },
-                pos,
-            );
+        let mut attempts = self.attempts;
+        for (_, (positives, negatives)) in attempts.iter_mut() {
+            positives.sort();
+            positives.dedup();
+            negatives.sort();
+            negatives.dedup();
+        }
+        let format_rule = |rule: &R| format!("{:?}", rule);
+        let collect_rules = |vec: &Vec<R>| match vec.len() {
+            0 => unreachable!(),
+            1 => format_rule(&vec[0]),
+            l => {
+                let iter = &vec[0..l - 1];
+                iter.iter().map(format_rule).collect::<Vec<_>>().join(", ")
+            }
+        };
+        let collect_attempts = |upper_rule: R, (positives, negatives): (&Vec<R>, &Vec<R>)| match (
+            positives.is_empty(),
+            negatives.is_empty(),
+        ) {
+            (true, true) => Cow::Borrowed("Unknown error (no rule tracked)."),
+            (false, true) => Cow::Owned(format!(
+                "Tracked in rule {:?}, expected {}",
+                upper_rule,
+                collect_rules(positives),
+            )),
+            (true, false) => Cow::Owned(format!(
+                "Tracked in rule {:?}, unexpected {}",
+                upper_rule,
+                collect_rules(negatives),
+            )),
+            (false, false) => Cow::Owned(format!(
+                "Tracked in rule {:?}, expected {}, unexpected {}",
+                upper_rule,
+                collect_rules(positives),
+                collect_rules(negatives),
+            )),
+        };
+        if !attempts.is_empty() {
+            let message = attempts
+                .into_iter()
+                .map(|(upper_rule, (positives, negatives))| {
+                    collect_attempts(upper_rule, (&positives, &negatives))
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            return Error::new_from_pos(ErrorVariant::CustomError { message }, pos);
         }
 
         for special in self.special {

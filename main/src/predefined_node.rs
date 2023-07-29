@@ -1197,13 +1197,13 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapp
     TypedNode<'i, R> for AtomicRule<'i, R, T, RULE, _EOI>
 {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool, _Rule: RuleWrapper<R>>(
+    fn try_parse_with<const ATOMIC: bool, UpperRule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         let start = input.clone();
-        tracker.record_during(start, |tracker| {
+        tracker.record_during(start, UpperRule::RULE, |tracker| {
             let (input, res) = T::try_parse_with::<true, RULE>(input, stack, tracker)?;
             let res = Self::from((res, start.span(&input)));
             Ok((input, res))
@@ -1298,12 +1298,12 @@ impl<
     > TypedNode<'i, R> for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
 {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool, _Rule: RuleWrapper<R>>(
+    fn try_parse_with<const ATOMIC: bool, UpperRule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        tracker.record_during(input, |tracker| {
+        tracker.record_during(input, UpperRule::RULE, |tracker| {
             let (input, res) = T::try_parse_with::<false, RULE>(input, stack, tracker)?;
             Ok((input, Self::from(res)))
         })
@@ -1502,12 +1502,12 @@ impl<
     > TypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T, IGNORED>
 {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool, _Rule: RuleWrapper<R>>(
+    fn try_parse_with<const ATOMIC: bool, UpperRule: RuleWrapper<R>>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        tracker.record_during(input, |tracker| {
+        tracker.record_during(input, UpperRule::RULE, |tracker| {
             let (input, res) = T::try_parse_with::<ATOMIC, RULE>(input, stack, tracker)?;
             Ok((input, Self::from(res)))
         })
