@@ -148,7 +148,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         }
         res
     }
-    /// Collect attempts to `pest::error::Error<R>`
+    /// Collect attempts to [`Error<R>`].
     pub fn collect(self) -> Error<R> {
         let pos = self.position;
         let mut attempts = self.attempts;
@@ -187,6 +187,8 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             }
         }
         if !attempts.is_empty() {
+            let spacing = format!("{}", self.position.line_col().0).len() + 2;
+            let spacing = "\n".to_owned() + &" ".repeat(spacing);
             // The four spaces after the `\n` is to aligh the lines, as there is a `  = ` in the first line.
             let message = attempts
                 .iter()
@@ -194,7 +196,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
                     collect_attempts(upper_rule, positives, negatives)
                 })
                 .collect::<Vec<_>>()
-                .join("\n    ");
+                .join(spacing.as_str());
             return Error::new_from_pos(ErrorVariant::CustomError { message }, pos);
         }
 
