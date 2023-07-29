@@ -20,7 +20,9 @@ use super::{
 use alloc::{
     borrow::{Cow, ToOwned},
     collections::BTreeMap,
-    format, vec,
+    format,
+    string::String,
+    vec,
     vec::Vec,
 };
 use pest::RuleType;
@@ -41,6 +43,7 @@ pub struct Tracker<'i, R: RuleType> {
     /// upper_rule -> (positives, negatives)
     attempts: BTreeMap<R, (Vec<R>, Vec<R>)>,
     special: Vec<SpecialError>,
+    stack: Vec<(R, bool)>,
 }
 impl<'i, R: RuleType> Tracker<'i, R> {
     /// Create an empty tracker for attempts.
@@ -50,6 +53,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             positive: true,
             attempts: BTreeMap::new(),
             special: vec![],
+            stack: vec![],
         }
     }
     fn clear(&mut self) {
@@ -125,19 +129,24 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     pub fn record_during<T: RuleWrapper<R>, E>(
         &mut self,
         pos: Position<'i>,
-        upper_rule: R,
         f: impl FnOnce(&mut Self) -> Result<(Position<'i>, T), E>,
     ) -> Result<(Position<'i>, T), E> {
-        match f(self) {
-            Ok(ok) => {
-                self.record(T::RULE, upper_rule, pos, true);
-                Ok(ok)
-            }
-            Err(err) => {
-                self.record(T::RULE, upper_rule, pos, false);
-                Err(err)
+        if let Some((_, has_children)) = self.stack.last_mut() {
+            *has_children = true;
+        }
+        self.stack.push((T::RULE, false));
+        let res = f(self);
+        let succeeded = match &res {
+            Ok(_) => true,
+            Err(_) => false,
+        };
+        let (rule, has_children) = self.stack.pop().unwrap();
+        if !has_children {
+            if let Some((upper, _)) = self.stack.last() {
+                self.record(rule, *upper, pos, succeeded);
             }
         }
+        res
     }
     /// Collect attempts to `pest::error::Error<R>`
     pub fn collect(self) -> Error<R> {
@@ -149,45 +158,43 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             negatives.sort();
             negatives.dedup();
         }
-        let format_rule = |rule: &R| format!("{:?}", rule);
-        let collect_rules = |vec: &Vec<R>| match vec.len() {
-            0 => unreachable!(),
-            1 => format_rule(&vec[0]),
-            l => {
-                let iter = &vec[0..l - 1];
-                iter.iter().map(format_rule).collect::<Vec<_>>().join(", ")
+        fn collect_rules<R: RuleType>(vec: &Vec<R>) -> String {
+            format!("{:?}", vec)
+        }
+        fn collect_attempts<R: RuleType>(
+            upper_rule: &R,
+            positives: &Vec<R>,
+            negatives: &Vec<R>,
+        ) -> Cow<'static, str> {
+            match (positives.is_empty(), negatives.is_empty()) {
+                (true, true) => Cow::Borrowed("Unknown error (no rule tracked)."),
+                (false, true) => Cow::Owned(format!(
+                    "Expected {}, by {:?}",
+                    collect_rules(positives),
+                    upper_rule,
+                )),
+                (true, false) => Cow::Owned(format!(
+                    "Unexpected {}, by {:?}",
+                    collect_rules(negatives),
+                    upper_rule,
+                )),
+                (false, false) => Cow::Owned(format!(
+                    "Unexpected {}, expected {}, by {:?}",
+                    collect_rules(negatives),
+                    collect_rules(positives),
+                    upper_rule,
+                )),
             }
-        };
-        let collect_attempts = |upper_rule: R, (positives, negatives): (&Vec<R>, &Vec<R>)| match (
-            positives.is_empty(),
-            negatives.is_empty(),
-        ) {
-            (true, true) => Cow::Borrowed("Unknown error (no rule tracked)."),
-            (false, true) => Cow::Owned(format!(
-                "Tracked in rule {:?}, expected {}",
-                upper_rule,
-                collect_rules(positives),
-            )),
-            (true, false) => Cow::Owned(format!(
-                "Tracked in rule {:?}, unexpected {}",
-                upper_rule,
-                collect_rules(negatives),
-            )),
-            (false, false) => Cow::Owned(format!(
-                "Tracked in rule {:?}, expected {}, unexpected {}",
-                upper_rule,
-                collect_rules(positives),
-                collect_rules(negatives),
-            )),
-        };
+        }
         if !attempts.is_empty() {
+            // The four spaces after the `\n` is to aligh the lines, as there is a `  = ` in the first line.
             let message = attempts
-                .into_iter()
+                .iter()
                 .map(|(upper_rule, (positives, negatives))| {
-                    collect_attempts(upper_rule, (&positives, &negatives))
+                    collect_attempts(upper_rule, positives, negatives)
                 })
                 .collect::<Vec<_>>()
-                .join("\n");
+                .join("\n    ");
             return Error::new_from_pos(ErrorVariant::CustomError { message }, pos);
         }
 
