@@ -70,9 +70,9 @@ impl<'i, R: RuleType, T: StringWrapper> Debug for Str<'i, R, T> {
 /// Match given string case insensitively.
 ///
 /// - The field `content` is the matched string.
-/// - The `CONTENT` on the type (by [`StringWrapper`]) is the original string to match, and it may differs with `content` in case.
+/// - The `CONTENT` on the type (by [`StringWrapper`]) is the original string to match, and it may differ from `content` in case.
 ///   
-///   For example, A `^"x"` may match `"X"`, and in this case, `content` is `"X"`, while `CONTENT` is still `"x"`.    
+///   For example, A `^"x"` may match `"X"`, and in the parsing result, `content` is `"X"`, while `CONTENT` is still `"x"`.    
 ///
 /// See [`Str`] for case-sensitive matching.
 pub struct Insens<'i, R: RuleType, T: StringWrapper> {
