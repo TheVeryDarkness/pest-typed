@@ -1164,7 +1164,7 @@ fn generate_graph_node<'g>(
                         .finish()
                 };
                 let def = create(
-                    &[format!("Tag {} referenced by {}", tag, rule_name).as_str()],
+                    &[format!("Tag {} referenced by {}.", tag, rule_name).as_str()],
                     &tag_id,
                     Some(&inner),
                     fields,
