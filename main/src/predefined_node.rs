@@ -1593,7 +1593,7 @@ fn parse_partial<'i, R: RuleType, RULE: RuleWrapper<R>, _Self: TypedNode<'i, R>>
     let mut tracker = Tracker::new(input);
     match _Self::try_parse_with::<false, RULE>(input, &mut stack, &mut tracker) {
         Ok((input, res)) => Ok((input, res)),
-        Err(_) => return Err(tracker.collect()),
+        Err(_) => Err(tracker.collect()),
     }
 }
 
