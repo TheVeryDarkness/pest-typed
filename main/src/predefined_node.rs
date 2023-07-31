@@ -252,13 +252,7 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
             true => {
                 let span = start.span(&input);
                 let content = span.as_str().chars().next().unwrap();
-                Ok((
-                    input,
-                    Self {
-                        content,
-                        _phantom: PhantomData,
-                    },
-                ))
+                Ok((input, Self::from(content)))
             }
             false => Err(()),
         }
@@ -950,7 +944,6 @@ pub type RepOnce<'i, R, T, IGNORED> = RepMin<'i, R, T, IGNORED, 1>;
 pub struct DROP<'i> {
     _phantom: PhantomData<&'i str>,
 }
-
 impl<'i, R: RuleType> TypedNode<'i, R> for DROP<'i> {
     #[inline]
     fn try_parse_with<const _A: bool, Rule: RuleWrapper<R>>(
@@ -1225,6 +1218,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapp
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AtomicRule")
+            .field("rule", &RULE::RULE)
             .field("content", &self.content)
             .finish()
     }
@@ -1336,6 +1330,7 @@ impl<
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("NonAtomicRule")
+            .field("rule", &RULE::RULE)
             .field("content", &self.content)
             .finish()
     }
@@ -1541,7 +1536,10 @@ impl<
     > Debug for Rule<'i, R, RULE, _EOI, T, IGNORED>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Rule").finish()
+        f.debug_struct("Rule")
+            .field("rule", &RULE::RULE)
+            .field("content", &self.content)
+            .finish()
     }
 }
 
@@ -1667,10 +1665,9 @@ pub fn match_char_by(position: &mut Position<'_>, pred: impl FnOnce(char) -> boo
 
 #[cfg(test)]
 mod tests {
-
     use super::super::Storage;
-
     use super::*;
+    use alloc::format;
 
     macro_rules! make_rules {
         ($($ids:ident,)*) => {
@@ -1736,11 +1733,20 @@ mod tests {
         assert_eq!(<StrFoo<'_> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
         let s = StrFoo::parse("foo").unwrap();
         assert_eq!(s.content.get_content(), "foo");
+        assert_eq!(format!("{:?}", s), r#"Rule { rule: Foo, content: Str }"#)
     }
     #[test]
     fn range() {
-        WHITESPACE::parse(" ").unwrap();
-        COMMENT::parse("\t").unwrap();
+        let whitespace = WHITESPACE::parse(" ").unwrap();
+        assert_eq!(
+            format!("{:?}", whitespace),
+            r#"AtomicRule { rule: WHITESPACE, content: Range { content: ' ' } }"#
+        );
+        let comment = COMMENT::parse("\t").unwrap();
+        assert_eq!(
+            format!("{:?}", comment),
+            r#"AtomicRule { rule: COMMENT, content: Range { content: '\t' } }"#
+        );
     }
     type Ignore<'i> = Ign<'i, Rule, COMMENT<'i>, WHITESPACE<'i>>;
     #[test]
@@ -1761,8 +1767,20 @@ mod tests {
     >;
     #[test]
     fn repetition() {
-        R::parse("foofoofoo").unwrap();
-        R::parse("foo foo foo").unwrap();
-        R::parse("foo foo\tfoo").unwrap();
+        let rep = R::parse("foofoofoo").unwrap();
+        assert_eq!(
+            format!("{:?}", rep),
+            "Rule { rule: RepFoo, content: RepMin { content: [Str, Str, Str] } }"
+        );
+        let rep = R::parse("foo foo foo").unwrap();
+        assert_eq!(
+            format!("{:?}", rep),
+            "Rule { rule: RepFoo, content: RepMin { content: [Str, Str, Str] } }"
+        );
+        let rep = R::parse("foo foo\tfoo").unwrap();
+        assert_eq!(
+            format!("{:?}", rep),
+            "Rule { rule: RepFoo, content: RepMin { content: [Str, Str, Str] } }"
+        );
     }
 }
