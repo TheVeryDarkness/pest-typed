@@ -51,3 +51,9 @@ pub trait TypeWrapper: Clone {
     /// Wrapped type.
     type Inner;
 }
+
+/// Bound for the length of vector.
+pub trait BoundWrapper {
+    const MIN: usize;
+    const MAX: usize;
+}

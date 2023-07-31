@@ -1115,13 +1115,9 @@ fn generate_graph_node(
                 expr,
                 rule_name,
                 quote! {
-                    #root::#generics::Seq::<
+                    #root::#generics::RepOnce::<
                         'i,
                         #inner_name,
-                        #root::#generics::Rep::<
-                            'i,
-                            #inner_name,
-                        >,
                     >
                 },
                 accessers.contents(),
@@ -1327,6 +1323,7 @@ pub(crate) fn generate_typed_pair_from_rule(
                 pub type Choice<'i, T1: TypedNode<'i, #root::Rule>, T2: TypedNode<'i, #root::Rule>> = predefined_node::Choice<'i, #root::Rule, T1, T2>;
                 pub type Opt<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Opt<'i, #root::Rule, T>;
                 pub type Rep<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Rep<'i, #root::Rule, T, Ignored<'i>>;
+                pub type RepOnce<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::RepOnce<'i, #root::Rule, T, Ignored<'i>>;
             }
         }
     };

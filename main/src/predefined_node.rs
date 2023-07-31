@@ -11,6 +11,8 @@
 //! The generator may use this for convenience.
 //! Normally you don't need to reference this module by yourself.
 
+use crate::wrapper::BoundWrapper;
+
 use super::{error::Error, parser_state::constrain_idxs, position::Position, stack::Stack};
 use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut};
@@ -854,15 +856,26 @@ impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> Debug for Choi
     }
 }
 
-/// Repeatably match `T`.
+/// Repeatably match `T` at least `MIN` times.
 #[derive(Clone)]
-pub struct Rep<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> {
+pub struct RepMin<
+    'i,
+    R: RuleType,
+    T: TypedNode<'i, R>,
+    IGNORED: NeverFailedTypedNode<'i, R>,
+    const MIN: usize,
+> {
     /// Matched nodes.
     pub content: Vec<T>,
     _phantom: PhantomData<(&'i R, &'i IGNORED)>,
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> TypedNode<'i, R>
-    for Rep<'i, R, T, IGNORED>
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+        const MIN: usize,
+    > TypedNode<'i, R> for RepMin<'i, R, T, IGNORED, MIN>
 {
     #[inline]
     fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
@@ -885,14 +898,13 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>>
                         vec.push(elem);
                     }
                     Err(_err) => {
+                        if i < MIN {
+                            return Err(());
+                        }
                         break;
                     }
                 }
                 i += 1;
-                if i > 1024 {
-                    tracker.repeat_too_many_times(input);
-                    return Err(());
-                }
             }
         }
         Ok((
@@ -904,15 +916,33 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>>
         ))
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>, IGNORED: NeverFailedTypedNode<'i, R>> Debug
-    for Rep<'i, R, T, IGNORED>
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+        const MIN: usize,
+    > Debug for RepMin<'i, R, T, IGNORED, MIN>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Rep")
+        f.debug_struct("RepMin")
             .field("content", &self.content)
             .finish()
     }
 }
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+        const MIN: usize,
+    > BoundWrapper for RepMin<'i, R, T, IGNORED, MIN>
+{
+    const MIN: usize = MIN;
+    const MAX: usize = usize::MAX;
+}
+pub type Rep<'i, R, T, IGNORED> = RepMin<'i, R, T, IGNORED, 0>;
+pub type RepOnce<'i, R, T, IGNORED> = RepMin<'i, R, T, IGNORED, 1>;
 
 /// Drop the top of the stack.
 /// Fail if there is no span in the stack.
