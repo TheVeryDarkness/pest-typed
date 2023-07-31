@@ -18,7 +18,7 @@ pub trait Storage<T> {
 }
 
 /// A wrapper for string as a generics argument.
-pub trait StringWrapper {
+pub trait StringWrapper: Clone {
     /// Wrapped string.
     const CONTENT: &'static str;
 }
@@ -29,7 +29,7 @@ impl<T: StringWrapper> Storage<&'static str> for T {
 }
 
 /// A wrapper for string array as a generics argument.
-pub trait StringArrayWrapper {
+pub trait StringArrayWrapper: Clone {
     /// Wrapped strings.
     const CONTENT: &'static [&'static str];
 }

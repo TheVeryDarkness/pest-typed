@@ -30,6 +30,7 @@ use super::{
 /// The `CONTENT` on the type (by [`StringWrapper`]) is the original string to match.
 ///
 /// See [`Insens`] for case-insensitive matching.
+#[derive(Clone)]
 pub struct Str<'i, R: RuleType, T: StringWrapper> {
     _phantom: PhantomData<(&'i R, &'i T)>,
 }
@@ -41,11 +42,6 @@ impl<'i, R: RuleType, T: StringWrapper> From<()> for Str<'i, R, T> {
         Self {
             _phantom: PhantomData,
         }
-    }
-}
-impl<'i, R: RuleType, T: StringWrapper> Clone for Str<'i, R, T> {
-    fn clone(&self) -> Self {
-        Self::from(())
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<'i, R, T> {
@@ -75,6 +71,7 @@ impl<'i, R: RuleType, T: StringWrapper> Debug for Str<'i, R, T> {
 ///   For example, A `^"x"` may match `"X"`, and in the parsing result, `content` is `"X"`, while `CONTENT` is still `"x"`.    
 ///
 /// See [`Str`] for case-sensitive matching.
+#[derive(Clone, PartialEq)]
 pub struct Insens<'i, R: RuleType, T: StringWrapper> {
     /// Matched content.
     pub content: &'i str,
@@ -89,11 +86,6 @@ impl<'i, R: RuleType, T: StringWrapper> From<&'i str> for Insens<'i, R, T> {
             content,
             _phantom: PhantomData,
         }
-    }
-}
-impl<'i, R: RuleType, T: StringWrapper> Clone for Insens<'i, R, T> {
-    fn clone(&self) -> Self {
-        Self::from(self.content)
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
@@ -120,6 +112,7 @@ impl<'i, R: RuleType, T: StringWrapper> Debug for Insens<'i, R, T> {
 /// Inner tokens will be discarded, and only a [`Span`] will be contained.
 ///
 /// And inner errors will **not** be tracked.
+#[derive(Clone)]
 pub struct Silent<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Span.
     pub span: Span<'i>,
@@ -131,11 +124,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> From<Span<'i>> for Silent<'i, R, T> {
             span,
             _phantom: PhantomData,
         }
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Clone for Silent<'i, R, T> {
-    fn clone(&self) -> Self {
-        Self::from(self.span)
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Silent<'i, R, T> {
@@ -161,6 +149,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Silent<'i, R, T> {
 }
 
 /// Skips until one of the given `strings`
+#[derive(Clone)]
 pub struct Skip<'i, R: RuleType, Strings: StringArrayWrapper> {
     /// Skipped span.
     pub span: Span<'i>,
@@ -172,11 +161,6 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> From<Span<'i>> for Skip<'i, R
             span,
             _phantom: PhantomData,
         }
-    }
-}
-impl<'i, R: RuleType, Strings: StringArrayWrapper> Clone for Skip<'i, R, Strings> {
-    fn clone(&self) -> Self {
-        Self::from(self.span)
     }
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i, R, Strings> {
@@ -208,6 +192,7 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> Debug for Skip<'i, R, Strings
 }
 
 /// Skip `n` characters if there are.
+#[derive(Clone)]
 pub struct SkipChar<'i, R: RuleType, const N: usize> {
     _phantom: PhantomData<&'i R>,
 }
@@ -216,11 +201,6 @@ impl<'i, R: RuleType, const N: usize> From<()> for SkipChar<'i, R, N> {
         Self {
             _phantom: PhantomData,
         }
-    }
-}
-impl<'i, R: RuleType, const N: usize> Clone for SkipChar<'i, R, N> {
-    fn clone(&self) -> Self {
-        Self::from(())
     }
 }
 impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, R, N> {
@@ -243,6 +223,7 @@ impl<'i, R: RuleType, const N: usize> Debug for SkipChar<'i, R, N> {
 
 /// Match a character in the range `[MIN, MAX]`.
 /// Inclusively both below and above.
+#[derive(Clone, PartialEq)]
 pub struct CharRange<'i, R: RuleType, const MIN: char, const MAX: char> {
     /// Matched character.
     pub content: char,
@@ -254,11 +235,6 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> From<char> for CharRange
             content,
             _phantom: PhantomData,
         }
-    }
-}
-impl<'i, R: RuleType, const MIN: char, const MAX: char> Clone for CharRange<'i, R, MIN, MAX> {
-    fn clone(&self) -> Self {
-        Self::from(self.content)
     }
 }
 impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
