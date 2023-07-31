@@ -99,7 +99,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             self.special.push(SpecialError::EmptyStack);
         }
     }
-    fn same_with_last(vec: &Vec<R>, rule: R) -> bool {
+    fn same_with_last(vec: &[R], rule: R) -> bool {
         match vec.last() {
             Some(last) => *last == rule,
             None => false,
