@@ -293,7 +293,7 @@ fn stack_slice<'i, 's, R: RuleType>(
 /// Match a part of the stack without popping.
 /// Will match (consume) input.
 #[inline]
-fn peek_spans<'s, 'i: 's, R: RuleType, Rule: RuleWrapper<R>>(
+fn peek_spans<'s, 'i: 's, R: RuleType>(
     input: Position<'i>,
     iter: impl Iterator<Item = &'s Span<'i>>,
     _tracker: &mut Tracker<'i, R>,
@@ -542,7 +542,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         let spans = stack[0..stack.len()].iter().rev();
-        let (input, span) = peek_spans::<R, Rule>(input, spans, tracker)?;
+        let (input, span) = peek_spans::<R>(input, spans, tracker)?;
         Ok((input, Self { span }))
     }
 }
@@ -1387,7 +1387,7 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         let spans = stack_slice(input, START, Some(END), stack, tracker)?;
-        let (input, _) = peek_spans::<R, Rule>(input, spans, tracker)?;
+        let (input, _) = peek_spans::<R>(input, spans, tracker)?;
         Ok((
             input,
             Self {
@@ -1415,7 +1415,7 @@ impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<'i, R, S
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         let spans = stack_slice(input, START, None, stack, tracker)?;
-        let (input, _) = peek_spans::<R, Rule>(input, spans, tracker)?;
+        let (input, _) = peek_spans::<R>(input, spans, tracker)?;
         Ok((
             input,
             Self {
