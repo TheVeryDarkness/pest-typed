@@ -139,10 +139,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         }
         self.stack.push((T::RULE, false));
         let res = f(self);
-        let succeeded = match &res {
-            Ok(_) => true,
-            Err(_) => false,
-        };
+        let succeeded = res.is_ok();
         let (rule, has_children) = self.stack.pop().unwrap();
         if !has_children {
             if let Some((upper, _)) = self.stack.last() {
