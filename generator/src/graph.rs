@@ -255,23 +255,24 @@ impl Node {
     }
 }
 
-struct Accesser {
+/// `'g` stands for the lifetime of rules.
+struct Accesser<'g> {
     /// name -> (path, type)
-    accessers: BTreeMap<String, Node>,
+    accessers: BTreeMap<&'g str, Node>,
 }
-impl Accesser {
+impl<'g> Accesser<'g> {
     pub fn new() -> Self {
         Self {
             accessers: BTreeMap::new(),
         }
     }
-    pub fn from_rule(name: String, id: TokenStream) -> Self {
+    pub fn from_rule(name: &'g str, id: TokenStream) -> Self {
         let mut res = BTreeMap::new();
         res.insert(name, Node::from_rule(id));
         Self { accessers: res }
     }
     #[cfg(feature = "grammar-extras")]
-    pub fn from_tag(name: String, id: TokenStream) -> Self {
+    pub fn from_tag(name: &'g str, id: TokenStream) -> Self {
         let mut res = BTreeMap::new();
         res.insert(name, Node::from_tag(id));
         Self { accessers: res }
@@ -305,9 +306,9 @@ impl Accesser {
         }
         self
     }
-    pub fn join(mut self, other: Accesser) -> Accesser {
+    pub fn join(mut self, other: Accesser<'g>) -> Self {
         other.accessers.into_iter().for_each(|(name, tree)| {
-            let entry = self.accessers.entry(name.clone());
+            let entry = self.accessers.entry(name);
             match entry {
                 btree_map::Entry::Vacant(entry) => {
                     entry.insert(tree);
@@ -323,7 +324,7 @@ impl Accesser {
     }
     pub fn collect(&self, root: &TokenStream) -> TokenStream {
         let accessers = self.accessers.iter().map(|(name, node)| {
-            let id = ident(name.as_str());
+            let id = ident(name);
             let (paths, types) = node.expand(root);
             let src = quote! {
                 #[allow(non_snake_case)]
@@ -715,17 +716,17 @@ impl Output {
 }
 
 /// Returns (type name, accesser).
-fn process_single_alias(
+fn process_single_alias<'g>(
     map: &mut Output,
     expr: &OptimizedExpr,
-    rule_name: &str,
+    rule_name: &'g str,
     type_name: TokenStream,
-    accessers: Accesser,
+    accessers: Accesser<'g>,
     root: &TokenStream,
     inner_spaces: Option<bool>,
     emission: Emission,
     explicit: bool,
-) -> (TokenStream, Accesser) {
+) -> (TokenStream, Accesser<'g>) {
     let rule_id = ident(rule_name);
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
@@ -747,9 +748,9 @@ fn process_single_alias(
 }
 
 /// Returns type name.
-fn generate_graph_node(
-    expr: &OptimizedExpr,
-    rule_name: &str,
+fn generate_graph_node<'g>(
+    expr: &'g OptimizedExpr,
+    rule_name: &'g str,
     // From node name to type definition and implementation
     map: &mut Output,
     explicit: bool,
@@ -757,7 +758,7 @@ fn generate_graph_node(
     emission: Emission,
     config: Config,
     root: &TokenStream,
-) -> (TokenStream, Accesser) {
+) -> (TokenStream, Accesser<'g>) {
     let generics = generics();
     // Still some compile-time information not taken.
     match expr {
@@ -873,7 +874,7 @@ fn generate_graph_node(
             let inner = ident(id);
             let pairs = pairs();
             let accessers = if config.emit_rule_reference {
-                Accesser::from_rule(id.clone(), quote! {#pairs::#inner})
+                Accesser::from_rule(id, quote! {#pairs::#inner})
             } else {
                 Accesser::new()
             };
@@ -1176,7 +1177,7 @@ fn generate_graph_node(
                 );
                 let rule_id = ident(rule_name);
                 let tag_module = map.insert_tag(&rule_id, def);
-                let accesser = Accesser::from_tag(tag.clone(), quote! {tags::#rule_id::#tag_id});
+                let accesser = Accesser::from_tag(tag.as_str(), quote! {tags::#rule_id::#tag_id});
                 (quote! {#root::#tag_module::#tag_id::<'i>}, accesser)
             } else {
                 let (inner, accesser) = generate_graph_node(
