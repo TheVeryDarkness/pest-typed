@@ -12,10 +12,7 @@ use core::fmt::Debug;
 pub use alloc::rc::Rc;
 use pest::RuleType;
 
-use super::{
-    error::Error, position::Position, span::Span, stack::Stack, tracker::Tracker,
-    wrapper::RuleWrapper,
-};
+use super::{error::Error, position::Position, span::Span, stack::Stack, tracker::Tracker};
 
 /// Node of concrete syntax tree that never fails.
 pub trait NeverFailedTypedNode<'i, R: RuleType>
@@ -24,7 +21,7 @@ where
 {
     /// Create typed node.
     /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
-    fn parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
+    fn parse_with<const ATOMIC: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
     ) -> (Position<'i>, Self);
@@ -37,7 +34,7 @@ where
 {
     /// Create typed node.
     /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
-    fn try_parse_with<const ATOMIC: bool, Rule: RuleWrapper<R>>(
+    fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
