@@ -395,8 +395,6 @@ fn create(
     root: &TokenStream,
 ) -> TokenStream {
     let pest_typed = pest_typed();
-    let rule_wrappers = rule_wrappers();
-    let rule_wrappers = quote! {#root::#rule_wrappers};
     let result = result_type();
     let position = position();
     let stack = stack();
@@ -452,7 +450,7 @@ fn create(
         }
         impl<'i> #pest_typed::TypedNode<'i, #rule> for #id<'i> {
             #[inline]
-            fn try_parse_with<const ATOMIC: #_bool, UpperRule: #pest_typed::RuleWrapper<#rule>>(
+            fn try_parse_with<const ATOMIC: #_bool>(
                 input: #position<'i>,
                 stack: &mut #stack<#span<'i>>,
                 tracker: &mut #tracker<'i, #rule>,
@@ -467,12 +465,12 @@ fn create(
                 let input = #position::from_start(input);
                 let mut tracker = #tracker::new(input);
                 let (input, res) =
-                    match Self::try_parse_with::<false, #rule_wrappers::#rule_name>(input, &mut stack, &mut tracker) {
+                    match Self::try_parse_with::<false>(input, &mut stack, &mut tracker) {
                         Ok((input, res)) => (input, res),
                         Err(_) => return Err(tracker.collect()),
                     };
-                let (input, _) = #ignore::parse_with::<false, #rule_wrappers::EOI>(input, &mut stack);
-                let (_, _) = match #root::#pairs::EOI::try_parse_with::<false, #rule_wrappers::EOI>(input, &mut stack, &mut tracker) {
+                let (input, _) = #ignore::parse_with::<false>(input, &mut stack);
+                let (_, _) = match #root::#pairs::EOI::try_parse_with::<false>(input, &mut stack, &mut tracker) {
                     Ok((input, res)) => (input, res),
                     Err(_) => return Err(tracker.collect()),
                 };
@@ -484,7 +482,7 @@ fn create(
                 let mut stack = #stack::new();
                 let input = #position::from_start(input);
                 let mut tracker = #tracker::new(input);
-                match Self::try_parse_with::<false, #rule_wrappers::#rule_name>(input, &mut stack, &mut tracker) {
+                match Self::try_parse_with::<false>(input, &mut stack, &mut tracker) {
                     Ok((input, res)) => Ok((input, res)),
                     Err(_) => return Err(tracker.collect()),
                 }
@@ -507,9 +505,7 @@ fn rule(
     inner_spaces: Option<bool>,
     emission: Emission,
 ) -> TokenStream {
-    let rule_wrappers = rule_wrappers();
     let root = quote! {super};
-    let rule_wrappers = quote! {#root::#rule_wrappers};
     let span = _span();
     let _bool = _bool();
     let (atomicity, atomicity_doc) = match inner_spaces {
@@ -526,7 +522,7 @@ fn rule(
             Some(type_name),
             quote! {},
             quote! {
-                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_id>(input, stack, tracker)?;
+                let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
                 Ok((input, Self { content }))
             },
             quote! {
@@ -546,7 +542,7 @@ fn rule(
                 tracker.record_during(
                     input,
                     |tracker| {
-                        let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_id>(input, stack, tracker)?;
+                        let (input, _) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
                         let span = start.span(&input);
                         Ok((input, Self { span }))
                     }
@@ -569,7 +565,7 @@ fn rule(
                 tracker.record_during(
                     input,
                     |tracker| {
-                        let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_id>(input, stack, tracker)?;
+                        let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
                         let span = start.span(&input);
                         Ok((input, Self { content, span }))
                     }
@@ -1134,9 +1130,6 @@ fn generate_graph_node<'g>(
                 let new_root = &quote! {super::super};
                 let span = _span();
                 let tag_id = ident(tag.as_str());
-                let rule_id = ident(rule_name);
-                let rule_wrappers = rule_wrappers();
-                let rule_wrappers = quote! {#new_root::#rule_wrappers};
                 let (inner, accesser) = generate_graph_node(
                     inner_expr,
                     rule_name,
@@ -1153,7 +1146,7 @@ fn generate_graph_node<'g>(
                 };
                 let parse_impl = quote! {
                     let start = input;
-                    let (input, content) = #inner::try_parse_with::<ATOMIC, #rule_wrappers::#rule_id>(input, stack, tracker)?;
+                    let (input, content) = #inner::try_parse_with::<ATOMIC>(input, stack, tracker)?;
                     let span = start.span(&input);
                     Ok((input, Self { content, span }))
                 };
@@ -1381,7 +1374,7 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
                 }
                 impl<'i> #pest_typed::TypedNode<'i, super::Rule> for #property_ident<'i> {
                     #[inline]
-                    fn try_parse_with<const ATOMIC: #bool, _Rule: #pest_typed::RuleWrapper<super::Rule>>(
+                    fn try_parse_with<const ATOMIC: #bool>(
                         mut input: #position<'i>,
                         _stack: &mut #stack<#span<'i>>,
                         tracker: &mut #tracker<'i, super::Rule>,
@@ -1414,6 +1407,7 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
 fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
     let pest_typed = pest_typed();
     let unicode = unicode_mod();
+    let rule_wrappers = rule_wrappers();
     let mut results = vec![quote! {
         use #pest_typed::TypedNode as _;
         use ::core::ops::Deref as _;
@@ -1430,9 +1424,14 @@ fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
             }
         };
     }
+
+    results.push(quote! {
+        #[allow(non_camel_case_types)]
+        pub type EOI<'i> = #pest_typed::predefined_node::AtomicRule::<'i, super::Rule, #pest_typed::predefined_node::EOI::<'i>, super::#rule_wrappers::EOI, super::#rule_wrappers::EOI>;
+    });
+
     insert_builtin!("ANY", ANY::<'i>);
     insert_builtin!("SOI", SOI::<'i>);
-    insert_builtin!("EOI", EOI::<'i>);
     insert_builtin!("PEEK", PEEK::<'i>);
     insert_builtin!("PEEK_ALL", PEEK_ALL::<'i>);
     insert_builtin!("POP", POP::<'i>);
