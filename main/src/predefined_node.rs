@@ -511,13 +511,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         let start = input;
-        if input.match_string("\r\n") {
-            let span = start.span(&input);
-            Ok((input, Self { span }))
-        } else if input.match_string("\n") {
-            let span = start.span(&input);
-            Ok((input, Self { span }))
-        } else if input.match_string("\r") {
+        if input.match_string("\r\n") || input.match_string("\n") || input.match_string("\r") {
             let span = start.span(&input);
             Ok((input, Self { span }))
         } else {
