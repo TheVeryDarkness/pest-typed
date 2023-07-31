@@ -1023,7 +1023,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         let (input, res) = PEEK_ALL::try_parse_with::<ATOMIC, Rule>(input, stack, tracker)?;
-        while let Some(_) = stack.pop() {}
+        while stack.pop().is_some() {}
         Ok((input, Self::from(res.span)))
     }
 }
