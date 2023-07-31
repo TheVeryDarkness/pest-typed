@@ -27,7 +27,6 @@ pub mod predefined_node;
 pub mod tracker;
 mod typed_node;
 mod wrapper;
-use pest;
 use pest::RuleType;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, TypedNode};
 pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper};

@@ -205,19 +205,19 @@ impl Node {
             #[cfg(feature = "grammar-extras")]
             Node::Tag(t) => (quote! {res}, quote! {&'s #root::#t::<'i>}),
             Node::First(inner) => {
-                let (pa, ty) = inner.expand(&root);
+                let (pa, ty) = inner.expand(root);
                 (quote! {{let res = &res.first; #pa}}, quote! {#ty})
             }
             Node::Second(inner) => {
-                let (pa, ty) = inner.expand(&root);
+                let (pa, ty) = inner.expand(root);
                 (quote! {{let res = &res.second; #pa}}, quote! {#ty})
             }
             Node::Content(inner) => {
-                let (pa, ty) = inner.expand(&root);
+                let (pa, ty) = inner.expand(root);
                 (quote! {{let res = &res.content; #pa}}, quote! {#ty})
             }
             Node::OptionalContent(flatten, inner) => {
-                let (pa, ty) = inner.expand(&root);
+                let (pa, ty) = inner.expand(root);
                 let flat = flat(flatten);
                 (
                     quote! {{let res = res.content.as_ref().and_then(|res| Some(#pa)) #flat; res}},
@@ -225,7 +225,7 @@ impl Node {
                 )
             }
             Node::GetFirst(flatten, inner) => {
-                let (pa, ty) = inner.expand(&root);
+                let (pa, ty) = inner.expand(root);
                 let flat = flat(flatten);
                 (
                     quote! {{let res = res.get_first().as_ref().and_then(|res| Some(#pa)) #flat; res}},
@@ -233,7 +233,7 @@ impl Node {
                 )
             }
             Node::GetSecond(flatten, inner) => {
-                let (pa, ty) = inner.expand(&root);
+                let (pa, ty) = inner.expand(root);
                 let flat = flat(flatten);
                 (
                     quote! {{let res = res.get_second().as_ref().and_then(|res| Some(#pa)) #flat; res}},
@@ -241,14 +241,14 @@ impl Node {
                 )
             }
             Node::Contents(inner) => {
-                let (pa, ty) = inner.expand(&root);
+                let (pa, ty) = inner.expand(root);
                 (
                     quote! {{let res = res.content.iter().map(|res| #pa).collect::<#vec<_>>(); res}},
                     quote! {#vec::<#ty>},
                 )
             }
             Node::Tuple(tuple) => {
-                let (pa, ty): (Vec<_>, Vec<_>) = tuple.iter().map(|e| e.expand(&root)).unzip();
+                let (pa, ty): (Vec<_>, Vec<_>) = tuple.iter().map(|e| e.expand(root)).unzip();
                 (quote! {{let res = (#(#pa),*); res}}, quote! {(#(#ty),*)})
             }
         }
@@ -541,7 +541,7 @@ fn rule(
                 pub span: #span<'i>,
             },
             quote! {
-                let start = input.clone();
+                let start = input;
                 tracker.record_during(
                     input,
                     |tracker| {
@@ -564,7 +564,7 @@ fn rule(
                 pub span: #span<'i>,
             },
             quote! {
-                let start = input.clone();
+                let start = input;
                 tracker.record_during(
                     input,
                     |tracker| {
@@ -1151,7 +1151,7 @@ fn generate_graph_node(
                     pub span: #span<'i>,
                 };
                 let parse_impl = quote! {
-                    let start = input.clone();
+                    let start = input;
                     let (input, content) = #inner::try_parse_with::<ATOMIC, #rule_wrappers::#rule_id>(input, stack, tracker)?;
                     let span = start.span(&input);
                     Ok((input, Self { content, span }))

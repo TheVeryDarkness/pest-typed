@@ -95,7 +95,7 @@ pub trait Node<'i, R: RuleType> {
     fn tokens(&self) -> Tokens<'i, R>;
     /// Not a member of [`pest::iterators::Pair`].
     fn find_first_tagged(&self, tag: &'i str) -> Option<&dyn Pair<'i, R>>;
-    fn into_inner<'n>(&'n self) -> Pairs<'i, 'n, R>;
+    fn as_inner<'n>(&'n self) -> Pairs<'i, 'n, R>;
 }
 
 pub struct Pairs<'i: 'n, 'n, R: RuleType> {
@@ -133,7 +133,7 @@ impl<'i: 'n, 'n, R: RuleType> Pairs<'i, 'n, R> {
         None
     }
     pub fn peek(&self) -> Option<&dyn Pair<'i, R>> {
-        self.pairs.first().map(|boxed| *boxed)
+        self.pairs.first().copied()
     }
 }
 
@@ -174,7 +174,7 @@ mod nodes {
             }
         }
 
-        fn into_inner<'n>(&'n self) -> Pairs<'i, 'n, R> {
+        fn as_inner<'n>(&'n self) -> Pairs<'i, 'n, R> {
             todo!()
         }
     }
@@ -201,7 +201,7 @@ mod nodes {
             todo!()
         }
 
-        fn into_inner<'n>(&'n self) -> Pairs<'i, 'n, R> {
+        fn as_inner<'n>(&'n self) -> Pairs<'i, 'n, R> {
             todo!()
         }
     }
@@ -226,7 +226,7 @@ mod nodes {
             todo!()
         }
 
-        fn into_inner<'n>(&'n self) -> Pairs<'i, 'n, R> {
+        fn as_inner<'n>(&'n self) -> Pairs<'i, 'n, R> {
             todo!()
         }
     }

@@ -108,18 +108,21 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     #[inline]
     fn record(&mut self, rule: R, upper_rule: R, pos: Position<'i>, succeeded: bool) {
         if self.prepare(pos) {
-            if self.positive {
-                if !succeeded {
-                    let (vec, _) = self.attempts.entry(upper_rule).or_default();
-                    if !Self::same_with_last(vec, rule) {
-                        vec.push(rule);
+            match self.positive {
+                true => {
+                    if !succeeded {
+                        let (vec, _) = self.attempts.entry(upper_rule).or_default();
+                        if !Self::same_with_last(vec, rule) {
+                            vec.push(rule);
+                        }
                     }
                 }
-            } else {
-                if succeeded {
-                    let (_, vec) = self.attempts.entry(upper_rule).or_default();
-                    if !Self::same_with_last(vec, rule) {
-                        vec.push(rule);
+                false => {
+                    if succeeded {
+                        let (_, vec) = self.attempts.entry(upper_rule).or_default();
+                        if !Self::same_with_last(vec, rule) {
+                            vec.push(rule);
+                        }
                     }
                 }
             }

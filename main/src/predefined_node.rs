@@ -96,7 +96,7 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let start = input.clone();
+        let start = input;
         if input.match_insensitive(Self::CONTENT) {
             let span = start.span(&input);
             Ok((input, Self::from(span.as_str())))
@@ -134,7 +134,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Silent<'i, R, T>
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let start = input.clone();
+        let start = input;
         match T::try_parse_with::<ATOMIC, Rule>(input, stack, tracker) {
             Ok((input, _)) => {
                 let span = start.span(&input);
@@ -171,7 +171,7 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let start = input.clone();
+        let start = input;
         match input.skip_until(Strings::CONTENT) {
             true => {
                 let span = start.span(&input);
@@ -247,7 +247,7 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let start = input.clone();
+        let start = input;
         match input.match_range(MIN..MAX) {
             true => {
                 let span = start.span(&input);
@@ -298,7 +298,7 @@ fn peek_spans<'s, 'i: 's, R: RuleType, Rule: RuleWrapper<R>>(
     iter: impl Iterator<Item = &'s Span<'i>>,
     _tracker: &mut Tracker<'i, R>,
 ) -> Result<(Position<'i>, Span<'i>), ()> {
-    let mut matching_pos = input.clone();
+    let mut matching_pos = input;
     for span in iter {
         match matching_pos.match_string(span.as_str()) {
             true => (),
@@ -419,7 +419,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let original_input = input.clone();
+        let original_input = input;
         let mut c: char = ' ';
         match input.match_char_by(|ch| {
             c = ch;
@@ -510,7 +510,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let start = input.clone();
+        let start = input;
         if input.match_string("\r\n") {
             let span = start.span(&input);
             Ok((input, Self { span }))
@@ -567,7 +567,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let start = input.clone();
+        let start = input;
         match stack.peek() {
             Some(string) => match input.match_string(string.as_str()) {
                 true => Ok((input, Self::from(start.span(&input)))),
@@ -1195,7 +1195,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapp
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let start = input.clone();
+        let start = input;
         tracker.record_during(start, |tracker| {
             let (input, res) = T::try_parse_with::<true, RULE>(input, stack, tracker)?;
             let res = Self::from((res, start.span(&input)));
@@ -1358,7 +1358,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<'i, R, T> {
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let start = input.clone();
+        let start = input;
         let (input, content) = T::try_parse_with::<ATOMIC, Rule>(input, stack, tracker)?;
         stack.push(start.span(&input));
         Ok((input, Self::from(content)))
