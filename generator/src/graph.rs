@@ -406,7 +406,7 @@ fn create(
     let _bool = _bool();
     let str = _str();
     let tracker = tracker();
-    let ignore = ignore(&root);
+    let ignore = ignore(root);
     let rule = quote! {#root::Rule};
     let pairs = pairs();
     let (content, deref) = match content_type {
