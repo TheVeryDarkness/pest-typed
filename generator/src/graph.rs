@@ -498,10 +498,9 @@ fn create(
 }
 
 fn rule(
-    name: &str,
-    id: &Ident,
+    rule_name: &str,
     type_name: &TokenStream,
-    rule_name: &Ident,
+    rule_id: &Ident,
     doc: &String,
     accessers: &Accesser,
     inner_spaces: Option<bool>,
@@ -526,11 +525,11 @@ fn rule(
             Some(type_name),
             quote! {},
             quote! {
-                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
+                let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_id>(input, stack, tracker)?;
                 Ok((input, Self { content }))
             },
             quote! {
-                f.debug_struct(#name)
+                f.debug_struct(#rule_name)
                     .field("content", &self.content)
                     .finish()
             },
@@ -546,14 +545,14 @@ fn rule(
                 tracker.record_during(
                     input,
                     |tracker| {
-                        let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
+                        let (input, _) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_id>(input, stack, tracker)?;
                         let span = start.span(&input);
                         Ok((input, Self { span }))
                     }
                 )
             },
             quote! {
-                f.debug_struct(#name)
+                f.debug_struct(#rule_name)
                     .field("span", &self.span)
                     .finish()
             },
@@ -569,14 +568,14 @@ fn rule(
                 tracker.record_during(
                     input,
                     |tracker| {
-                        let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_name>(input, stack, tracker)?;
+                        let (input, content) = #type_name::try_parse_with::<#atomicity, #rule_wrappers::#rule_id>(input, stack, tracker)?;
                         let span = start.span(&input);
                         Ok((input, Self { content, span }))
                     }
                 )
             },
             quote! {
-                f.debug_struct(#name)
+                f.debug_struct(#rule_name)
                     .field("content", &self.content)
                     .field("span", &self.span)
                     .finish()
@@ -585,11 +584,11 @@ fn rule(
     };
     create(
         &[doc, atomicity_doc],
-        id,
+        rule_id,
         content_type,
         fields,
         type_name,
-        rule_name,
+        rule_id,
         accessers,
         parse_impl,
         debug_impl,
@@ -600,6 +599,7 @@ fn rule(
 struct Output {
     content: Vec<TokenStream>,
     wrappers: Vec<TokenStream>,
+    wrapper_counter: usize,
     #[cfg(feature = "grammar-extras")]
     tagged_nodes: BTreeMap<Ident, Vec<TokenStream>>,
 }
@@ -608,6 +608,7 @@ impl Output {
         Self {
             content: Vec::new(),
             wrappers: Vec::new(),
+            wrapper_counter: 0,
             #[cfg(feature = "grammar-extras")]
             tagged_nodes: BTreeMap::new(),
         }
@@ -632,12 +633,47 @@ impl Output {
         }
         quote! { tags::#rule_name }
     }
-    /// Insert to wrapper module.
+    /// Insert a string wrapper to corresponding module.
     /// Return the module path relative to module root.
-    fn insert_wrapper(&mut self, tokens: TokenStream) -> TokenStream {
-        self.wrappers.push(tokens);
-        let wrappers = constant_wrappers();
-        quote! { #wrappers }
+    fn insert_string_wrapper(&mut self, string: &str) -> TokenStream {
+        let s = ident(&format!("w_{}", self.wrapper_counter));
+        self.wrapper_counter += 1;
+        let doc = format!("A wrapper for `{:?}`.", string);
+        let str = _str();
+        let wrapper_mod = constant_wrappers();
+        let pest_typed = pest_typed();
+        let wrapper = quote! {
+            #[doc = #doc]
+            #[allow(non_camel_case_types)]
+            #[derive(Clone)]
+            pub struct #s();
+            impl #pest_typed::StringWrapper for #s {
+                const CONTENT: &'static #str = #string;
+            }
+        };
+        self.wrappers.push(wrapper);
+        quote! {#wrapper_mod::#s}
+    }
+    /// Insert a string array wrapper to corresponding module.
+    /// Return the module path relative to module root.
+    fn insert_string_array_wrapper(&mut self, strings: &[String]) -> TokenStream {
+        let s = ident(&format!("w_{}", self.wrapper_counter));
+        self.wrapper_counter += 1;
+        let doc = format!("A wrapper for `{:?}`.", strings);
+        let str = _str();
+        let wrapper_mod = constant_wrappers();
+        let pest_typed = pest_typed();
+        let wrapper = quote! {
+            #[doc = #doc]
+            #[allow(non_camel_case_types)]
+            #[derive(Clone)]
+            pub struct #s();
+            impl #pest_typed::StringArrayWrapper for #s {
+                const CONTENT: &'static [&'static #str] = &[ #(#strings),* ];
+            }
+        };
+        self.wrappers.push(wrapper);
+        quote! {#wrapper_mod::#s}
     }
     /// (nodes, wrappers)
     fn collect(&self) -> TokenStream {
@@ -683,7 +719,6 @@ fn process_single_alias(
     map: &mut Output,
     expr: &OptimizedExpr,
     rule_name: &str,
-    candidate_name: String,
     type_name: TokenStream,
     accessers: Accesser,
     root: &TokenStream,
@@ -691,15 +726,13 @@ fn process_single_alias(
     emission: Emission,
     explicit: bool,
 ) -> (TokenStream, Accesser) {
-    let rule_name = ident(rule_name);
-    let name = ident(&candidate_name);
+    let rule_id = ident(rule_name);
     if explicit {
         let doc = format!("Corresponds to expression: `{}`.", expr);
         let def = rule(
-            candidate_name.as_str(),
-            &name,
+            rule_name,
             &type_name,
-            &rule_name,
+            &rule_id,
             &doc,
             &accessers,
             inner_spaces,
@@ -707,7 +740,7 @@ fn process_single_alias(
         );
         map.insert(def);
         let pairs = pairs();
-        (quote! {#root::#pairs::#name::<'i>}, accessers)
+        (quote! {#root::#pairs::#rule_id::<'i>}, accessers)
     } else {
         (type_name, accessers)
     }
@@ -717,7 +750,6 @@ fn process_single_alias(
 fn generate_graph_node(
     expr: &OptimizedExpr,
     rule_name: &str,
-    candidate_name: String,
     // From node name to type definition and implementation
     map: &mut Output,
     explicit: bool,
@@ -726,30 +758,17 @@ fn generate_graph_node(
     config: Config,
     root: &TokenStream,
 ) -> (TokenStream, Accesser) {
-    let pest_typed = pest_typed();
     let generics = generics();
     // Still some compile-time information not taken.
     match expr {
         OptimizedExpr::Str(content) => {
-            let wrapper = format_ident!("r#{}", candidate_name);
-            let doc = format!("A wrapper for `{:?}`.", content);
-            let str = _str();
-            let module = map.insert_wrapper(quote! {
-                #[doc = #doc]
-                #[allow(non_camel_case_types)]
-                #[derive(Clone)]
-                pub struct #wrapper();
-                impl #pest_typed::StringWrapper for #wrapper {
-                    const CONTENT: &'static #str = #content;
-                }
-            });
+            let wrapper = map.insert_string_wrapper(content.as_str());
             process_single_alias(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
-                    #root::#generics::Str::<'i, #root::#module::#wrapper>
+                    #root::#generics::Str::<'i, #root::#wrapper>
                 },
                 Accesser::new(),
                 root,
@@ -759,25 +778,13 @@ fn generate_graph_node(
             )
         }
         OptimizedExpr::Insens(content) => {
-            let wrapper = format_ident!("r#{}", candidate_name);
-            let doc = format!("A wrapper for `{:?}`.", content);
-            let str = _str();
-            let module = map.insert_wrapper(quote! {
-                #[doc = #doc]
-                #[allow(non_camel_case_types)]
-                #[derive(Clone)]
-                pub struct #wrapper();
-                impl #pest_typed::StringWrapper for #wrapper {
-                    const CONTENT: &'static #str = #content;
-                }
-            });
+            let wrapper = map.insert_string_wrapper(content.as_str());
             process_single_alias(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
-                    #root::#generics::Insens::<'i, #root::#module::#wrapper>
+                    #root::#generics::Insens::<'i, #root::#wrapper>
                 },
                 Accesser::new(),
                 root,
@@ -790,7 +797,6 @@ fn generate_graph_node(
             map,
             expr,
             rule_name,
-            candidate_name,
             match end {
                 Some(end) => quote! {
                     #root::#generics::PeekSlice2::<'i, #start, #end>
@@ -809,7 +815,6 @@ fn generate_graph_node(
             let (inner, accesser) = generate_graph_node(
                 expr,
                 rule_name,
-                format! {"{}_p", candidate_name},
                 map,
                 false,
                 inner_spaces,
@@ -821,7 +826,6 @@ fn generate_graph_node(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
                     #root::#generics::Push::<'i, #inner>
                 },
@@ -833,25 +837,13 @@ fn generate_graph_node(
             )
         }
         OptimizedExpr::Skip(strings) => {
-            let wrapper = format_ident!("r#{}", candidate_name);
-            let doc = format!("A wrapper for `{:?}`.", strings);
-            let str = _str();
-            let module = map.insert_wrapper(quote! {
-                #[doc = #doc]
-                #[allow(non_camel_case_types)]
-                #[derive(Clone)]
-                pub struct #wrapper();
-                impl #pest_typed::StringArrayWrapper for #wrapper {
-                    const CONTENT: &'static[&'static #str] = &[ #(#strings),* ];
-                }
-            });
+            let wrapper = map.insert_string_array_wrapper(strings);
             process_single_alias(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
-                    #root::#generics::Skip::<'i, #root::#module::#wrapper>
+                    #root::#generics::Skip::<'i, #root::#wrapper>
                 },
                 Accesser::new(),
                 root,
@@ -867,7 +859,6 @@ fn generate_graph_node(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
                     #root::#generics::CharRange::<'i, #start, #end>
                 },
@@ -890,7 +881,6 @@ fn generate_graph_node(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {#root::#generics::Box::<'i, #root::#pairs::#inner::<'i>>},
                 accessers,
                 root,
@@ -903,7 +893,6 @@ fn generate_graph_node(
             let (inner, accessers) = generate_graph_node(
                 expr,
                 rule_name,
-                format! {"{}_P", candidate_name},
                 map,
                 false,
                 inner_spaces,
@@ -915,7 +904,6 @@ fn generate_graph_node(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
                     #root::#generics::Positive::<'i, #inner>
                 },
@@ -931,7 +919,6 @@ fn generate_graph_node(
             let (inner, _) = generate_graph_node(
                 expr,
                 rule_name,
-                format! {"{}_N", candidate_name},
                 map,
                 false,
                 inner_spaces,
@@ -943,7 +930,6 @@ fn generate_graph_node(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
                     #root::#generics::Negative::<'i, #inner>
                 },
@@ -958,7 +944,6 @@ fn generate_graph_node(
             let (inner, accessers) = generate_graph_node(
                 expr,
                 rule_name,
-                format! {"{}_E", candidate_name},
                 map,
                 false,
                 inner_spaces,
@@ -971,7 +956,6 @@ fn generate_graph_node(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
                     #root::#generics::Restorable::<'i, #inner>
                 },
@@ -986,7 +970,6 @@ fn generate_graph_node(
             let (first, acc_first) = generate_graph_node(
                 lhs,
                 rule_name,
-                format! {"{}_0", candidate_name},
                 map,
                 false,
                 inner_spaces,
@@ -997,7 +980,6 @@ fn generate_graph_node(
             let (second, acc_second) = generate_graph_node(
                 rhs,
                 rule_name,
-                format! {"{}_1", candidate_name},
                 map,
                 false,
                 inner_spaces,
@@ -1009,7 +991,6 @@ fn generate_graph_node(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
                     #root::#generics::Seq::<
                         'i,
@@ -1028,7 +1009,6 @@ fn generate_graph_node(
             let (first, acc_first) = generate_graph_node(
                 lhs,
                 rule_name,
-                format! {"{}_0", candidate_name},
                 map,
                 false,
                 inner_spaces,
@@ -1040,7 +1020,6 @@ fn generate_graph_node(
             let (second, acc_second) = generate_graph_node(
                 rhs,
                 rule_name,
-                format! {"{}_1", candidate_name},
                 map,
                 false,
                 inner_spaces,
@@ -1053,7 +1032,6 @@ fn generate_graph_node(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
                     #root::#generics::Choice::<
                         'i,
@@ -1072,7 +1050,6 @@ fn generate_graph_node(
             let (inner_name, accessers) = generate_graph_node(
                 inner,
                 rule_name,
-                format!("{}_o", candidate_name),
                 map,
                 false,
                 inner_spaces,
@@ -1085,7 +1062,6 @@ fn generate_graph_node(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {#root::#generics::Opt::<'i, #inner_name>},
                 accessers,
                 root,
@@ -1098,7 +1074,6 @@ fn generate_graph_node(
             let (inner_name, accessers) = generate_graph_node(
                 inner,
                 rule_name,
-                format!("{}_r", candidate_name),
                 map,
                 false,
                 inner_spaces,
@@ -1110,7 +1085,6 @@ fn generate_graph_node(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
                     #root::#generics::Rep::<
                         'i,
@@ -1129,7 +1103,6 @@ fn generate_graph_node(
             let (inner_name, accessers) = generate_graph_node(
                 inner,
                 rule_name,
-                format!("{}_ro", candidate_name),
                 map,
                 false,
                 inner_spaces,
@@ -1141,7 +1114,6 @@ fn generate_graph_node(
                 map,
                 expr,
                 rule_name,
-                candidate_name,
                 quote! {
                     #root::#generics::Seq::<
                         'i,
@@ -1171,7 +1143,6 @@ fn generate_graph_node(
                 let (inner, accesser) = generate_graph_node(
                     inner_expr,
                     rule_name,
-                    format!("{}", candidate_name),
                     map,
                     explicit,
                     inner_spaces,
@@ -1215,7 +1186,6 @@ fn generate_graph_node(
                 let (inner, accesser) = generate_graph_node(
                     inner_expr,
                     rule_name,
-                    format!("{}", candidate_name),
                     map,
                     explicit,
                     inner_spaces,
@@ -1227,7 +1197,6 @@ fn generate_graph_node(
                     map,
                     inner_expr,
                     rule_name,
-                    candidate_name,
                     inner,
                     accesser,
                     root,
@@ -1244,7 +1213,6 @@ fn generate_graph(rules: &[OptimizedRule], config: Config) -> Output {
     let mut res = Output::new();
     for rule in rules.iter() {
         let rule_name = rule.name.as_str();
-        let candidate_name = rule.name.clone();
         let (inner_spaces, emission) = match rule.ty {
             RuleType::Normal => (None, Emission::InnerToken),
             RuleType::Silent => (None, Emission::Nothing),
@@ -1255,7 +1223,6 @@ fn generate_graph(rules: &[OptimizedRule], config: Config) -> Output {
         generate_graph_node(
             &rule.expr,
             rule_name,
-            candidate_name,
             &mut res,
             true,
             inner_spaces,
