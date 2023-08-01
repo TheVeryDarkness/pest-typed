@@ -1234,6 +1234,8 @@ pub struct NonAtomicRule<
 > {
     /// Matched content.
     pub content: T,
+    /// Matched span.
+    pub span: Span<'i>,
     _phantom: PhantomData<(&'i R, &'i T, &'i RULE, &'i _EOI, &'i IGNORED)>,
 }
 impl<
@@ -1243,11 +1245,12 @@ impl<
         RULE: RuleWrapper<R>,
         _EOI: RuleWrapper<R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
-    > From<T> for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
+    > From<(T, Span<'i>)> for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
 {
-    fn from(content: T) -> Self {
+    fn from((content, span): (T, Span<'i>)) -> Self {
         Self {
             content,
+            span,
             _phantom: PhantomData,
         }
     }
@@ -1292,8 +1295,9 @@ impl<
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         tracker.record_during(input, |tracker| {
+            let start = input;
             let (input, res) = T::try_parse_with::<false>(input, stack, tracker)?;
-            Ok((input, Self::from(res)))
+            Ok((input, Self::from((res, start.span(&input)))))
         })
     }
 }
@@ -1433,27 +1437,30 @@ impl<'i, R: RuleType, const START: i32> Debug for PeekSlice1<'i, R, START> {
 pub struct Rule<
     'i,
     R: RuleType,
+    T: TypedNode<'i, R>,
     RULE: RuleWrapper<R>,
     _EOI: RuleWrapper<R>,
-    T: TypedNode<'i, R>,
     IGNORED: NeverFailedTypedNode<'i, R>,
 > {
     /// Matched content.
     pub content: T,
+    /// Matched span
+    pub span: Span<'i>,
     _phantom: PhantomData<(&'i R, &'i RULE, &'i _EOI, &'i IGNORED)>,
 }
 impl<
         'i,
         R: RuleType,
+        T: TypedNode<'i, R>,
         RULE: RuleWrapper<R>,
         _EOI: RuleWrapper<R>,
-        T: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
-    > From<T> for Rule<'i, R, RULE, _EOI, T, IGNORED>
+    > From<(T, Span<'i>)> for Rule<'i, R, T, RULE, _EOI, IGNORED>
 {
-    fn from(content: T) -> Self {
+    fn from((content, span): (T, Span<'i>)) -> Self {
         Self {
             content,
+            span,
             _phantom: PhantomData,
         }
     }
@@ -1461,22 +1468,22 @@ impl<
 impl<
         'i,
         R: RuleType,
+        T: TypedNode<'i, R>,
         RULE: RuleWrapper<R>,
         _EOI: RuleWrapper<R>,
-        T: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
-    > TypeWrapper for Rule<'i, R, RULE, _EOI, T, IGNORED>
+    > TypeWrapper for Rule<'i, R, T, RULE, _EOI, IGNORED>
 {
     type Inner = T;
 }
 impl<
         'i,
         R: RuleType,
+        T: TypedNode<'i, R>,
         RULE: RuleWrapper<R>,
         _EOI: RuleWrapper<R>,
-        T: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
-    > RuleWrapper<R> for Rule<'i, R, RULE, _EOI, T, IGNORED>
+    > RuleWrapper<R> for Rule<'i, R, T, RULE, _EOI, IGNORED>
 {
     const RULE: R = RULE::RULE;
     type Rule = R;
@@ -1484,11 +1491,11 @@ impl<
 impl<
         'i,
         R: RuleType,
+        T: TypedNode<'i, R>,
         RULE: RuleWrapper<R>,
         _EOI: RuleWrapper<R>,
-        T: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
-    > TypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T, IGNORED>
+    > TypedNode<'i, R> for Rule<'i, R, T, RULE, _EOI, IGNORED>
 {
     #[inline]
     fn try_parse_with<const ATOMIC: bool>(
@@ -1497,19 +1504,20 @@ impl<
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         tracker.record_during(input, |tracker| {
+            let start = input;
             let (input, res) = T::try_parse_with::<ATOMIC>(input, stack, tracker)?;
-            Ok((input, Self::from(res)))
+            Ok((input, Self::from((res, start.span(&input)))))
         })
     }
 }
 impl<
         'i,
         R: RuleType,
+        T: TypedNode<'i, R>,
         RULE: RuleWrapper<R>,
         _EOI: RuleWrapper<R>,
-        T: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
-    > ParsableTypedNode<'i, R> for Rule<'i, R, RULE, _EOI, T, IGNORED>
+    > ParsableTypedNode<'i, R> for Rule<'i, R, T, RULE, _EOI, IGNORED>
 {
     #[inline]
     fn parse(input: &'i str) -> Result<Self, Error<R>> {
@@ -1524,10 +1532,10 @@ impl<
         'i,
         R: RuleType,
         RULE: RuleWrapper<R>,
-        _EOI: RuleWrapper<R>,
         T: TypedNode<'i, R>,
+        _EOI: RuleWrapper<R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
-    > Debug for Rule<'i, R, RULE, _EOI, T, IGNORED>
+    > Debug for Rule<'i, R, T, RULE, _EOI, IGNORED>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Rule")
@@ -1725,9 +1733,9 @@ mod tests {
     type StrFoo<'i> = super::Rule<
         'i,
         Rule,
+        Str<'i, Rule, Foo>,
         rule_wrappers::Foo,
         rule_wrappers::EOI,
-        Str<'i, Rule, Foo>,
         Ignore<'i>,
     >;
     #[test]
@@ -1753,7 +1761,7 @@ mod tests {
     type Ignore<'i> = Ign<'i, Rule, COMMENT<'i>, WHITESPACE<'i>>;
     #[test]
     fn ignore() {
-        super::Rule::<Rule, rule_wrappers::RepFoo, rule_wrappers::EOI, Ignore<'_>, Ignore<'_>>::parse(
+        super::Rule::<Rule, Ignore<'_>, rule_wrappers::RepFoo, rule_wrappers::EOI, Ignore<'_>>::parse(
             " \t  ",
         )
         .unwrap();
@@ -1762,9 +1770,9 @@ mod tests {
     type R<'i> = super::Rule<
         'i,
         Rule,
+        Rep<'i, Rule, Str<'i, Rule, Foo>, Ignore<'i>>,
         rule_wrappers::RepFoo,
         rule_wrappers::EOI,
-        Rep<'i, Rule, Str<'i, Rule, Foo>, Ignore<'i>>,
         Ignore<'i>,
     >;
     #[test]
