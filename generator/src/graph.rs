@@ -377,8 +377,13 @@ fn _span() -> TokenStream {
 
 #[derive(Clone, Copy)]
 enum Emission {
-    Nothing,
+    /// Current rule will not contain a span.
+    /// Current rule will not be visible in some APIs.
+    Silent,
+    /// Current rule will only contain a span.
+    /// Inner structures will not be emitted.
     Span,
+    /// Normal rule.
     InnerToken,
 }
 
@@ -546,10 +551,10 @@ fn rule(
     };
     let accessers = match emission {
         Emission::InnerToken => accessers.collect(&root),
-        Emission::Nothing | Emission::Span => quote! {},
+        Emission::Silent | Emission::Span => quote! {},
     };
     let (content_type, fields, parse_impl, debug_impl) = match emission {
-        Emission::Nothing => (
+        Emission::Silent => (
             Some(type_name),
             quote! {},
             quote! {
@@ -613,7 +618,7 @@ fn rule(
     let extra = {
         let pest_typed = pest_typed();
         match emission {
-            Emission::Nothing => quote! {},
+            Emission::Silent => quote! {},
             Emission::Span => quote! {
                 impl<'i> #pest_typed::RuleStruct<'i, #root::Rule> for #rule_id<'i> {
                     fn span(&self) -> #span<'i> {
@@ -1260,7 +1265,7 @@ fn generate_graph(rules: &[OptimizedRule], config: Config) -> Output {
         let rule_name = rule.name.as_str();
         let (inner_spaces, emission) = match rule.ty {
             RuleType::Normal => (None, Emission::InnerToken),
-            RuleType::Silent => (None, Emission::Nothing),
+            RuleType::Silent => (None, Emission::Silent),
             RuleType::NonAtomic => (Some(true), Emission::InnerToken),
             RuleType::CompoundAtomic => (Some(false), Emission::InnerToken),
             RuleType::Atomic => (Some(false), Emission::Span),
