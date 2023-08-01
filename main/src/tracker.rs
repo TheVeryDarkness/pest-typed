@@ -191,7 +191,6 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             // "{} = "
             let spacing = format!("{}", self.position.line_col().0).len() + 3;
             let spacing = "\n".to_owned() + &" ".repeat(spacing);
-            // The four spaces after the `\n` is to aligh the lines, as there is a `  = ` in the first line.
             let message = attempts
                 .iter()
                 .map(|(upper_rule, (positives, negatives))| {
