@@ -10,6 +10,7 @@ categories = ["parsing"]
 license = "MIT/Apache-2.0"
 
 [features]
+default = ["std"]
 std = ["pest/std"]
 grammar-extras = ["pest_meta/grammar-extras"]
 

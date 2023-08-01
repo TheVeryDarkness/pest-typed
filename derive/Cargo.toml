@@ -13,6 +13,7 @@ license = "MIT/Apache-2.0"
 proc-macro = true
 
 [features]
+default = ["std"]
 std = ["pest_typed/std", "pest_typed_generator/std"]
 grammar-extras = ["pest_typed_generator/grammar-extras"]
 
@@ -20,7 +21,7 @@ grammar-extras = ["pest_typed_generator/grammar-extras"]
 all-features = true
 
 [dependencies]
-pest_typed_generator = { path = "../generator", version = "0.1.16" }
+pest_typed_generator = { path = "../generator", version = "0.1.16", default-features = false }
 
 [dev-dependencies]
-pest_typed = { path = "../main", version = "0.1.16" }
+pest_typed = { path = "../main", version = "0.1.16", default-features = false }

@@ -10,6 +10,7 @@ categories = ["parsing"]
 license = "MIT/Apache-2.0"
 
 [features]
+default = ["std"]
 # Implements `std::error::Error` for the `Error` type
 std = ["pest/std", "ucd-trie/std", "dep:thiserror"]
 
