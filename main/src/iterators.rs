@@ -27,6 +27,13 @@ pub trait Pairs<'i: 'n, 'n, R: RuleType + 'n> {
     fn into_iter(self) -> Self::IntoIter;
 }
 
+pub trait Pair<'i: 'n, 'n, R: RuleType + 'n>: Pairs<'i, 'n, R> {
+    type Inner: Iterator<Item = &'n (dyn RuleStruct<'i, R>)>;
+    type IntoInner: Iterator<Item = boxed::Box<dyn RuleStruct<'i, R> + 'n>>;
+    fn inner(&'n self) -> Self::Inner;
+    fn into_inner(self) -> Self::IntoInner;
+}
+
 macro_rules! impl_empty {
     ($node:ty, $($tt:tt)*) => {
         impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> Pairs<'i, 'n, R> for $node {

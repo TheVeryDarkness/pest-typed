@@ -8,6 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use crate::config::Config;
+use crate::docs::DocComment;
 
 use super::types::{box_type, option_type, result_type, vec_type};
 use pest::unicode::unicode_property_names;
@@ -386,17 +387,36 @@ enum Emission {
     /// Normal rule.
     InnerToken,
 }
+impl Emission {
+    pub fn emit_content(&self) -> bool {
+        match self {
+            Emission::InnerToken | Emission::Silent => true,
+            Emission::Span => false,
+        }
+    }
+    pub fn emit_span(&self) -> bool {
+        match self {
+            Emission::InnerToken | Emission::Span => true,
+            Emission::Silent => false,
+        }
+    }
+}
 
-fn create(
-    doc: &[&str],
+struct RuleConfig<'g> {
+    pub atomicity: Option<bool>,
+    pub rule_id: Ident,
+    pub rule_name: &'g str,
+    pub rule_doc: Option<&'g str>,
+}
+impl<'g> RuleConfig<'g> {}
+
+fn create<'g>(
+    doc: impl Iterator<Item = &'g str>,
     id: &Ident,
-    content_type: Option<&TokenStream>,
-    fields: TokenStream,
     type_name: &TokenStream,
-    rule_name: &Ident,
+    rule_config: &RuleConfig,
+    emission: Emission,
     accessers: TokenStream,
-    parse_impl: TokenStream,
-    debug_impl: TokenStream,
     root: &TokenStream,
 ) -> TokenStream {
     let pest_typed = pest_typed();
@@ -413,63 +433,183 @@ fn create(
     let rule = quote! {#root::Rule};
     let pairs = pairs();
     let box_ = box_type();
-    let (content, deref, pairs_impl) = match content_type {
-        Some(content_type) => (
+
+    let emit_content = emission.emit_content();
+    let emit_span = emission.emit_span();
+    let rule_id = &rule_config.rule_id;
+    let atomicity = match rule_config.atomicity {
+        Some(true) => quote! {true},
+        Some(false) => quote! {false},
+        None => quote! {ATOMIC},
+    };
+
+    let fields = {
+        let content = if emit_content {
             quote! {
                 #[doc = "Matched content."]
-                pub content: #content_type,
-            },
+                pub content: #type_name,
+            }
+        } else {
+            quote! {}
+        };
+        let span = if emit_span {
             quote! {
-                impl<'i> ::core::ops::Deref for #id<'i> {
-                    type Target = #content_type;
-                    fn deref(&self) -> &Self::Target {
-                        &self.content
-                    }
+                #[doc = "Matched span."]
+                pub span: #span<'i>,
+            }
+        } else {
+            quote! {}
+        };
+        quote! {#content #span}
+    };
+    let deref = if emit_content {
+        quote! {
+            impl<'i> ::core::ops::Deref for #id<'i> {
+                type Target = #type_name;
+                fn deref(&self) -> &Self::Target {
+                    &self.content
                 }
-                impl<'i> ::core::ops::DerefMut for #id<'i> {
-                    fn deref_mut(&mut self) -> &mut Self::Target {
-                        &mut self.content
-                    }
+            }
+            impl<'i> ::core::ops::DerefMut for #id<'i> {
+                fn deref_mut(&mut self) -> &mut Self::Target {
+                    &mut self.content
                 }
-            },
-            quote! {
-                impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #id<'i> {
-                    type Iter = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::Iter;
-                    type IntoIter = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::IntoIter;
+            }
+        }
+    } else {
+        quote! {}
+    };
+    let pairs_impl = if emit_span {
+        quote! {
+            impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #id<'i> {
+                type Iter = ::core::iter::Once<&'n dyn #pest_typed::RuleStruct<'i, #root::Rule>>;
+                type IntoIter = ::core::iter::Once<#box_<dyn #pest_typed::RuleStruct<'i, #root::Rule> + 'n>>;
 
-                    fn iter(&'n self) -> Self::Iter {
-                        self.content.iter()
-                    }
-                    fn into_iter(self) -> Self::IntoIter {
-                        self.content.into_iter()
-                    }
+                fn iter(&'n self) -> Self::Iter {
+                    ::core::iter::once(self)
                 }
-            },
-        ),
-        None => (
-            quote! {},
-            quote! {},
-            quote! {
-                impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #id<'i> {
-                    type Iter = ::core::iter::Once<&'n dyn #pest_typed::RuleStruct<'i, #root::Rule>>;
-                    type IntoIter = ::core::iter::Once<#box_<dyn #pest_typed::RuleStruct<'i, #root::Rule> + 'n>>;
+                fn into_iter(self) -> Self::IntoIter {
+                    ::core::iter::once(#box_::new(self))
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #id<'i> {
+                type Iter = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::Iter;
+                type IntoIter = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::IntoIter;
 
-                    fn iter(&'n self) -> Self::Iter {
-                        ::core::iter::once(self)
-                    }
-                    fn into_iter(self) -> Self::IntoIter {
-                        ::core::iter::once(#box_::new(self))
+                fn iter(&'n self) -> Self::Iter {
+                    self.content.iter()
+                }
+                fn into_iter(self) -> Self::IntoIter {
+                    self.content.into_iter()
+                }
+            }
+        }
+    };
+    let pair_impl = if emit_content {
+        quote! {
+            impl<'i: 'n, 'n> #pest_typed::iterators::Pair<'i, 'n, #root::Rule> for #id<'i> {
+                type Inner = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::Iter;
+                type IntoInner = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::IntoIter;
+
+                fn inner(&'n self) -> Self::Inner {
+                    self.content.iter()
+                }
+                fn into_inner(self) -> Self::IntoInner {
+                    self.content.into_iter()
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl<'i: 'n, 'n> #pest_typed::iterators::Pair<'i, 'n, #root::Rule> for #id<'i> {
+                type Inner = ::core::iter::Empty<&'n dyn #pest_typed::RuleStruct<'i, #root::Rule>>;
+                type IntoInner = ::core::iter::Empty<#box_<dyn #pest_typed::RuleStruct<'i, #root::Rule> + 'n>>;
+
+                fn inner(&'n self) -> Self::Inner {
+                    ::core::iter::empty()
+                }
+                fn into_inner(self) -> Self::IntoInner {
+                    ::core::iter::empty()
+                }
+            }
+        }
+    };
+    let rule_struct_impl = {
+        match emission {
+            Emission::Silent => quote! {},
+            Emission::Span => quote! {
+                impl<'i> #pest_typed::RuleStruct<'i, #root::Rule> for #id<'i> {
+                    fn span(&self) -> #span<'i> {
+                        self.span
                     }
                 }
             },
-        ),
+            Emission::InnerToken => quote! {
+                impl<'i> #pest_typed::RuleStruct<'i, #root::Rule> for #id<'i> {
+                    fn span(&self) -> #span<'i> {
+                        self.span
+                    }
+                }
+            },
+        }
+    };
+    let parse_impl = match emission {
+        Emission::Silent => quote! {
+            let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
+            Ok((input, Self { content }))
+        },
+        Emission::Span => quote! {
+            let start = input;
+            tracker.record_during(
+                input,
+                |tracker| {
+                    let (input, _) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
+                    let span = start.span(&input);
+                    Ok((input, Self { span }))
+                }
+            )
+        },
+        Emission::InnerToken => quote! {
+            let start = input;
+            tracker.record_during(
+                input,
+                |tracker| {
+                    let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
+                    let span = start.span(&input);
+                    Ok((input, Self { content, span }))
+                }
+            )
+        },
+    };
+    let debug_impl = {
+        let rule_name = rule_config.rule_name;
+        match emission {
+            Emission::Silent => quote! {
+                f.debug_struct(#rule_name)
+                    .field("content", &self.content)
+                    .finish()
+            },
+            Emission::Span => quote! {
+                f.debug_struct(#rule_name)
+                    .field("span", &self.span)
+                    .finish()
+            },
+            Emission::InnerToken => quote! {
+                f.debug_struct(#rule_name)
+                    .field("content", &self.content)
+                    .field("span", &self.span)
+                    .finish()
+            },
+        }
     };
     quote! {
         #(#[doc = #doc])*
         #[allow(non_camel_case_types)]
         #[derive(Clone)]
         pub struct #id<'i> {
-            #content
             #fields
         }
         impl<'i> #id<'i> {
@@ -477,7 +617,7 @@ fn create(
         }
         #deref
         impl<'i> #pest_typed::RuleWrapper<#root::Rule> for #id<'i> {
-            const RULE: #root::Rule = #root::Rule::#rule_name;
+            const RULE: #root::Rule = #root::Rule::#rule_id;
             type Rule = #root::Rule;
         }
         impl<'i> #pest_typed::TypeWrapper for #id<'i> {
@@ -529,127 +669,46 @@ fn create(
             }
         }
         #pairs_impl
+        #pair_impl
+        #rule_struct_impl
     }
 }
 
 fn rule(
-    rule_name: &str,
+    rule_config: &RuleConfig,
     type_name: &TokenStream,
-    rule_id: &Ident,
     doc: &String,
     accessers: &Accesser,
-    inner_spaces: Option<bool>,
     emission: Emission,
 ) -> TokenStream {
     let root = quote! {super};
-    let span = _span();
     let _bool = _bool();
-    let (atomicity, atomicity_doc) = match inner_spaces {
-        Some(false) => (quote! {true}, "Atomic rule."),
-        Some(true) => (quote! {false}, "Non-atomic rule."),
-        None => (quote! {ATOMIC}, "Normal rule."),
+    let atomicity_doc = match rule_config.atomicity {
+        Some(true) => "Atomic rule.",
+        Some(false) => "Non-atomic rule.",
+        None => "Normal rule.",
     };
     let accessers = match emission {
         Emission::InnerToken => accessers.collect(&root),
         Emission::Silent | Emission::Span => quote! {},
     };
-    let (content_type, fields, parse_impl, debug_impl) = match emission {
-        Emission::Silent => (
-            Some(type_name),
-            quote! {},
-            quote! {
-                let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
-                Ok((input, Self { content }))
-            },
-            quote! {
-                f.debug_struct(#rule_name)
-                    .field("content", &self.content)
-                    .finish()
-            },
-        ),
-        Emission::Span => (
-            None,
-            quote! {
-                #[doc = "Matched span."]
-                pub span: #span<'i>,
-            },
-            quote! {
-                let start = input;
-                tracker.record_during(
-                    input,
-                    |tracker| {
-                        let (input, _) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
-                        let span = start.span(&input);
-                        Ok((input, Self { span }))
-                    }
-                )
-            },
-            quote! {
-                f.debug_struct(#rule_name)
-                    .field("span", &self.span)
-                    .finish()
-            },
-        ),
-        Emission::InnerToken => (
-            Some(type_name),
-            quote! {
-                #[doc = "Matched span."]
-                pub span: #span<'i>,
-            },
-            quote! {
-                let start = input;
-                tracker.record_during(
-                    input,
-                    |tracker| {
-                        let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
-                        let span = start.span(&input);
-                        Ok((input, Self { content, span }))
-                    }
-                )
-            },
-            quote! {
-                f.debug_struct(#rule_name)
-                    .field("content", &self.content)
-                    .field("span", &self.span)
-                    .finish()
-            },
-        ),
-    };
-    let extra = {
-        let pest_typed = pest_typed();
-        match emission {
-            Emission::Silent => quote! {},
-            Emission::Span => quote! {
-                impl<'i> #pest_typed::RuleStruct<'i, #root::Rule> for #rule_id<'i> {
-                    fn span(&self) -> #span<'i> {
-                        self.span
-                    }
-                }
-            },
-            Emission::InnerToken => quote! {
-                impl<'i> #pest_typed::RuleStruct<'i, #root::Rule> for #rule_id<'i> {
-                    fn span(&self) -> #span<'i> {
-                        self.span
-                    }
-                }
-            },
-        }
-    };
-    let def = create(
-        &[doc, atomicity_doc],
-        rule_id,
-        content_type,
-        fields,
-        type_name,
-        rule_id,
-        accessers,
-        parse_impl,
-        debug_impl,
-        &root,
-    );
-    quote! {
-        #def
-        #extra
+    let docs = [doc, atomicity_doc];
+    macro_rules! create {
+        ($docs:expr) => {{
+            create(
+                $docs,
+                &rule_config.rule_id,
+                type_name,
+                rule_config,
+                emission,
+                accessers,
+                &root,
+            )
+        }};
+    }
+    match rule_config.rule_doc {
+        Some(rule_doc) => create!(docs.into_iter().chain(std::iter::once(rule_doc))),
+        None => create!(docs.into_iter()),
     }
 }
 
@@ -734,7 +793,6 @@ impl Output {
     }
     /// (nodes, wrappers)
     fn collect(&self) -> TokenStream {
-        #[cfg(feature = "grammar-extras")]
         let pest_typed = pest_typed();
         let content = &self.content;
         let wrappers = &self.wrappers;
@@ -743,7 +801,7 @@ impl Output {
         let tags = self.tagged_nodes.iter().map(|(name, def)| {
             quote! {
                 pub mod #name {
-                    use #pest_typed::{NeverFailedTypedNode as _, TypedNode as _};
+                    use #pest_typed::{iterators::{Pair as _, Pairs as _}, NeverFailedTypedNode as _, TypedNode as _, };
                     use core::ops::Deref as _;
                     #(#def)*
                 }
@@ -765,6 +823,7 @@ impl Output {
             #mod_tags
             #[doc = "Definitions of statically typed nodes generated by pest-generator."]
             pub mod pairs {
+                use #pest_typed::iterators::{Pair as _, Pairs as _};
                 #(#content)*
             }
         }
@@ -775,26 +834,17 @@ impl Output {
 fn process_single_alias<'g>(
     map: &mut Output,
     expr: &OptimizedExpr,
-    rule_name: &'g str,
+    rule_config: &RuleConfig,
     type_name: TokenStream,
     accessers: Accesser<'g>,
     root: &TokenStream,
-    inner_spaces: Option<bool>,
     emission: Emission,
     explicit: bool,
 ) -> (TokenStream, Accesser<'g>) {
-    let rule_id = ident(rule_name);
     if explicit {
+        let rule_id = &rule_config.rule_id;
         let doc = format!("Corresponds to expression: `{}`.", expr);
-        let def = rule(
-            rule_name,
-            &type_name,
-            &rule_id,
-            &doc,
-            &accessers,
-            inner_spaces,
-            emission,
-        );
+        let def = rule(rule_config, &type_name, &doc, &accessers, emission);
         map.insert(def);
         let pairs = pairs();
         (quote! {#root::#pairs::#rule_id::<'i>}, accessers)
@@ -806,11 +856,10 @@ fn process_single_alias<'g>(
 /// Returns type name.
 fn generate_graph_node<'g>(
     expr: &'g OptimizedExpr,
-    rule_name: &'g str,
+    rule_config: &RuleConfig,
     // From node name to type definition and implementation
     map: &mut Output,
     explicit: bool,
-    inner_spaces: Option<bool>,
     emission: Emission,
     config: Config,
     root: &TokenStream,
@@ -823,13 +872,12 @@ fn generate_graph_node<'g>(
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::Str::<'i, #root::#wrapper>
                 },
                 Accesser::new(),
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
@@ -839,13 +887,12 @@ fn generate_graph_node<'g>(
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::Insens::<'i, #root::#wrapper>
                 },
                 Accesser::new(),
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
@@ -853,7 +900,7 @@ fn generate_graph_node<'g>(
         OptimizedExpr::PeekSlice(start, end) => process_single_alias(
             map,
             expr,
-            rule_name,
+            rule_config,
             match end {
                 Some(end) => quote! {
                     #root::#generics::PeekSlice2::<'i, #start, #end>
@@ -864,31 +911,21 @@ fn generate_graph_node<'g>(
             },
             Accesser::new(),
             root,
-            inner_spaces,
             emission,
             explicit,
         ),
         OptimizedExpr::Push(expr) => {
-            let (inner, accesser) = generate_graph_node(
-                expr,
-                rule_name,
-                map,
-                false,
-                inner_spaces,
-                emission,
-                config,
-                root,
-            );
+            let (inner, accesser) =
+                generate_graph_node(expr, rule_config, map, false, emission, config, root);
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::Push::<'i, #inner>
                 },
                 accesser.content(),
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
@@ -898,13 +935,12 @@ fn generate_graph_node<'g>(
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::Skip::<'i, #root::#wrapper>
                 },
                 Accesser::new(),
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
@@ -915,13 +951,12 @@ fn generate_graph_node<'g>(
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::CharRange::<'i, #start, #end>
                 },
                 Accesser::new(),
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
@@ -937,117 +972,73 @@ fn generate_graph_node<'g>(
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {#root::#generics::Box::<'i, #root::#pairs::#inner::<'i>>},
                 accessers,
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
         }
         OptimizedExpr::PosPred(expr) => {
-            let (inner, accessers) = generate_graph_node(
-                expr,
-                rule_name,
-                map,
-                false,
-                inner_spaces,
-                emission,
-                config,
-                root,
-            );
+            let (inner, accessers) =
+                generate_graph_node(expr, rule_config, map, false, emission, config, root);
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::Positive::<'i, #inner>
                 },
                 accessers.content(),
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
         }
         OptimizedExpr::NegPred(expr) => {
             // Impossible to access inner tokens.
-            let (inner, _) = generate_graph_node(
-                expr,
-                rule_name,
-                map,
-                false,
-                inner_spaces,
-                emission,
-                config,
-                root,
-            );
+            let (inner, _) =
+                generate_graph_node(expr, rule_config, map, false, emission, config, root);
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::Negative::<'i, #inner>
                 },
                 Accesser::new(),
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
         }
         OptimizedExpr::RestoreOnErr(expr) => {
-            let (inner, accessers) = generate_graph_node(
-                expr,
-                rule_name,
-                map,
-                false,
-                inner_spaces,
-                emission,
-                config,
-                root,
-            );
+            let (inner, accessers) =
+                generate_graph_node(expr, rule_config, map, false, emission, config, root);
             let accessers = accessers.content();
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::Restorable::<'i, #inner>
                 },
                 accessers,
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
         }
         OptimizedExpr::Seq(lhs, rhs) => {
-            let (first, acc_first) = generate_graph_node(
-                lhs,
-                rule_name,
-                map,
-                false,
-                inner_spaces,
-                emission,
-                config,
-                root,
-            );
-            let (second, acc_second) = generate_graph_node(
-                rhs,
-                rule_name,
-                map,
-                false,
-                inner_spaces,
-                emission,
-                config,
-                root,
-            );
+            let (first, acc_first) =
+                generate_graph_node(lhs, rule_config, map, false, emission, config, root);
+            let (second, acc_second) =
+                generate_graph_node(rhs, rule_config, map, false, emission, config, root);
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::Seq::<
                         'i,
@@ -1057,38 +1048,21 @@ fn generate_graph_node<'g>(
                 },
                 acc_first.first().join(acc_second.second()),
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
         }
         OptimizedExpr::Choice(lhs, rhs) => {
-            let (first, acc_first) = generate_graph_node(
-                lhs,
-                rule_name,
-                map,
-                false,
-                inner_spaces,
-                emission,
-                config,
-                root,
-            );
+            let (first, acc_first) =
+                generate_graph_node(lhs, rule_config, map, false, emission, config, root);
             let acc_first = acc_first.optional_first();
-            let (second, acc_second) = generate_graph_node(
-                rhs,
-                rule_name,
-                map,
-                false,
-                inner_spaces,
-                emission,
-                config,
-                root,
-            );
+            let (second, acc_second) =
+                generate_graph_node(rhs, rule_config, map, false, emission, config, root);
             let acc_second = acc_second.optional_second();
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::Choice::<
                         'i,
@@ -1098,50 +1072,32 @@ fn generate_graph_node<'g>(
                 },
                 acc_first.join(acc_second),
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
         }
         OptimizedExpr::Opt(inner) => {
-            let (inner_name, accessers) = generate_graph_node(
-                inner,
-                rule_name,
-                map,
-                false,
-                inner_spaces,
-                emission,
-                config,
-                root,
-            );
+            let (inner_name, accessers) =
+                generate_graph_node(inner, rule_config, map, false, emission, config, root);
             let accessers = accessers.optional_content();
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {#root::#generics::Opt::<'i, #inner_name>},
                 accessers,
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
         }
         OptimizedExpr::Rep(inner) => {
-            let (inner_name, accessers) = generate_graph_node(
-                inner,
-                rule_name,
-                map,
-                false,
-                inner_spaces,
-                emission,
-                config,
-                root,
-            );
+            let (inner_name, accessers) =
+                generate_graph_node(inner, rule_config, map, false, emission, config, root);
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::Rep::<
                         'i,
@@ -1150,27 +1106,18 @@ fn generate_graph_node<'g>(
                 },
                 accessers.contents(),
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
         }
         #[cfg(feature = "grammar-extras")]
         OptimizedExpr::RepOnce(inner) => {
-            let (inner_name, accessers) = generate_graph_node(
-                inner,
-                rule_name,
-                map,
-                false,
-                inner_spaces,
-                emission,
-                config,
-                root,
-            );
+            let (inner_name, accessers) =
+                generate_graph_node(inner, rule_config, map, false, emission, config, root);
             process_single_alias(
                 map,
                 expr,
-                rule_name,
+                rule_config,
                 quote! {
                     #root::#generics::RepOnce::<
                         'i,
@@ -1179,7 +1126,6 @@ fn generate_graph_node<'g>(
                 },
                 accessers.contents(),
                 root,
-                inner_spaces,
                 emission,
                 explicit,
             )
@@ -1188,69 +1134,55 @@ fn generate_graph_node<'g>(
         OptimizedExpr::NodeTag(inner_expr, tag) => {
             if config.emit_tagged_node_reference {
                 let new_root = &quote! {super::super};
-                let span = _span();
                 let tag_id = ident(tag.as_str());
                 let (inner, accesser) = generate_graph_node(
                     inner_expr,
-                    rule_name,
+                    rule_config,
                     map,
                     explicit,
-                    inner_spaces,
                     emission,
                     config,
                     new_root,
                 );
-                let fields = quote! {
-                    /// Matched span.
-                    pub span: #span<'i>,
-                };
-                let parse_impl = quote! {
-                    let start = input;
-                    let (input, content) = #inner::try_parse_with::<ATOMIC>(input, stack, tracker)?;
-                    let span = start.span(&input);
-                    Ok((input, Self { content, span }))
-                };
-                let debug_impl = quote! {
-                    f.debug_struct(#tag)
-                        .field("content", &self.content)
-                        .field("span", &self.span)
-                        .finish()
-                };
                 let def = create(
-                    &[format!("Tag {} referenced by {}.", tag, rule_name).as_str()],
+                    [format!("Tag {} referenced by {}.", tag, rule_config.rule_name).as_str()]
+                        .into_iter(),
                     &tag_id,
-                    Some(&inner),
-                    fields,
                     &inner,
-                    &ident(rule_name),
+                    rule_config,
+                    Emission::InnerToken,
                     accesser.collect(&new_root),
-                    parse_impl,
-                    debug_impl,
                     new_root,
                 );
-                let rule_id = ident(rule_name);
-                let tag_module = map.insert_tag(&rule_id, def);
-                let accesser = Accesser::from_tag(tag.as_str(), quote! {tags::#rule_id::#tag_id});
-                (quote! {#root::#tag_module::#tag_id::<'i>}, accesser)
+                let rule_id = &rule_config.rule_id;
+                let tag_module = map.insert_tag(rule_id, def);
+                let new_accesser =
+                    Accesser::from_tag(tag.as_str(), quote! {tags::#rule_id::#tag_id});
+                if config.truncate_accesser_at_node_tag {
+                    (quote! {#root::#tag_module::#tag_id::<'i>}, new_accesser)
+                } else {
+                    (
+                        quote! {#root::#tag_module::#tag_id::<'i>},
+                        new_accesser.join(accesser),
+                    )
+                }
             } else {
                 let (inner, accesser) = generate_graph_node(
                     inner_expr,
-                    rule_name,
+                    rule_config,
                     map,
                     explicit,
-                    inner_spaces,
                     emission,
                     config,
                     root,
                 );
                 process_single_alias(
                     map,
-                    inner_expr,
-                    rule_name,
+                    expr,
+                    rule_config,
                     inner,
                     accesser,
                     root,
-                    inner_spaces,
                     emission,
                     false,
                 )
@@ -1259,23 +1191,29 @@ fn generate_graph_node<'g>(
     }
 }
 
-fn generate_graph(rules: &[OptimizedRule], config: Config) -> Output {
+fn generate_graph(rules: &[OptimizedRule], config: Config, doc: &DocComment) -> Output {
     let mut res = Output::new();
     for rule in rules.iter() {
         let rule_name = rule.name.as_str();
-        let (inner_spaces, emission) = match rule.ty {
+        let (atomicity, emission) = match rule.ty {
             RuleType::Normal => (None, Emission::InnerToken),
             RuleType::Silent => (None, Emission::Silent),
-            RuleType::NonAtomic => (Some(true), Emission::InnerToken),
-            RuleType::CompoundAtomic => (Some(false), Emission::InnerToken),
-            RuleType::Atomic => (Some(false), Emission::Span),
+            RuleType::NonAtomic => (Some(false), Emission::InnerToken),
+            RuleType::CompoundAtomic => (Some(true), Emission::InnerToken),
+            RuleType::Atomic => (Some(true), Emission::Span),
+        };
+        let rule_doc = doc.line_docs.get(rule_name).map(|s| s.as_str());
+        let rule_config = RuleConfig {
+            atomicity,
+            rule_id: ident(rule_name),
+            rule_name,
+            rule_doc,
         };
         generate_graph_node(
             &rule.expr,
-            rule_name,
+            &rule_config,
             &mut res,
             true,
-            inner_spaces,
             emission,
             config,
             &quote! {super},
@@ -1311,10 +1249,11 @@ fn collect_used_rule<'s>(rule: &'s OptimizedRule, res: &mut BTreeSet<&'s str>) {
 
 pub(crate) fn generate_typed_pair_from_rule(
     rules: &[OptimizedRule],
+    doc: &DocComment,
     config: Config,
 ) -> TokenStream {
     let pest_typed = pest_typed();
-    let mut graph = generate_graph(rules, config);
+    let mut graph = generate_graph(rules, config, doc);
     let as_wrapper = |name: &Ident| {
         quote! {
             #[allow(non_camel_case_types)]
@@ -1355,7 +1294,7 @@ pub(crate) fn generate_typed_pair_from_rule(
         quote! {
             #[doc(hidden)]
             mod generics {
-                use #pest_typed::{NeverFailedTypedNode, StringArrayWrapper, StringWrapper, TypedNode, predefined_node};
+                use #pest_typed::{NeverFailedTypedNode, predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
                 pub type Ignored<'i> = predefined_node::Ign::<
                     'i,
                     #root::Rule,

@@ -117,7 +117,7 @@ fn generate_typed(
         quote!()
     };
     let rule_enum = generate_enum(&rules, doc_comment);
-    let pairs = generate_typed_pair_from_rule(&rules, config);
+    let pairs = generate_typed_pair_from_rule(&rules, doc_comment, config);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let result = result_type();
