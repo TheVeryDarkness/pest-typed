@@ -147,16 +147,11 @@ impl<
         const MIN: usize,
     > Pairs<'i, 'n, R> for RepMin<'i, R, T, IGNORED, MIN>
 {
-    type Iter = vec::IntoIter<&'n dyn RuleStruct<'i, R>>;
+    type Iter = FlatMap<core::slice::Iter<'n, T>, T::Iter, fn(&'n T) -> T::Iter>;
     type IntoIter = FlatMap<vec::IntoIter<T>, T::IntoIter, fn(T) -> T::IntoIter>;
 
     fn iter(&'n self) -> Self::Iter {
-        let mut vec = vec![];
-        for e in self.content.iter() {
-            vec.extend(e.iter());
-        }
-        vec.into_iter()
-        // self.content.iter().flat_map(|e| e.iter())
+        self.content.iter().flat_map(|e: &'n T| e.iter())
     }
     fn into_iter(self) -> Self::IntoIter {
         self.content.into_iter().flat_map(|e| e.into_iter())
