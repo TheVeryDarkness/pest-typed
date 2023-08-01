@@ -582,6 +582,14 @@ pub struct Opt<'i, R: RuleType, T: TypedNode<'i, R>> {
     pub content: Option<T>,
     _phantom: PhantomData<&'i R>,
 }
+impl<'i, R: RuleType, T: TypedNode<'i, R>> From<Option<T>> for Opt<'i, R, T> {
+    fn from(content: Option<T>) -> Self {
+        Self {
+            content,
+            _phantom: PhantomData,
+        }
+    }
+}
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Opt<'i, R, T> {
     #[inline]
     fn try_parse_with<const ATOMIC: bool>(
@@ -590,21 +598,20 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Opt<'i, R, T> {
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         match T::try_parse_with::<ATOMIC>(input, stack, tracker) {
-            Ok((input, inner)) => Ok((
-                input,
-                Self {
-                    content: Some(inner),
-                    _phantom: PhantomData,
-                },
-            )),
-            Err(_) => Ok((
-                input,
-                Self {
-                    content: None,
-                    _phantom: PhantomData,
-                },
-            )),
+            Ok((input, inner)) => Ok((input, Self::from(Some(inner)))),
+            Err(_) => Ok((input, Self::from(None))),
         }
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Opt<'i, R, T> {
+    type Target = Option<T>;
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Opt<'i, R, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.content
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Opt<'i, R, T> {
@@ -910,6 +917,31 @@ impl<
         T: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
         const MIN: usize,
+    > Deref for RepMin<'i, R, T, IGNORED, MIN>
+{
+    type Target = Vec<T>;
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+        const MIN: usize,
+    > DerefMut for RepMin<'i, R, T, IGNORED, MIN>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.content
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+        const MIN: usize,
     > Debug for RepMin<'i, R, T, IGNORED, MIN>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -1095,6 +1127,17 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> From<T> for Restorable<'i, R, T> {
         }
     }
 }
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Restorable<'i, R, T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Restorable<'i, R, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.content
+    }
+}
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Restorable<'i, R, T> {
     fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
@@ -1205,6 +1248,21 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapp
     }
     fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {
         parse_partial::<R, RULE, Self>(input)
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>> Deref
+    for AtomicRule<'i, R, T, RULE, _EOI>
+{
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>> DerefMut
+    for AtomicRule<'i, R, T, RULE, _EOI>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.content
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>> Debug
@@ -1324,6 +1382,33 @@ impl<
         RULE: RuleWrapper<R>,
         _EOI: RuleWrapper<R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
+    > Deref for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
+{
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        RULE: RuleWrapper<R>,
+        _EOI: RuleWrapper<R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > DerefMut for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.content
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        RULE: RuleWrapper<R>,
+        _EOI: RuleWrapper<R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
     > Debug for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -1360,6 +1445,17 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<'i, R, T> {
         let (input, content) = T::try_parse_with::<ATOMIC>(input, stack, tracker)?;
         stack.push(start.span(&input));
         Ok((input, Self::from(content)))
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Push<'i, R, T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Push<'i, R, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.content
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Push<'i, R, T> {
@@ -1526,6 +1622,33 @@ impl<
 
     fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {
         parse_partial::<R, RULE, Self>(input)
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        RULE: RuleWrapper<R>,
+        T: TypedNode<'i, R>,
+        _EOI: RuleWrapper<R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > Deref for Rule<'i, R, T, RULE, _EOI, IGNORED>
+{
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        RULE: RuleWrapper<R>,
+        T: TypedNode<'i, R>,
+        _EOI: RuleWrapper<R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+    > DerefMut for Rule<'i, R, T, RULE, _EOI, IGNORED>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.content
     }
 }
 impl<
