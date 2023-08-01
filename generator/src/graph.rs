@@ -9,7 +9,7 @@
 
 use crate::config::Config;
 
-use super::types::{option_type, result_type, vec_type};
+use super::types::{box_type, option_type, result_type, vec_type};
 use pest::unicode::unicode_property_names;
 use pest_meta::optimizer::OptimizedExpr;
 use pest_meta::{ast::RuleType, optimizer::OptimizedRule};
@@ -407,7 +407,8 @@ fn create(
     let ignore = ignore(root);
     let rule = quote! {#root::Rule};
     let pairs = pairs();
-    let (content, deref) = match content_type {
+    let box_ = box_type();
+    let (content, deref, pairs_impl) = match content_type {
         Some(content_type) => (
             quote! {
                 #[doc = "Matched content."]
@@ -426,8 +427,37 @@ fn create(
                     }
                 }
             },
+            quote! {
+                impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #id<'i> {
+                    type Iter = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::Iter;
+                    type IntoIter = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::IntoIter;
+
+                    fn iter(&'n self) -> Self::Iter {
+                        self.content.iter()
+                    }
+                    fn into_iter(self) -> Self::IntoIter {
+                        self.content.into_iter()
+                    }
+                }
+            },
         ),
-        None => (quote! {}, quote! {}),
+        None => (
+            quote! {},
+            quote! {},
+            quote! {
+                impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #id<'i> {
+                    type Iter = ::core::iter::Once<&'n dyn #pest_typed::RuleStruct<'i, #root::Rule>>;
+                    type IntoIter = ::core::iter::Once<#box_<dyn #pest_typed::RuleStruct<'i, #root::Rule> + 'n>>;
+
+                    fn iter(&'n self) -> Self::Iter {
+                        ::core::iter::once(self)
+                    }
+                    fn into_iter(self) -> Self::IntoIter {
+                        ::core::iter::once(#box_::new(self))
+                    }
+                }
+            },
+        ),
     };
     quote! {
         #(#[doc = #doc])*
@@ -493,6 +523,7 @@ fn create(
                 #debug_impl
             }
         }
+        #pairs_impl
     }
 }
 
@@ -579,7 +610,27 @@ fn rule(
             },
         ),
     };
-    create(
+    let extra = {
+        let pest_typed = pest_typed();
+        match emission {
+            Emission::Nothing => quote! {},
+            Emission::Span => quote! {
+                impl<'i> #pest_typed::RuleStruct<'i, #root::Rule> for #rule_id<'i> {
+                    fn span(&self) -> #span<'i> {
+                        self.span
+                    }
+                }
+            },
+            Emission::InnerToken => quote! {
+                impl<'i> #pest_typed::RuleStruct<'i, #root::Rule> for #rule_id<'i> {
+                    fn span(&self) -> #span<'i> {
+                        self.span
+                    }
+                }
+            },
+        }
+    };
+    let def = create(
         &[doc, atomicity_doc],
         rule_id,
         content_type,
@@ -590,7 +641,11 @@ fn rule(
         parse_impl,
         debug_impl,
         &root,
-    )
+    );
+    quote! {
+        #def
+        #extra
+    }
 }
 
 struct Output {
@@ -1348,6 +1403,8 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
     let span = _span();
     let char = _char();
     let tracker = tracker();
+    let root = quote! {super};
+    let box_ = box_type();
 
     for property in unicode_property_names() {
         let property_ident: Ident = syn::parse_str(property).unwrap();
@@ -1394,6 +1451,17 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
                         f.debug_struct(#property)
                             .field("content", &self.content)
                             .finish()
+                    }
+                }
+                impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #property_ident<'i> {
+                    type Iter = ::core::iter::Empty<&'n dyn #pest_typed::RuleStruct<'i, #root::Rule>>;
+                    type IntoIter = ::core::iter::Empty<#box_<dyn #pest_typed::RuleStruct<'i, #root::Rule> + 'n>>;
+
+                    fn iter(&'n self) -> Self::Iter {
+                        ::core::iter::empty()
+                    }
+                    fn into_iter(self) -> Self::IntoIter {
+                        ::core::iter::empty()
                     }
                 }
             });

@@ -12,6 +12,8 @@ use core::fmt::Debug;
 pub use alloc::rc::Rc;
 use pest::RuleType;
 
+use crate::RuleWrapper;
+
 use super::{error::Error, position::Position, span::Span, stack::Stack, tracker::Tracker};
 
 /// Node of concrete syntax tree that never fails.
@@ -49,4 +51,17 @@ pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
     /// Parse the whole input into given typed node.
     /// A rule is not atomic by default.
     fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>>;
+}
+
+pub trait RuleStorage<R: RuleType> {
+    fn rule(&self) -> R;
+}
+impl<R: RuleType, T: RuleWrapper<R>> RuleStorage<R> for T {
+    fn rule(&self) -> R {
+        T::RULE
+    }
+}
+
+pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
+    fn span(&self) -> Span<'i>;
 }
