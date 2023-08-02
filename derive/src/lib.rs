@@ -103,8 +103,8 @@
 use proc_macro::TokenStream;
 
 /// The main method that's called by the proc macro [`pest_typed_generator::derive_typed_parser`].
-#[doc = include_str!("../usage-part1.md")]
-#[doc = include_str!("../usage-part2.md")]
+///
+/// See [`pest_typed_generator`] for more information.
 #[proc_macro_derive(
     TypedParser,
     attributes(
