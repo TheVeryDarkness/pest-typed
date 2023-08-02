@@ -36,12 +36,31 @@ enum SpecialError {
     EmptyStack,
 }
 
+impl<R: RuleType> From<SpecialError> for ErrorVariant<R> {
+    fn from(special: SpecialError) -> Self {
+        match special {
+            SpecialError::SliceOutOfBound(start, end) => ErrorVariant::CustomError {
+                message: match end {
+                    Some(end) => format!("Peek slice {}..{} out of bound.", start, end),
+                    None => format!("Peek slice {}.. out of bound.", start),
+                },
+            },
+            SpecialError::RepeatTooManyTimes => ErrorVariant::CustomError {
+                message: "Repeated too many times.".to_owned(),
+            },
+            SpecialError::EmptyStack => ErrorVariant::CustomError {
+                message: "Nothing to pop or drop.".to_owned(),
+            },
+        }
+    }
+}
+
 /// Error tracker.
 pub struct Tracker<'i, R: RuleType> {
     position: Position<'i>,
     positive: bool,
-    /// upper_rule -> (positives, negatives)
-    attempts: BTreeMap<R, (Vec<R>, Vec<R>)>,
+    /// upper rules -> (positives, negatives)
+    attempts: BTreeMap<Vec<R>, (Vec<R>, Vec<R>)>,
     special: Vec<SpecialError>,
     stack: Vec<(R, bool)>,
 }
@@ -106,12 +125,13 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         }
     }
     #[inline]
-    fn record(&mut self, rule: R, upper_rule: R, pos: Position<'i>, succeeded: bool) {
+    fn record(&mut self, rule: R, pos: Position<'i>, succeeded: bool) {
         if self.prepare(pos) {
             match self.positive {
                 true => {
                     if !succeeded {
-                        let (vec, _) = self.attempts.entry(upper_rule).or_default();
+                        let key = self.stack.iter().map(|(e, _)| e.clone()).collect();
+                        let (vec, _) = self.attempts.entry(key).or_default();
                         if !Self::same_with_last(vec, rule) {
                             vec.push(rule);
                         }
@@ -119,7 +139,8 @@ impl<'i, R: RuleType> Tracker<'i, R> {
                 }
                 false => {
                     if succeeded {
-                        let (_, vec) = self.attempts.entry(upper_rule).or_default();
+                        let key = self.stack.iter().map(|(e, _)| e.clone()).collect();
+                        let (_, vec) = self.attempts.entry(key).or_default();
                         if !Self::same_with_last(vec, rule) {
                             vec.push(rule);
                         }
@@ -142,9 +163,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         let succeeded = res.is_ok();
         let (rule, has_children) = self.stack.pop().unwrap();
         if !has_children {
-            if let Some((upper, _)) = self.stack.last() {
-                self.record(rule, *upper, pos, succeeded);
-            }
+            self.record(rule, pos, succeeded);
         }
         res
     }
@@ -161,8 +180,29 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         fn collect_rules<R: RuleType>(vec: &Vec<R>) -> String {
             format!("{:?}", vec)
         }
+        fn collect_rule_stack<R: RuleType>(vec: &[R]) -> String {
+            let max_len: usize = 3;
+            if vec.len() > max_len {
+                let v = &vec[..max_len];
+                let chain = v
+                    .iter()
+                    .rev()
+                    .map(|r| format!("{:?} <- ", r))
+                    .collect::<Vec<_>>()
+                    .concat();
+                format!("{} ...", chain)
+            } else {
+                let chain = vec
+                    .iter()
+                    .rev()
+                    .map(|r| format!("{:?}", r))
+                    .collect::<Vec<_>>()
+                    .join(" <- ");
+                chain
+            }
+        }
         fn collect_attempts<R: RuleType>(
-            upper_rule: &R,
+            upper_rules: &[R],
             positives: &Vec<R>,
             negatives: &Vec<R>,
         ) -> Cow<'static, str> {
@@ -171,18 +211,18 @@ impl<'i, R: RuleType> Tracker<'i, R> {
                 (false, true) => Cow::Owned(format!(
                     "Expected {}, by {:?}",
                     collect_rules(positives),
-                    upper_rule,
+                    collect_rule_stack(upper_rules),
                 )),
                 (true, false) => Cow::Owned(format!(
                     "Unexpected {}, by {:?}",
                     collect_rules(negatives),
-                    upper_rule,
+                    collect_rule_stack(upper_rules),
                 )),
                 (false, false) => Cow::Owned(format!(
                     "Unexpected {}, expected {}, by {:?}",
                     collect_rules(negatives),
                     collect_rules(positives),
-                    upper_rule,
+                    collect_rule_stack(upper_rules),
                 )),
             }
         }
@@ -202,29 +242,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         }
 
         for special in self.special {
-            return match special {
-                SpecialError::SliceOutOfBound(start, end) => Error::new_from_pos(
-                    ErrorVariant::CustomError {
-                        message: match end {
-                            Some(end) => format!("Peek slice {}..{} out of bound.", start, end),
-                            None => format!("Peek slice {}.. out of bound.", start),
-                        },
-                    },
-                    pos,
-                ),
-                SpecialError::RepeatTooManyTimes => Error::new_from_pos(
-                    ErrorVariant::CustomError {
-                        message: "Repeated too many times.".to_owned(),
-                    },
-                    pos,
-                ),
-                SpecialError::EmptyStack => Error::new_from_pos(
-                    ErrorVariant::CustomError {
-                        message: "Nothing to pop or drop.".to_owned(),
-                    },
-                    pos,
-                ),
-            };
+            return Error::new_from_pos(special.into(), pos);
         }
 
         Error::new_from_pos(
