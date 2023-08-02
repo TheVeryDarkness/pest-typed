@@ -132,10 +132,10 @@ macro_rules! seq {
                 $T0: $pest_typed::TypedNode<'i, R>,
                 $($T: $pest_typed::TypedNode<'i, R>, )*
                 IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-            > ::core::convert::Into<( T0, $($T, )* )> for $name<'i, R, T0, $($T, )* IGNORED>
+            > ::core::convert::From<$name<'i, R, T0, $($T, )* IGNORED>> for ( T0, $($T, )* )
         {
-            fn into(self) -> ( T0, $($T, )* ) {
-                self.content
+            fn from(value: $name<'i, R, T0, $($T, )* IGNORED>) -> Self {
+                value.content
             }
         }
         impl<
