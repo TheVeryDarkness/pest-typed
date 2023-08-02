@@ -21,7 +21,7 @@ grammar-extras = ["pest_typed_generator/grammar-extras"]
 all-features = true
 
 [dependencies]
-pest_typed_generator = { path = "../generator", version = "0.3.0", default-features = false }
+pest_typed_generator = { path = "../generator", version = "0.3.2", default-features = false }
 
 [dev-dependencies]
-pest_typed = { path = "../main", version = "0.3.0", default-features = false }
+pest_typed = { path = "../main", version = "0.3.2", default-features = false }
