@@ -1169,7 +1169,7 @@ fn generate_graph_node<'g>(
                     &inner,
                     rule_config,
                     Emission::InnerToken,
-                    accesser.collect(&new_root),
+                    accesser.collect(new_root),
                     new_root,
                 );
                 let rule_id = &rule_config.rule_id;
