@@ -1167,10 +1167,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapp
     ParsableTypedNode<'i, R> for AtomicRule<'i, R, T, RULE, _EOI>
 {
     fn parse(input: &'i str) -> Result<Self, Error<R>> {
-        parse_without_ignore::<R, RULE, _EOI, Self>(input)
+        parse_without_ignore::<R, _EOI, Self>(input)
     }
     fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {
-        parse_partial::<R, RULE, Self>(input)
+        parse_partial::<R, Self>(input)
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>> Deref
@@ -1292,10 +1292,10 @@ impl<
     > ParsableTypedNode<'i, R> for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
 {
     fn parse(input: &'i str) -> Result<Self, Error<R>> {
-        parse::<R, RULE, _EOI, Self, IGNORED>(input)
+        parse::<R, _EOI, Self, IGNORED>(input)
     }
     fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {
-        parse_partial::<R, RULE, Self>(input)
+        parse_partial::<R, Self>(input)
     }
 }
 impl<
@@ -1540,11 +1540,11 @@ impl<
 {
     #[inline]
     fn parse(input: &'i str) -> Result<Self, Error<R>> {
-        parse::<R, RULE, _EOI, Self, IGNORED>(input)
+        parse::<R, _EOI, Self, IGNORED>(input)
     }
 
     fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {
-        parse_partial::<R, RULE, Self>(input)
+        parse_partial::<R, Self>(input)
     }
 }
 impl<
@@ -1594,7 +1594,6 @@ impl<
 fn parse<
     'i,
     R: RuleType + 'i,
-    RULE: RuleWrapper<R>,
     _EOI: RuleWrapper<R> + 'i,
     _Self: TypedNode<'i, R>,
     IGNORED: NeverFailedTypedNode<'i, R>,
@@ -1623,7 +1622,6 @@ fn parse<
 fn parse_without_ignore<
     'i,
     R: RuleType + 'i,
-    RULE: RuleWrapper<R>,
     _EOI: RuleWrapper<R> + 'i,
     _Self: TypedNode<'i, R>,
 >(
@@ -1647,7 +1645,7 @@ fn parse_without_ignore<
     Ok(res)
 }
 
-fn parse_partial<'i, R: RuleType, RULE: RuleWrapper<R>, _Self: TypedNode<'i, R>>(
+fn parse_partial<'i, R: RuleType, _Self: TypedNode<'i, R>>(
     input: &'i str,
 ) -> Result<(Position<'i>, _Self), Error<R>> {
     let mut stack = Stack::new();
