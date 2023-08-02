@@ -11,7 +11,7 @@ use crate::{
     predefined_node::{
         AtomicRule, Box, CharRange, Choice, Insens, Negative, NonAtomicRule, Opt, PeekSlice1,
         PeekSlice2, Positive, Push, RepMin, Restorable, Rule, Skip, Str, DROP, NEWLINE, PEEK,
-        PEEK_ALL, POP, POP_ALL, SOI,
+        PEEK_ALL, POP, POP_ALL, SOI, ANY,
     },
     typed_node::RuleStruct,
     NeverFailedTypedNode, RuleWrapper, Span, StringArrayWrapper, StringWrapper, TypedNode,
@@ -160,6 +160,8 @@ macro_rules! impl_easiest {
         }
     };
 }
+
+impl_easiest!(ANY);
 
 impl_easiest!(SOI);
 impl_easiest!(NEWLINE);
