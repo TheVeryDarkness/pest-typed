@@ -9,30 +9,7 @@
 
 //! For Pratt Parser. See [`pest::pratt_parser`]
 
-use crate::{predefined_node::*, NeverFailedTypedNode, RuleType, TypedNode};
-
-/// Node counter.
-pub trait NodeCounter {
-    const CHOICES: usize = 1;
-    const SEQUENCE: usize = 1;
-}
-
-impl<'i, R: RuleType, T1: TypedNode<'i, R> + NodeCounter, T2: TypedNode<'i, R> + NodeCounter>
-    NodeCounter for Choice<'i, R, T1, T2>
-{
-    const CHOICES: usize = 1 + T2::CHOICES;
-}
-
-impl<
-        'i,
-        R: RuleType,
-        T1: TypedNode<'i, R> + NodeCounter,
-        T2: TypedNode<'i, R> + NodeCounter,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-    > NodeCounter for Seq<'i, R, T1, T2, IGNORED>
-{
-    const SEQUENCE: usize = 1 + T2::SEQUENCE;
-}
+use crate::{RuleType, TypedNode};
 
 /// Pratt parser for those nodes with prefix, infix and postfix.
 pub trait PrattPrefixInfixPostfix<

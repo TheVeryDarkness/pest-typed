@@ -690,80 +690,6 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> D
     }
 }
 
-/// Match a sequence of two expressions.
-#[derive(Clone)]
-pub struct Seq<
-    'i,
-    R: RuleType,
-    T1: TypedNode<'i, R>,
-    T2: TypedNode<'i, R>,
-    IGNORED: NeverFailedTypedNode<'i, R>,
-> {
-    /// Matched first expression.
-    pub first: T1,
-    /// Matched second expression.
-    pub second: T2,
-    _phantom: PhantomData<(&'i R, &'i IGNORED)>,
-}
-impl<
-        'i,
-        R: RuleType,
-        T1: TypedNode<'i, R>,
-        T2: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-    > Seq<'i, R, T1, T2, IGNORED>
-{
-    pub fn next(&self) -> (&T1, &T2) {
-        (&self.first, &self.second)
-    }
-}
-impl<
-        'i,
-        R: RuleType,
-        T1: TypedNode<'i, R>,
-        T2: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-    > TypedNode<'i, R> for Seq<'i, R, T1, T2, IGNORED>
-{
-    #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
-        mut input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        let (next, first) = T1::try_parse_with::<ATOMIC>(input, stack, tracker)?;
-        input = next;
-        let (next, _) = IGNORED::parse_with::<ATOMIC>(input, stack);
-        input = next;
-        let (next, second) = T2::try_parse_with::<ATOMIC>(input, stack, tracker)?;
-        input = next;
-
-        Ok((
-            input,
-            Self {
-                first,
-                second,
-                _phantom: PhantomData,
-            },
-        ))
-    }
-}
-impl<
-        'i,
-        R: RuleType,
-        T1: TypedNode<'i, R>,
-        T2: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-    > Debug for Seq<'i, R, T1, T2, IGNORED>
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Seq")
-            .field("first", &self.first)
-            .field("second", &self.second)
-            .finish()
-    }
-}
-
 /// Help to invoke if-else-if-else-if-else structure.
 pub struct ChoiceHelper<'n, T, Ret> {
     result: Result<Ret, &'n T>,
@@ -1067,6 +993,19 @@ pub struct Box<'i, R: RuleType, T: TypedNode<'i, R>> {
     pub content: ::alloc::boxed::Box<T>,
     _phantom: PhantomData<&'i R>,
 }
+impl<'i, R: RuleType, T: TypedNode<'i, R>> From<::alloc::boxed::Box<T>> for Box<'i, R, T> {
+    fn from(content: ::alloc::boxed::Box<T>) -> Self {
+        Self {
+            content,
+            _phantom: PhantomData,
+        }
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> From<T> for Box<'i, R, T> {
+    fn from(content: T) -> Self {
+        Self::from(::alloc::boxed::Box::new(content))
+    }
+}
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Box<'i, R, T> {
     type Target = T;
 
@@ -1079,16 +1018,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Box<'i, R, T> {
         self.content.as_mut()
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> AsRef<T> for Box<'i, R, T> {
-    fn as_ref(&self) -> &T {
-        &self.content
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> AsMut<T> for Box<'i, R, T> {
-    fn as_mut(&mut self) -> &mut T {
-        &mut self.content
-    }
-}
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Box<'i, R, T> {
     #[inline]
     fn try_parse_with<const ATOMIC: bool>(
@@ -1097,13 +1026,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Box<'i, R, T> {
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         let (input, res) = T::try_parse_with::<ATOMIC>(input, stack, tracker)?;
-        Ok((
-            input,
-            Self {
-                content: ::alloc::boxed::Box::new(res),
-                _phantom: PhantomData,
-            },
-        ))
+        Ok((input, Self::from(res)))
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {

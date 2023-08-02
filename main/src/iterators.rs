@@ -10,14 +10,14 @@
 use crate::{
     predefined_node::{
         AtomicRule, Box, CharRange, Choice, Insens, Negative, NonAtomicRule, Opt, PeekSlice1,
-        PeekSlice2, Positive, Push, RepMin, Restorable, Rule, Seq, Skip, Str, DROP, NEWLINE, PEEK,
+        PeekSlice2, Positive, Push, RepMin, Restorable, Rule, Skip, Str, DROP, NEWLINE, PEEK,
         PEEK_ALL, POP, POP_ALL, SOI,
     },
     typed_node::RuleStruct,
     NeverFailedTypedNode, RuleWrapper, Span, StringArrayWrapper, StringWrapper, TypedNode,
 };
 use alloc::{boxed, vec};
-use core::iter::{empty, Chain, Empty, FlatMap, Iterator};
+use core::iter::{empty, Empty, FlatMap, Iterator};
 use pest::RuleType;
 
 pub trait Pairs<'i: 'n, 'n, R: RuleType + 'n> {
@@ -79,26 +79,6 @@ impl_forward_inner!(Box);
 impl_forward_inner!(Positive);
 impl_empty!(Negative<'i, R, T>, T: TypedNode<'i, R>);
 impl_forward_inner!(Restorable);
-
-impl<
-        'i: 'n,
-        'n,
-        R: RuleType + 'n,
-        T1: TypedNode<'i, R> + Pairs<'i, 'n, R>,
-        T2: TypedNode<'i, R> + Pairs<'i, 'n, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-    > Pairs<'i, 'n, R> for Seq<'i, R, T1, T2, IGNORED>
-{
-    type Iter = Chain<T1::Iter, T2::Iter>;
-    type IntoIter = Chain<T1::IntoIter, T2::IntoIter>;
-
-    fn iter(&'n self) -> Self::Iter {
-        self.first.iter().chain(self.second.iter())
-    }
-    fn into_iter(self) -> Self::IntoIter {
-        self.first.into_iter().chain(self.second.into_iter())
-    }
-}
 
 impl<
         'i: 'n,

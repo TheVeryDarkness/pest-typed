@@ -24,8 +24,7 @@ A,B,C
             let columns = once(first).chain(following.into_iter());
             let columns = columns.map(|item: &pairs::item<'_>| {
                 item.if_then(|escaped| {
-                    let (_, escaped) = escaped.next();
-                    let (content, _) = escaped.next();
+                    let (_, content, _) = escaped.as_ref();
                     content.span.as_str()
                 })
                 .else_then(|unescaped| unescaped.span.as_str())

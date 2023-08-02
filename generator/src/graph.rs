@@ -12,13 +12,14 @@ use crate::docs::DocComment;
 
 use super::types::{box_type, option_type, result_type, vec_type};
 use pest::unicode::unicode_property_names;
-use pest_meta::optimizer::OptimizedExpr;
-use pest_meta::{ast::RuleType, optimizer::OptimizedRule};
+use pest_meta::{
+    ast::RuleType,
+    optimizer::{OptimizedExpr, OptimizedRule},
+};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
-use std::collections::btree_map;
-pub use std::collections::BTreeMap;
-use std::collections::BTreeSet;
+use std::collections::{btree_map, BTreeMap, BTreeSet};
+use syn::Index;
 
 pub fn pest() -> TokenStream {
     quote! {::pest_typed}
@@ -74,9 +75,8 @@ fn ignore(root: &TokenStream) -> TokenStream {
 #[derive(Clone)]
 enum Edge {
     // Type remained.
-    First,
-    Second,
     Content,
+    ContentI(usize),
     // Type wrapped by Option.
     GetFirst,
     GetSecond,
@@ -95,14 +95,11 @@ enum Node {
     Tag(TokenStream),
     // Type remained.
     /// - Type: `#inner`
-    /// - Path: `.first`
-    First(Box<Node>),
-    /// - Type: `#inner`
-    /// - Path: `.second`
-    Second(Box<Node>),
-    /// - Type: `#inner`
     /// - Path: `.content`
     Content(Box<Node>),
+    /// - Type: `#inner`
+    /// - Path: `.content.#index`
+    ContentI(usize, Box<Node>),
     // Type wrapped by Option.
     /// - Type: `#opt::<#inner>`
     /// - Path: `.get_first().as_ref().and_then(|e|Some(e #inner)) #flat`
@@ -136,7 +133,7 @@ impl Node {
             Node::Rule(_) => false,
             #[cfg(feature = "grammar-extras")]
             Node::Tag(_) => false,
-            Node::First(inner) | Node::Second(inner) | Node::Content(inner) => inner.flattenable(),
+            Node::Content(inner) | Node::ContentI(_, inner) => inner.flattenable(),
             Node::GetFirst(false, _)
             | Node::GetSecond(false, _)
             | Node::OptionalContent(false, _) => true,
@@ -148,9 +145,8 @@ impl Node {
     }
     pub fn wrap(self, edge: Edge) -> Self {
         match edge {
-            Edge::First => Self::First(Box::new(self)),
-            Edge::Second => Self::Second(Box::new(self)),
             Edge::Content => Self::Content(Box::new(self)),
+            Edge::ContentI(i) => Self::ContentI(i, Box::new(self)),
             Edge::GetFirst => Self::GetFirst(self.flattenable(), Box::new(self)),
             Edge::GetSecond => Self::GetSecond(self.flattenable(), Box::new(self)),
             Edge::OptionalContent => Self::OptionalContent(self.flattenable(), Box::new(self)),
@@ -205,17 +201,14 @@ impl Node {
             ),
             #[cfg(feature = "grammar-extras")]
             Node::Tag(t) => (quote! {res}, quote! {&'s #root::#t::<'i>}),
-            Node::First(inner) => {
-                let (pa, ty) = inner.expand(root);
-                (quote! {{let res = &res.first; #pa}}, quote! {#ty})
-            }
-            Node::Second(inner) => {
-                let (pa, ty) = inner.expand(root);
-                (quote! {{let res = &res.second; #pa}}, quote! {#ty})
-            }
             Node::Content(inner) => {
                 let (pa, ty) = inner.expand(root);
                 (quote! {{let res = &res.content; #pa}}, quote! {#ty})
+            }
+            Node::ContentI(i, inner) => {
+                let (pa, ty) = inner.expand(root);
+                let i = Index::from(*i);
+                (quote! {{let res = &res.content.#i; #pa}}, quote! {#ty})
             }
             Node::OptionalContent(flatten, inner) => {
                 let (pa, ty) = inner.expand(root);
@@ -281,6 +274,9 @@ impl<'g> Accesser<'g> {
     pub fn content(self) -> Self {
         self.prepend(Edge::Content)
     }
+    pub fn content_i(self, i: usize) -> Self {
+        self.prepend(Edge::ContentI(i))
+    }
     pub fn contents(self) -> Self {
         self.prepend(Edge::Contents)
     }
@@ -292,12 +288,6 @@ impl<'g> Accesser<'g> {
     }
     pub fn optional_second(self) -> Self {
         self.prepend(Edge::GetSecond)
-    }
-    pub fn first(self) -> Self {
-        self.prepend(Edge::First)
-    }
-    pub fn second(self) -> Self {
-        self.prepend(Edge::Second)
     }
     #[inline]
     fn prepend(mut self, edge: Edge) -> Self {
@@ -718,6 +708,7 @@ struct Output {
     wrapper_counter: usize,
     #[cfg(feature = "grammar-extras")]
     tagged_nodes: BTreeMap<Ident, Vec<TokenStream>>,
+    sequences: BTreeSet<usize>,
 }
 impl Output {
     fn new() -> Self {
@@ -727,7 +718,16 @@ impl Output {
             wrapper_counter: 0,
             #[cfg(feature = "grammar-extras")]
             tagged_nodes: BTreeMap::new(),
+            sequences: BTreeSet::new(),
         }
+    }
+    /// Record usage of Seq* generics.
+    fn record_seq(&mut self, index: usize) {
+        self.sequences.insert(index);
+    }
+    /// Used sequences.
+    fn seq(&self) -> &BTreeSet<usize> {
+        &self.sequences
     }
     /// Insert rule struct to rule module.
     fn insert(&mut self, tokens: TokenStream) {
@@ -865,6 +865,18 @@ fn generate_graph_node<'g>(
     root: &TokenStream,
 ) -> (TokenStream, Accesser<'g>) {
     let generics = generics();
+    macro_rules! walk {
+        ($root:expr, $var:ident) => {{
+            let mut current = $root;
+            let mut nodes = Vec::<&OptimizedExpr>::new();
+            while let OptimizedExpr::$var(lhs, rhs) = current {
+                current = rhs;
+                nodes.push(&lhs);
+            }
+            nodes.push(current);
+            nodes
+        }};
+    }
     // Still some compile-time information not taken.
     match expr {
         OptimizedExpr::Str(content) => {
@@ -1030,23 +1042,29 @@ fn generate_graph_node<'g>(
                 explicit,
             )
         }
-        OptimizedExpr::Seq(lhs, rhs) => {
-            let (first, acc_first) =
-                generate_graph_node(lhs, rule_config, map, false, emission, config, root);
-            let (second, acc_second) =
-                generate_graph_node(rhs, rule_config, map, false, emission, config, root);
+        OptimizedExpr::Seq(_, _) => {
+            let vec = walk!(expr, Seq);
+            let mut types = Vec::<TokenStream>::with_capacity(vec.len());
+            let mut accesser = Accesser::new();
+            for (i, expr) in vec.into_iter().enumerate() {
+                let (child, acc) =
+                    generate_graph_node(expr, rule_config, map, false, emission, config, root);
+                types.push(child);
+                accesser = accesser.join(acc.content_i(i));
+            }
+            let seq = format_ident!("Seq_{}", types.len());
+            map.record_seq(types.len());
             process_single_alias(
                 map,
                 expr,
                 rule_config,
                 quote! {
-                    #root::#generics::Seq::<
+                    #root::#generics::#seq::<
                         'i,
-                        #first,
-                        #second,
+                        #(#types, )*
                     >
                 },
-                acc_first.first().join(acc_second.second()),
+                accesser,
                 root,
                 emission,
                 explicit,
@@ -1291,9 +1309,30 @@ pub(crate) fn generate_typed_pair_from_rule(
         let pairs = pairs();
         let _i32 = _i32();
         let char = _char();
+        let mut seq = vec![];
+        for sequence in graph.seq() {
+            let type_i = format_ident!("Seq_{}", sequence);
+            let generics_i = format_ident!("Seq{}", sequence);
+            let (types, field): (Vec<_>, Vec<_>) = (0..*sequence)
+                .map(|i| (format_ident!("T{}", i), Index::from(i)))
+                .unzip();
+            if *sequence >= 8 {
+                seq.push(quote! {
+                    pest_typed::seq!(#generics_i, pest_typed, #(#types, #field, )*);
+                });
+            } else {
+                seq.push(quote! {
+                    use pest_typed::sequence::#generics_i;
+                })
+            }
+            seq.push(quote!{
+                pub type #type_i<'i, #(#types: TypedNode<'i, #root::Rule>, )*> = #generics_i<'i, #root::Rule, #(#types, )* Ignored<'i>>;
+            });
+        }
         quote! {
             #[doc(hidden)]
             mod generics {
+                use #pest_typed as pest_typed;
                 use #pest_typed::{NeverFailedTypedNode, predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
                 pub type Ignored<'i> = predefined_node::Ign::<
                     'i,
@@ -1312,7 +1351,7 @@ pub(crate) fn generate_typed_pair_from_rule(
                 pub type Positive<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Positive<'i, #root::Rule, T>;
                 pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<'i, #root::Rule, T>;
                 pub type Restorable<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Restorable<'i, #root::Rule, T>;
-                pub type Seq<'i, T1: TypedNode<'i, #root::Rule>, T2: TypedNode<'i, #root::Rule>> = predefined_node::Seq<'i, #root::Rule, T1, T2, Ignored<'i>>;
+                #(#seq)*
                 pub type Choice<'i, T1: TypedNode<'i, #root::Rule>, T2: TypedNode<'i, #root::Rule>> = predefined_node::Choice<'i, #root::Rule, T1, T2>;
                 pub type Opt<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Opt<'i, #root::Rule, T>;
                 pub type Rep<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Rep<'i, #root::Rule, T, Ignored<'i>>;

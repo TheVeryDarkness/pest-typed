@@ -61,7 +61,6 @@ impl<R: RuleType, T: RuleWrapper<R>> RuleStorage<R> for T {
         T::RULE
     }
 }
-
 pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
     fn span(&self) -> Span<'i>;
 }

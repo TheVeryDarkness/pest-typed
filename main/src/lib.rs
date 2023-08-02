@@ -23,15 +23,16 @@ extern crate core;
 extern crate std;
 
 pub mod iterators;
-mod pairs;
 pub mod predefined_node;
 pub mod tracker;
 mod typed_node;
 mod wrapper;
-use pest::RuleType;
+pub use pest::RuleType;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, RuleStruct, TypedNode};
 pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper};
 mod pratt;
+mod macros;
+pub mod sequence;
 
 // Below modules are copied from pest.
 pub mod error;

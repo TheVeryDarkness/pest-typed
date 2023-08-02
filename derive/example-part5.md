@@ -55,9 +55,8 @@ struct Parser;
 
 fn parse(input: &str) -> Result<(), pest_typed::error::Error<Rule>> {
     let a = pairs::a::parse(input)?;
-    let (str_a, a) = a.content.next();
+    let (str_a, var_b, c) = a.content.as_ref();
     assert_eq!(str_a.get_content(), "a");
-    let (var_b, c) = a.next();
     var_b
         .if_then(|b1| assert_eq!(b1.get_content(), "bbb"))
         .else_if(|b2| assert_eq!(b2.get_content(), "cc"))
