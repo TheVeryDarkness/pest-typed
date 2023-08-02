@@ -183,10 +183,8 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         fn collect_rule_stack<R: RuleType>(vec: &[R]) -> String {
             let max_len: usize = 3;
             if vec.len() > max_len {
-                let v = &vec[..max_len];
+                let v = vec.iter().rev().take(max_len);
                 let chain = v
-                    .iter()
-                    .rev()
                     .map(|r| format!("{:?} <- ", r))
                     .collect::<Vec<_>>()
                     .concat();
@@ -209,17 +207,17 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             match (positives.is_empty(), negatives.is_empty()) {
                 (true, true) => Cow::Borrowed("Unknown error (no rule tracked)."),
                 (false, true) => Cow::Owned(format!(
-                    "Expected {}, by {:?}",
+                    "Expected {}, by {}",
                     collect_rules(positives),
                     collect_rule_stack(upper_rules),
                 )),
                 (true, false) => Cow::Owned(format!(
-                    "Unexpected {}, by {:?}",
+                    "Unexpected {}, by {}",
                     collect_rules(negatives),
                     collect_rule_stack(upper_rules),
                 )),
                 (false, false) => Cow::Owned(format!(
-                    "Unexpected {}, expected {}, by {:?}",
+                    "Unexpected {}, expected {}, by {}",
                     collect_rules(negatives),
                     collect_rules(positives),
                     collect_rule_stack(upper_rules),
