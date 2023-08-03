@@ -105,19 +105,19 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     pub fn negative_during<Ret>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
         self.during::<Ret, false>(f)
     }
-    /// Report a [`SpecialError::RepeatTooManyTimes`].
+    /// Report a repetition that exceeds the limit.
     pub fn repeat_too_many_times(&mut self, pos: Position<'i>) {
         if self.prepare(pos) {
             self.special.push(SpecialError::RepeatTooManyTimes);
         }
     }
-    /// Report a [`SpecialError::SliceOutOfBound`].
+    /// Reports a stack slice operation that is out of bound.
     pub fn out_of_bound(&mut self, pos: Position<'i>, start: i32, end: Option<i32>) {
         if self.prepare(pos) {
             self.special.push(SpecialError::SliceOutOfBound(start, end));
         }
     }
-    /// Report a [`SpecialError::EmptyStack`].
+    /// Reports accessing operations on empty stack.
     pub fn empty_stack(&mut self, pos: Position<'i>) {
         if self.prepare(pos) {
             self.special.push(SpecialError::EmptyStack);

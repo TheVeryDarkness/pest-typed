@@ -17,7 +17,7 @@ pub trait NextChoice {
 
 #[macro_export]
 /// Generate choice helpers that can be used to traverse those branches.
-/// Automatically called by [`choices`].
+/// Automatically called by [`crate::choices!`].
 macro_rules! choices_helper {
     ($pest_typed:ident, $name:ident, ($_V0:ident, $_v0:tt, $( $_V:ident, $_v:tt, )* ), $V0:ident, $v0:tt, $V1:ident, $v1:tt, $( $V:ident, $v:tt, )* ) => {
         /// Choices.
@@ -70,7 +70,7 @@ macro_rules! choices_helper {
 
 #[macro_export]
 /// Generate an iterator type that implements [`core::iter::Iterator`] for choices.
-/// Automatically called by [`choices`].
+/// Automatically called by [`crate::choices!`].
 macro_rules! choices_iter {
     ($name:ident, $pest_typed:ident, $iter_type:ident, $iter_func:ident, $item:ty, $V0:ident, $v0:tt, $( $V:ident, $v:tt, )* ) => {
         pub enum $iter_type<'i, 'n, R: $pest_typed::RuleType, $V0: $pest_typed::iterators::Pairs<'i, 'n, R>, $($V: $pest_typed::iterators::Pairs<'i, 'n, R>, )* > {
