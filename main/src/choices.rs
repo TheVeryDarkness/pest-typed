@@ -207,3 +207,19 @@ choices!(Choice5, crate, ch5, it5, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4,);
 choices!(Choice6, crate, ch6, it6, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5,);
 choices!(Choice7, crate, ch7, it7, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6,);
 choices!(Choice8, crate, ch8, it8, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,);
+choices!(
+    Choice9, crate, ch9, it9, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7, T8,
+    _8,
+);
+choices!(
+    Choice10, crate, ch10, it10, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
+    T8, _8, T9, _9,
+);
+choices!(
+    Choice11, crate, ch11, it11, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
+    T8, _8, T9, _9, T10, _10,
+);
+choices!(
+    Choice12, crate, ch12, it12, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
+    T8, _8, T9, _9, T10, _10, T11, _11,
+);

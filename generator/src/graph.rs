@@ -1328,7 +1328,7 @@ pub(crate) fn generate_typed_pair_from_rule(
                         (format_ident!("T{}", i), field)
                     })
                     .unzip();
-                if *item >= 8 {
+                if *item >= 12 {
                     let helper_iter = if helper_iter {
                         let helper = format_ident!("helper_{}", item);
                         let iter = format_ident!("iter_{}", item);
