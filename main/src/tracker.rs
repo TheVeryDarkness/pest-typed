@@ -59,8 +59,8 @@ impl<R: RuleType> From<SpecialError> for ErrorVariant<R> {
 pub struct Tracker<'i, R: RuleType> {
     position: Position<'i>,
     positive: bool,
-    /// upper rules -> (positives, negatives)
-    attempts: BTreeMap<Vec<R>, (Vec<R>, Vec<R>)>,
+    /// upper rule -> (positives, negatives)
+    attempts: BTreeMap<R, (Vec<R>, Vec<R>)>,
     special: Vec<SpecialError>,
     stack: Vec<(R, bool)>,
 }
@@ -127,23 +127,16 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     #[inline]
     fn record(&mut self, rule: R, pos: Position<'i>, succeeded: bool) {
         if self.prepare(pos) {
-            match self.positive {
-                true => {
-                    if !succeeded {
-                        let key = self.stack.iter().map(|(e, _)| e.clone()).collect();
-                        let (vec, _) = self.attempts.entry(key).or_default();
-                        if !Self::same_with_last(vec, rule) {
-                            vec.push(rule);
-                        }
-                    }
-                }
-                false => {
-                    if succeeded {
-                        let key = self.stack.iter().map(|(e, _)| e.clone()).collect();
-                        let (_, vec) = self.attempts.entry(key).or_default();
-                        if !Self::same_with_last(vec, rule) {
-                            vec.push(rule);
-                        }
+            if succeeded != self.positive {
+                if let Some(&(key, _)) = self.stack.last() {
+                    let value = self.attempts.entry(key).or_default();
+                    let vec = if self.positive {
+                        &mut value.0
+                    } else {
+                        &mut value.1
+                    };
+                    if !Self::same_with_last(vec, rule) {
+                        vec.push(rule);
                     }
                 }
             }
@@ -200,27 +193,27 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             }
         }
         fn collect_attempts<R: RuleType>(
-            upper_rules: &[R],
+            upper_rule: &R,
             positives: &Vec<R>,
             negatives: &Vec<R>,
         ) -> Cow<'static, str> {
             match (positives.is_empty(), negatives.is_empty()) {
                 (true, true) => Cow::Borrowed("Unknown error (no rule tracked)."),
                 (false, true) => Cow::Owned(format!(
-                    "Expected {}, by {}",
+                    "Expected {}, by {:?}",
                     collect_rules(positives),
-                    collect_rule_stack(upper_rules),
+                    upper_rule,
                 )),
                 (true, false) => Cow::Owned(format!(
-                    "Unexpected {}, by {}",
+                    "Unexpected {}, by {:?}",
                     collect_rules(negatives),
-                    collect_rule_stack(upper_rules),
+                    upper_rule,
                 )),
                 (false, false) => Cow::Owned(format!(
-                    "Unexpected {}, expected {}, by {}",
+                    "Unexpected {}, expected {}, by {:?}",
                     collect_rules(negatives),
                     collect_rules(positives),
-                    collect_rule_stack(upper_rules),
+                    upper_rule,
                 )),
             }
         }
