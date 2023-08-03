@@ -25,3 +25,5 @@ pest_typed_generator = { path = "../generator", version = "0.3.4", default-featu
 
 [dev-dependencies]
 pest_typed = { path = "../main", version = "0.3.4", default-features = false }
+indoc = { version = "2.0" }
+anyhow = { version = "1.0" }
