@@ -39,6 +39,7 @@ pub mod choices;
 mod macros;
 mod pratt;
 pub mod sequence;
+pub use alloc::boxed::Box;
 
 // Below modules are copied from pest.
 pub mod error;

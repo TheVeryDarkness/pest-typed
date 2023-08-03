@@ -7,11 +7,9 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-extern crate alloc;
-use std::fmt::Write;
-
 use pest_typed::{error::Error, iterators::PairTree, ParsableTypedNode};
 use pest_typed_derive::TypedParser;
+use std::fmt::Write;
 
 #[derive(TypedParser)]
 #[grammar = "tests/csv.pest"]
