@@ -8,7 +8,6 @@ use std::iter::once;
 #[emit_rule_reference]
 struct CSV;
 
-#[test]
 fn main() -> Result<(), Error<Rule>> {
     let file = pairs::file::parse(
         r#"1,2,3

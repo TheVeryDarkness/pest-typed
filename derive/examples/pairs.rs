@@ -18,8 +18,7 @@ use pest_typed_derive::TypedParser;
 #[emit_rule_reference]
 struct CSV;
 
-#[test]
-fn pairs() -> Result<(), Error<Rule>> {
+fn main() -> Result<(), Error<Rule>> {
     let res = pairs::file::parse("a,b,c\nd,e,f")?;
     let mut buf = String::new();
     res.iterate_pre_order(|pair, depth| {
