@@ -72,6 +72,16 @@ fn ignore(root: &TokenStream) -> TokenStream {
     }
 }
 
+/// Reserved for future use.
+#[allow(dead_code)]
+fn quote_if<T: quote::ToTokens>(v: Option<T>) -> TokenStream {
+    if let Some(v) = v {
+        quote! {#v}
+    } else {
+        quote! {}
+    }
+}
+
 #[derive(Clone)]
 enum Edge {
     // Type remained.
