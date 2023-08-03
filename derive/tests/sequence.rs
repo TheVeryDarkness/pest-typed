@@ -7,7 +7,9 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use pest_typed::{ParsableTypedNode, Storage};
 use pest_typed_derive::TypedParser;
+use std::ops::Deref;
 
 #[derive(TypedParser)]
 #[grammar_inline = r#"
@@ -27,14 +29,18 @@ s12 = { "a" ~ "b" ~ "c" ~ "d" ~ "e" ~ "f" ~ "g" ~ "h" ~ "i" ~ "j" ~ "k" ~ "l" }
 struct Parser;
 
 macro_rules! test {
-    ($name:ident, $input:literal) => {
+    ($name:ident, $input:literal, $($fields:tt)*) => {
         mod $name {
             use super::{pairs, Rule};
-            use pest_typed::{error::Error, ParsableTypedNode};
+            use pest_typed::{error::Error, ParsableTypedNode, TypeWrapper};
 
             #[test]
             fn matched() -> Result<(), Error<Rule>> {
-                pairs::$name::parse($input)?;
+                let res = pairs::$name::parse($input)?;
+                assert_eq!(res, res.clone());
+                assert_eq!(res.content, res.content.clone());
+                let ( $($fields, )* ) = res.as_ref();
+                assert_eq!(res.content, <pairs::$name as TypeWrapper>::Inner::from(( $($fields.clone(), )* )));
                 Ok(())
             }
             #[test]
@@ -51,15 +57,39 @@ macro_rules! test {
     };
 }
 
-test!(s1, "a");
-test!(s2, "ab");
-test!(s3, "abc");
-test!(s4, "abcd");
-test!(s5, "abcde");
-test!(s6, "abcdef");
-test!(s7, "abcdefg");
-test!(s8, "abcdefgh");
-test!(s9, "abcdefghi");
-test!(s10, "abcdefghij");
-test!(s11, "abcdefghijk");
-test!(s12, "abcdefghijkl");
+test!(s2, "ab", e0 e1);
+test!(s3, "abc", e0 e1 e2);
+test!(s4, "abcd", e0 e1 e2 e3);
+test!(s5, "abcde", e0 e1 e2 e3 e4);
+test!(s6, "abcdef", e0 e1 e2 e3 e4 e5);
+test!(s7, "abcdefg", e0 e1 e2 e3 e4 e5 e6);
+test!(s8, "abcdefgh", e0 e1 e2 e3 e4 e5 e6 e7);
+test!(s9, "abcdefghi", e0 e1 e2 e3 e4 e5 e6 e7 e8);
+test!(s10, "abcdefghij", e0 e1 e2 e3 e4 e5 e6 e7 e8 e9);
+test!(s11, "abcdefghijk", e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 e10);
+test!(s12, "abcdefghijkl", e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 e11);
+
+#[test]
+fn as_ref() {
+    let s4 = pairs::s4::parse("abcd").unwrap();
+    let (a, b, c, d) = s4.as_ref();
+    assert_eq!(a.get_content(), "a");
+    assert_eq!(b.get_content(), "b");
+    assert_eq!(c.get_content(), "c");
+    assert_eq!(d.get_content(), "d");
+
+    assert_eq!(
+        generics::Seq_4::from((a.clone(), b.clone(), c.clone(), d.clone())),
+        s4.content
+    );
+    assert_eq!(&s4.deref().clone(), s4.deref());
+    assert_eq!(s4.deref(), &s4.content);
+    assert_eq!(
+        s4.deref().deref(),
+        &(a.clone(), b.clone(), c.clone(), d.clone())
+    );
+    assert_eq!(
+        format!("{:?}", s4.deref()),
+        format!("Seq({:?}, {:?}, {:?}, {:?})", a, b, c, d)
+    );
+}

@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use generics::Choice_4;
+use pest_typed::{ParsableTypedNode, Storage};
 use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
@@ -37,12 +39,13 @@ macro_rules! test {
             };
             #[test]
             fn success() -> Result<(), Error<Rule>> {
-                let $name = pairs::$name::parse($input)?;
-                let span = $name.span;
-                assert_eq!(span, $name.iter().next().unwrap().span());
-                assert_eq!(span, $name.clone().into_iter().next().unwrap().span());
-                assert!($name.inner().next().is_none());
-                assert!($name.clone().into_inner().next().is_none());
+                let res = pairs::$name::parse($input)?;
+                let span = res.span;
+                assert_eq!(span, res.iter().next().unwrap().span());
+                assert_eq!(span, res.clone().into_iter().next().unwrap().span());
+                assert!(res.inner().next().is_none());
+                assert!(res.clone().into_inner().next().is_none());
+                assert_eq!(res, res.clone());
 
                 Ok(())
             }
@@ -68,3 +71,22 @@ test!(c9, "abcdefghi");
 test!(c10, "abcdefghij");
 test!(c11, "abcdefghijk");
 test!(c12, "abcdefghijkl");
+
+#[test]
+fn choices() {
+    let c4 = pairs::c4::parse("abcd").unwrap();
+    let (_0, _1, _2, _3) = c4.as_ref();
+    macro_rules! t {
+        ($branch:ident) => {
+            $branch
+                .if_then(|_0| assert_eq!(_0.get_content(), "a"))
+                .else_if(|_1| assert_eq!(_1.get_content(), "b"))
+                .else_if(|_2| assert_eq!(_2.get_content(), "c"))
+                .else_then(|_3| assert_eq!(_3.get_content(), "d"))
+        };
+    };
+    t!(_0);
+    t!(_1);
+    t!(_2);
+    t!(_3);
+}
