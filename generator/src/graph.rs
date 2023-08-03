@@ -581,7 +581,7 @@ fn create<'g>(
     quote! {
         #(#[doc = #doc])*
         #[allow(non_camel_case_types)]
-        #[derive(Clone)]
+        #[derive(Clone, PartialEq)]
         pub struct #id<'i> {
             #fields
         }
@@ -754,7 +754,7 @@ impl Output {
         let wrapper = quote! {
             #[doc = #doc]
             #[allow(non_camel_case_types)]
-            #[derive(Clone)]
+            #[derive(Clone, PartialEq)]
             pub struct #s();
             impl #pest_typed::StringWrapper for #s {
                 const CONTENT: &'static #str = #string;
@@ -775,7 +775,7 @@ impl Output {
         let wrapper = quote! {
             #[doc = #doc]
             #[allow(non_camel_case_types)]
-            #[derive(Clone)]
+            #[derive(Clone, PartialEq)]
             pub struct #s();
             impl #pest_typed::StringArrayWrapper for #s {
                 const CONTENT: &'static [&'static #str] = &[ #(#strings),* ];
@@ -1272,7 +1272,7 @@ pub(crate) fn generate_typed_pair_from_rule(
     let as_wrapper = |name: &Ident| {
         quote! {
             #[allow(non_camel_case_types)]
-            #[derive(Clone)]
+            #[derive(Clone, PartialEq)]
             pub struct #name;
             impl #pest_typed::RuleWrapper<super::Rule> for #name {
                 const RULE: super::Rule = super::Rule::#name;
@@ -1447,7 +1447,7 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
             results.push(quote! {
                 #[allow(non_camel_case_types)]
                 #[doc = #doc]
-                #[derive(Clone)]
+                #[derive(Clone, PartialEq)]
                 pub struct #property_ident<'i> {
                     pub content: #char,
                     _phantom: ::core::marker::PhantomData<&'i #char>

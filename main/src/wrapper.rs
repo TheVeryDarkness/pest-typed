@@ -18,7 +18,7 @@ pub trait Storage<T> {
 }
 
 /// A wrapper for string as a generics argument.
-pub trait StringWrapper: Clone {
+pub trait StringWrapper: Clone + PartialEq {
     /// Wrapped string.
     const CONTENT: &'static str;
 }
@@ -29,7 +29,7 @@ impl<T: StringWrapper> Storage<&'static str> for T {
 }
 
 /// A wrapper for string array as a generics argument.
-pub trait StringArrayWrapper: Clone {
+pub trait StringArrayWrapper: Clone + PartialEq {
     /// Wrapped strings.
     const CONTENT: &'static [&'static str];
 }
@@ -40,7 +40,7 @@ impl<T: StringArrayWrapper> Storage<&'static [&'static str]> for T {
 }
 
 /// Rule wrapper.
-pub trait RuleWrapper<R: RuleType>: Clone {
+pub trait RuleWrapper<R: RuleType>: Clone + PartialEq {
     /// Wrapped rule.
     const RULE: R;
     /// The type of wrapped rule.
@@ -48,13 +48,13 @@ pub trait RuleWrapper<R: RuleType>: Clone {
 }
 
 /// Type wrapper.
-pub trait TypeWrapper: Clone {
+pub trait TypeWrapper: Clone + PartialEq {
     /// Wrapped type.
     type Inner;
 }
 
 /// Bound for the length of vector.
-pub trait BoundWrapper {
+pub trait BoundWrapper: Clone + PartialEq {
     const MIN: usize;
     const MAX: usize;
 }

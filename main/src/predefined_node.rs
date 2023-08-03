@@ -32,7 +32,7 @@ use super::{
 /// The `CONTENT` on the type (by [`StringWrapper`]) is the original string to match.
 ///
 /// See [`Insens`] for case-insensitive matching.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Str<'i, R: RuleType, T: StringWrapper> {
     _phantom: PhantomData<(&'i R, &'i T)>,
 }
@@ -114,7 +114,7 @@ impl<'i, R: RuleType, T: StringWrapper> Debug for Insens<'i, R, T> {
 /// Inner tokens will be discarded, and only a [`Span`] will be contained.
 ///
 /// And inner errors will **not** be tracked.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Silent<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Span.
     pub span: Span<'i>,
@@ -151,7 +151,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Silent<'i, R, T> {
 }
 
 /// Skips until one of the given `strings`
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Skip<'i, R: RuleType, Strings: StringArrayWrapper> {
     /// Skipped span.
     pub span: Span<'i>,
@@ -194,7 +194,7 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> Debug for Skip<'i, R, Strings
 }
 
 /// Skip `n` characters if there are.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct SkipChar<'i, R: RuleType, const N: usize> {
     _phantom: PhantomData<&'i R>,
 }
@@ -311,7 +311,7 @@ fn peek_spans<'s, 'i: 's, R: RuleType>(
 }
 
 /// Positive predicate.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Positive<'i, R: RuleType, N: TypedNode<'i, R>> {
     /// Mathed content.
     pub content: N,
@@ -366,7 +366,7 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Positive<'i, R, N> {
 /// Negative predicate.
 ///
 /// Will not contain anything.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Negative<'i, R: RuleType, N: TypedNode<'i, R>> {
     _phantom: PhantomData<(&'i R, &'i N)>,
 }
@@ -405,7 +405,7 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Negative<'i, R, N> {
 }
 
 /// Match any character.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ANY<'i> {
     /// Pair span.
     pub span: Span<'i>,
@@ -435,7 +435,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
 }
 
 /// Match the start of input.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct SOI<'i> {
     _phantom: PhantomData<&'i str>,
 }
@@ -467,7 +467,7 @@ impl<'i> Debug for SOI<'i> {
 /// Match the end of input.
 ///
 /// [`EOI`] will record its rule if not matched.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct EOI<'i> {
     _phantom: PhantomData<&'i str>,
 }
@@ -498,7 +498,7 @@ impl<'i> Debug for EOI<'i> {
 
 /// Match a new line character.
 /// A built-in rule. Equivalent to `"\r\n" | "\n" | "\r"`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NEWLINE<'i> {
     /// Pair span.
     pub span: Span<'i>,
@@ -523,7 +523,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
 /// Peek all spans in stack reversely.
 /// Will consume input.
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PEEK_ALL<'i> {
     /// Pair span.
     pub span: Span<'i>,
@@ -544,7 +544,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
 /// Peek top span in stack.
 /// Will consume input.
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PEEK<'i> {
     /// Pair span.
     pub span: Span<'i>,
@@ -576,7 +576,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
 }
 
 /// Optionally match `T`.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Opt<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Matched content.
     pub content: Option<T>,
@@ -624,7 +624,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Opt<'i, R, T> {
 
 /// Skip comments (by rule `COMMENT`) or white spaces (by rule `WHITESPACE`) if there is any.
 /// Never fail.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Ign<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> {
     _phantom: PhantomData<(&'i R, &'i COMMENT, &'i WHITESPACE)>,
 }
@@ -691,7 +691,7 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> D
 }
 
 /// Repeatably match `T` at least `MIN` times.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct RepMin<
     'i,
     R: RuleType,
@@ -807,7 +807,7 @@ pub type RepOnce<'i, R, T, IGNORED> = RepMin<'i, R, T, IGNORED, 1>;
 
 /// Drop the top of the stack.
 /// Fail if there is no span in the stack.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct DROP<'i> {
     _phantom: PhantomData<&'i str>,
 }
@@ -839,7 +839,7 @@ impl<'i> Debug for DROP<'i> {
 }
 
 /// Match and pop the top span of the stack.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct POP<'i> {
     /// Matched span.
     pub span: Span<'i>,
@@ -877,7 +877,7 @@ impl<'i> Debug for POP<'i> {
 
 /// Match and pop all spans in the stack in top-to-bottom-order.
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct POP_ALL<'i> {
     /// Matched span.
     pub span: Span<'i>,
@@ -902,7 +902,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
 }
 
 /// Boxed node for `T`.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Box<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Boxed content.
     pub content: ::alloc::boxed::Box<T>,
@@ -951,7 +951,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
 }
 
 /// Restore stack state on error.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Restorable<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Matched content.
     pub content: T,
@@ -1002,12 +1002,12 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Restorable<'i, R, T> {
 }
 
 /// Always fail.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct AlwaysFail<'i> {
     _phantom: PhantomData<&'i ()>,
 }
 /// A trait that only `AlwaysFail` implements.
-pub trait AlwaysFailed: Debug + Clone {}
+pub trait AlwaysFailed: Debug + Clone + PartialEq {}
 impl<'i> AlwaysFailed for AlwaysFail<'i> {}
 impl<'i, R: RuleType, T: AlwaysFailed> TypedNode<'i, R> for T {
     #[inline]
@@ -1030,7 +1030,7 @@ impl<'i> Debug for AlwaysFail<'i> {
 /// Force inner tokens to be atomic.
 ///
 /// See [`Rule`] and [`NonAtomicRule`].
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct AtomicRule<
     'i,
     R: RuleType,
@@ -1119,7 +1119,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapp
 /// Force inner tokens to be not atomic.
 ///
 /// See [`Rule`] and [`AtomicRule`].
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct NonAtomicRule<
     'i,
     R: RuleType,
@@ -1258,7 +1258,7 @@ impl<
 }
 
 /// Match an expression and push it.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Push<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Matched content.
     pub content: T,
@@ -1305,7 +1305,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Push<'i, R, T> {
 }
 
 /// Match `[START:END]` in top-to-bottom order of the stack.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct PeekSlice2<'i, R: RuleType, const START: i32, const END: i32> {
     _phantom: PhantomData<&'i R>,
 }
@@ -1335,7 +1335,7 @@ impl<'i, R: RuleType, const START: i32, const END: i32> Debug for PeekSlice2<'i,
 }
 
 /// Match `[START:END]` in top-to-bottom order of the stack.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct PeekSlice1<'i, R: RuleType, const START: i32> {
     _phantom: PhantomData<&'i R>,
 }
@@ -1367,7 +1367,7 @@ impl<'i, R: RuleType, const START: i32> Debug for PeekSlice1<'i, R, START> {
 /// Will not change atomicity.
 ///
 /// See [`AtomicRule`] and [`NonAtomicRule`].
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Rule<
     'i,
     R: RuleType,
@@ -1643,7 +1643,7 @@ mod tests {
             }
             mod rule_wrappers {
                 $(
-                    #[derive(Clone)]
+                    #[derive(Clone, PartialEq)]
                     pub struct $ids {}
                     impl super::RuleWrapper<super::Rule> for $ids {
                         const RULE:super::Rule = super::Rule::$ids;
@@ -1662,7 +1662,7 @@ mod tests {
         EOI,
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, PartialEq)]
     struct Foo;
     impl StringWrapper for Foo {
         const CONTENT: &'static str = "foo";

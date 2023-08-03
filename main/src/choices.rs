@@ -98,7 +98,7 @@ macro_rules! choices_iter {
 macro_rules! choices {
     ($name:ident, $pest_typed:ident, $helper:ident, $iter:ident, $V0:ident, $v0:tt, $( $V:ident, $v:tt, )* ) => {
         /// Match either of two expressions.
-        #[derive(Clone)]
+        #[derive(Clone, PartialEq)]
         pub enum $name<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* > {
             #[doc = ::core::stringify!(Variant $v0 for choice $V0.)]
             $v0($V0, ::core::marker::PhantomData<&'i R>),

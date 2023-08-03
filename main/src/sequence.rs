@@ -125,6 +125,21 @@ macro_rules! seq {
                 $T0: $pest_typed::TypedNode<'i, R>,
                 $($T: $pest_typed::TypedNode<'i, R>, )*
                 IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
+            > ::core::cmp::PartialEq for $name<'i, R, T0, $($T, )* IGNORED>
+        {
+            fn eq(&self, other: &Self) -> ::core::primitive::bool {
+                self.content.$t0 == other.content.$t0
+                $(
+                    && self.content.$t == other.content.$t
+                )*
+            }
+        }
+        impl<
+                'i,
+                R: $pest_typed::RuleType,
+                $T0: $pest_typed::TypedNode<'i, R>,
+                $($T: $pest_typed::TypedNode<'i, R>, )*
+                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
             > $name<'i, R, T0, $($T, )* IGNORED>
         {
             /// Convert the reference of a sequence into a tuple of references of elements.
