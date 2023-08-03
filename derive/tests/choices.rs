@@ -7,7 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use generics::Choice_4;
 use pest_typed::{ParsableTypedNode, Storage};
 use pest_typed_derive::TypedParser;
 
@@ -84,7 +83,7 @@ fn choices() {
                 .else_if(|_2| assert_eq!(_2.get_content(), "c"))
                 .else_then(|_3| assert_eq!(_3.get_content(), "d"))
         };
-    };
+    }
     t!(_0);
     t!(_1);
     t!(_2);
