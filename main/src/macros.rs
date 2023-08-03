@@ -8,6 +8,9 @@
 // modified, or distributed except according to those terms.
 
 #[macro_export]
+/// Chained iterator type.
+///
+/// Used by [`crate::seq`].
 macro_rules! chains {
     ($pest_typed:ident, $t:ident, $T0:ident, ) => {
         $T0::$t
@@ -18,6 +21,9 @@ macro_rules! chains {
 }
 
 #[macro_export]
+/// Chained iterator.
+///
+/// Used by [`crate::seq`].
 macro_rules! chain {
     ($pest_typed:ident, $self: ident, $f: ident, $t0:tt, ) => {
         $self.content.$t0.$f()

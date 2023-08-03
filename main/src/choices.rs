@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Definition of choices-related macros and types.
+
 /// Choice helper with a next branch.
 pub trait NextChoice {
     /// The choice helper that corresponds to the next branch.

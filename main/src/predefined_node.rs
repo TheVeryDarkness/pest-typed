@@ -800,7 +800,9 @@ impl<
     const MIN: usize = MIN;
     const MAX: usize = usize::MAX;
 }
+/// Repeat arbitrary times.
 pub type Rep<'i, R, T, IGNORED> = RepMin<'i, R, T, IGNORED, 0>;
+/// Repeat at least one times.
 pub type RepOnce<'i, R, T, IGNORED> = RepMin<'i, R, T, IGNORED, 1>;
 
 /// Drop the top of the stack.

@@ -61,6 +61,9 @@ impl<R: RuleType, T: RuleWrapper<R>> RuleStorage<R> for T {
         T::RULE
     }
 }
+
+/// A trait for those struct that correspond to non-silent rules.
 pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
+    /// The span of a matched expression by a non-silent rule.
     fn span(&self) -> Span<'i>;
 }

@@ -97,22 +97,27 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         self.positive = original;
         res
     }
+    /// Set the tracker to positive during calling `f`.
     pub fn positive_during<Ret>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
         self.during::<Ret, true>(f)
     }
+    /// Set the tracker to negative during calling `f`.
     pub fn negative_during<Ret>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
         self.during::<Ret, false>(f)
     }
+    /// Report a [`SpecialError::RepeatTooManyTimes`].
     pub fn repeat_too_many_times(&mut self, pos: Position<'i>) {
         if self.prepare(pos) {
             self.special.push(SpecialError::RepeatTooManyTimes);
         }
     }
+    /// Report a [`SpecialError::SliceOutOfBound`].
     pub fn out_of_bound(&mut self, pos: Position<'i>, start: i32, end: Option<i32>) {
         if self.prepare(pos) {
             self.special.push(SpecialError::SliceOutOfBound(start, end));
         }
     }
+    /// Report a [`SpecialError::EmptyStack`].
     pub fn empty_stack(&mut self, pos: Position<'i>) {
         if self.prepare(pos) {
             self.special.push(SpecialError::EmptyStack);
@@ -142,6 +147,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             }
         }
     }
+    /// Record if the result doesn't match the state during calling `f`.
     #[inline]
     pub fn record_during<T: RuleWrapper<R>, E>(
         &mut self,
@@ -173,6 +179,8 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         fn collect_rules<R: RuleType>(vec: &Vec<R>) -> String {
             format!("{:?}", vec)
         }
+        /// Reserved for future usage.
+        #[allow(dead_code)]
         fn collect_rule_stack<R: RuleType>(vec: &[R]) -> String {
             let max_len: usize = 3;
             if vec.len() > max_len {

@@ -7,7 +7,12 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Definition of choices-related macros and types.
+
 #[macro_export]
+/// Generate sequences generics.
+///
+/// Also generate iterator type with [`crate::chain`] and [`crate::chain`].
 macro_rules! seq {
     ($name:ident, $pest_typed:ident, $T0:ident, $t0:tt, $( $T:ident, $t:tt, )* ) => {
         #[doc = "Match a sequence of several expressions."]
@@ -122,6 +127,7 @@ macro_rules! seq {
                 IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
             > $name<'i, R, T0, $($T, )* IGNORED>
         {
+            /// Convert the reference of a sequence into a tuple of references of elements.
             pub fn as_ref(&self) -> ( &$T0, $(&$T, )* ) {
                 ( &self.content.$t0, $(&self.content.$t, )* )
             }

@@ -43,6 +43,7 @@ impl<T: StringArrayWrapper> Storage<&'static [&'static str]> for T {
 pub trait RuleWrapper<R: RuleType>: Clone {
     /// Wrapped rule.
     const RULE: R;
+    /// The type of wrapped rule.
     type Rule;
 }
 
