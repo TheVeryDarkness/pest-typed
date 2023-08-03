@@ -7,8 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-#![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
-
 //! Derive statically typed nodes and parser from pest grammar.
 //! Aimed to add enhancement to pest for those in need.
 //!
@@ -94,6 +92,14 @@
 //! }
 //! ```
 //!
+
+#![warn(
+    missing_docs,
+    rust_2018_idioms,
+    rustdoc::all,
+    unused_qualifications,
+    future_incompatible
+)]
 
 #![doc = include_str!("../example-part2.md")]
 #![cfg_attr(feature = "grammar-extras", doc = include_str!("../example-part3.md"))]

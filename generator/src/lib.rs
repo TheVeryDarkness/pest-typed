@@ -13,6 +13,14 @@
 //!
 //! See [pest_typed](https://docs.rs/pest_typed/latest/pest_typed/) for related traits and types.
 
+#![warn(
+    missing_docs,
+    rust_2018_idioms,
+    rustdoc::all,
+    unused_qualifications,
+    future_incompatible
+)]
+
 mod config;
 mod graph;
 mod typed;

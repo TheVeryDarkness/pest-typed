@@ -16,6 +16,13 @@
 //! - [Error type](`error`) (copied from [`pest`]).
 
 #![no_std]
+#![warn(
+    missing_docs,
+    rust_2018_idioms,
+    rustdoc::all,
+    unused_qualifications,
+    future_incompatible
+)]
 
 extern crate alloc;
 extern crate core;
