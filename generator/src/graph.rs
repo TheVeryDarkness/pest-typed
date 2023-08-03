@@ -387,7 +387,7 @@ fn create<'g>(
     doc: impl Iterator<Item = &'g str>,
     id: &Ident,
     type_name: &TokenStream,
-    rule_config: &RuleConfig,
+    rule_config: &RuleConfig<'g>,
     emission: Emission,
     accessers: TokenStream,
     root: &TokenStream,
@@ -637,11 +637,11 @@ fn create<'g>(
     }
 }
 
-fn rule(
-    rule_config: &RuleConfig,
+fn rule<'a, 'g>(
+    rule_config: &RuleConfig<'g>,
     type_name: &TokenStream,
     doc: &String,
-    accessers: &Accesser,
+    accessers: &Accesser<'a>,
     emission: Emission,
 ) -> TokenStream {
     let root = quote! {super};
@@ -817,7 +817,7 @@ impl Output {
 fn process_single_alias<'g>(
     map: &mut Output,
     expr: &OptimizedExpr,
-    rule_config: &RuleConfig,
+    rule_config: &RuleConfig<'g>,
     type_name: TokenStream,
     accessers: Accesser<'g>,
     root: &TokenStream,
@@ -839,7 +839,7 @@ fn process_single_alias<'g>(
 /// Returns type name.
 fn generate_graph_node<'g>(
     expr: &'g OptimizedExpr,
-    rule_config: &RuleConfig,
+    rule_config: &RuleConfig<'g>,
     // From node name to type definition and implementation
     map: &mut Output,
     explicit: bool,

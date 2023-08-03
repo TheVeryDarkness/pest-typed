@@ -1521,7 +1521,7 @@ fn parse<
         Err(_) => return Err(tracker.collect()),
     };
     let (input, _) = IGNORED::parse_with::<false>(input, &mut stack);
-    let (_, _) = match AtomicRule::<'i, R, EOI, _EOI, _EOI>::try_parse_with::<false>(
+    let (_, _) = match AtomicRule::<'i, R, EOI<'i>, _EOI, _EOI>::try_parse_with::<false>(
         input,
         &mut stack,
         &mut tracker,
@@ -1547,7 +1547,7 @@ fn parse_without_ignore<
         Ok((input, res)) => (input, res),
         Err(_) => return Err(tracker.collect()),
     };
-    let (_, _) = match AtomicRule::<'i, R, EOI, _EOI, _EOI>::try_parse_with::<false>(
+    let (_, _) = match AtomicRule::<'i, R, EOI<'i>, _EOI, _EOI>::try_parse_with::<false>(
         input,
         &mut stack,
         &mut tracker,
