@@ -10,7 +10,7 @@
 use crate::config::Config;
 use crate::docs::DocComment;
 
-use super::types::{box_type, option_type, result_type, vec_type};
+use super::types::{box_type, option_type, result_type, vec_mod, vec_type};
 use pest::unicode::unicode_property_names;
 use pest_meta::{
     ast::RuleType,
@@ -78,8 +78,7 @@ enum Edge {
     Content,
     ContentI(usize),
     // Type wrapped by Option.
-    GetFirst,
-    GetSecond,
+    ChoiceI(usize),
     OptionalContent,
     // Type wrapped by Option.
     Contents,
@@ -102,11 +101,8 @@ enum Node {
     ContentI(usize, Box<Node>),
     // Type wrapped by Option.
     /// - Type: `#opt::<#inner>`
-    /// - Path: `.get_first().as_ref().and_then(|e|Some(e #inner)) #flat`
-    GetFirst(bool, Box<Node>),
-    /// - Type: `#opt::<#inner>`
-    /// - Path: `.get_second().as_ref().and_then(|e|Some(e #inner)) #flat`
-    GetSecond(bool, Box<Node>),
+    /// - Path: `._#index().and_then(|e|Some(e #inner)) #flat`
+    ChoiceI(usize, bool, Box<Node>),
     /// - Type: `#opt::<#inner>`
     /// - Path: `.content.as_ref().and_then(|e|Some(e #inner)) #flat`
     OptionalContent(bool, Box<Node>),
@@ -134,12 +130,10 @@ impl Node {
             #[cfg(feature = "grammar-extras")]
             Node::Tag(_) => false,
             Node::Content(inner) | Node::ContentI(_, inner) => inner.flattenable(),
-            Node::GetFirst(false, _)
-            | Node::GetSecond(false, _)
-            | Node::OptionalContent(false, _) => true,
-            Node::GetFirst(true, inner)
-            | Node::GetSecond(true, inner)
-            | Node::OptionalContent(true, inner) => inner.flattenable(),
+            Node::ChoiceI(_, false, _) | Node::OptionalContent(false, _) => true,
+            Node::ChoiceI(_, true, inner) | Node::OptionalContent(true, inner) => {
+                inner.flattenable()
+            }
             Node::Contents(_) | Node::Tuple(_) => false,
         }
     }
@@ -147,8 +141,7 @@ impl Node {
         match edge {
             Edge::Content => Self::Content(Box::new(self)),
             Edge::ContentI(i) => Self::ContentI(i, Box::new(self)),
-            Edge::GetFirst => Self::GetFirst(self.flattenable(), Box::new(self)),
-            Edge::GetSecond => Self::GetSecond(self.flattenable(), Box::new(self)),
+            Edge::ChoiceI(i) => Self::ChoiceI(i, self.flattenable(), Box::new(self)),
             Edge::OptionalContent => Self::OptionalContent(self.flattenable(), Box::new(self)),
             Edge::Contents => Self::Contents(Box::new(self)),
         }
@@ -218,19 +211,12 @@ impl Node {
                     opt(flatten, ty),
                 )
             }
-            Node::GetFirst(flatten, inner) => {
+            Node::ChoiceI(index, flatten, inner) => {
                 let (pa, ty) = inner.expand(root);
+                let func = format_ident!("_{}", index);
                 let flat = flat(flatten);
                 (
-                    quote! {{let res = res.get_first().as_ref().and_then(|res| Some(#pa)) #flat; res}},
-                    opt(flatten, ty),
-                )
-            }
-            Node::GetSecond(flatten, inner) => {
-                let (pa, ty) = inner.expand(root);
-                let flat = flat(flatten);
-                (
-                    quote! {{let res = res.get_second().as_ref().and_then(|res| Some(#pa)) #flat; res}},
+                    quote! {{let res = res.#func().and_then(|res| Some(#pa)) #flat; res}},
                     opt(flatten, ty),
                 )
             }
@@ -283,11 +269,8 @@ impl<'g> Accesser<'g> {
     pub fn optional_content(self) -> Self {
         self.prepend(Edge::OptionalContent)
     }
-    pub fn optional_first(self) -> Self {
-        self.prepend(Edge::GetFirst)
-    }
-    pub fn optional_second(self) -> Self {
-        self.prepend(Edge::GetSecond)
+    pub fn choice(self, i: usize) -> Self {
+        self.prepend(Edge::ChoiceI(i))
     }
     #[inline]
     fn prepend(mut self, edge: Edge) -> Self {
@@ -423,6 +406,8 @@ fn create<'g>(
     let rule = quote! {#root::Rule};
     let pairs = pairs();
     let box_ = box_type();
+    let vec = vec_type();
+    let vec_mod = vec_mod();
 
     let emit_content = emission.emit_content();
     let emit_span = emission.emit_span();
@@ -469,11 +454,11 @@ fn create<'g>(
     } else {
         quote! {}
     };
-    let pairs_impl = if emit_span {
-        quote! {
+    let pairs_impl = match emission {
+        Emission::Span | Emission::InnerToken => quote! {
             impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #id<'i> {
-                type Iter = ::core::iter::Once<&'n dyn #pest_typed::RuleStruct<'i, #root::Rule>>;
-                type IntoIter = ::core::iter::Once<#box_<dyn #pest_typed::RuleStruct<'i, #root::Rule> + 'n>>;
+                type Iter = ::core::iter::Once<&'n dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>>;
+                type IntoIter = ::core::iter::Once<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>>;
 
                 fn iter(&'n self) -> Self::Iter {
                     ::core::iter::once(self)
@@ -482,9 +467,8 @@ fn create<'g>(
                     ::core::iter::once(#box_::new(self))
                 }
             }
-        }
-    } else {
-        quote! {
+        },
+        Emission::Silent => quote! {
             impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #id<'i> {
                 type Iter = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::Iter;
                 type IntoIter = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::IntoIter;
@@ -496,48 +480,37 @@ fn create<'g>(
                     self.content.into_iter()
                 }
             }
-        }
+        },
     };
-    let pair_impl = if emit_content {
-        quote! {
+    let pair_impl = match emission {
+        Emission::Silent => quote! {},
+        Emission::InnerToken => quote! {
             impl<'i: 'n, 'n> #pest_typed::iterators::Pair<'i, 'n, #root::Rule> for #id<'i> {
-                type Inner = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::Iter;
-                type IntoInner = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::IntoIter;
-
-                fn inner(&'n self) -> Self::Inner {
-                    self.content.iter()
+                fn inner(&'n self) -> #vec_mod::IntoIter<&'n (dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>)> {
+                    self.content.iter().collect::<#vec::<_>>().into_iter()
                 }
-                fn into_inner(self) -> Self::IntoInner {
-                    self.content.into_iter()
+                fn into_inner(self) -> #vec_mod::IntoIter<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>> {
+                    self.content.into_iter().collect::<#vec::<_>>().into_iter()
                 }
             }
-        }
-    } else {
-        quote! {
+        },
+        Emission::Span => quote! {
             impl<'i: 'n, 'n> #pest_typed::iterators::Pair<'i, 'n, #root::Rule> for #id<'i> {
-                type Inner = ::core::iter::Empty<&'n dyn #pest_typed::RuleStruct<'i, #root::Rule>>;
-                type IntoInner = ::core::iter::Empty<#box_<dyn #pest_typed::RuleStruct<'i, #root::Rule> + 'n>>;
-
-                fn inner(&'n self) -> Self::Inner {
-                    ::core::iter::empty()
+                fn inner(&'n self) -> #vec_mod::IntoIter<&'n (dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>)> {
+                    #vec::new().into_iter()
                 }
-                fn into_inner(self) -> Self::IntoInner {
-                    ::core::iter::empty()
+                fn into_inner(self) -> #vec_mod::IntoIter<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>> {
+                    #vec::new().into_iter()
                 }
             }
-        }
+        },
     };
     let rule_struct_impl = {
         match emission {
-            Emission::Silent => quote! {},
-            Emission::Span => quote! {
-                impl<'i> #pest_typed::RuleStruct<'i, #root::Rule> for #id<'i> {
-                    fn span(&self) -> #span<'i> {
-                        self.span
-                    }
-                }
+            Emission::Silent => quote! {
+                // impl<'i> ! #pest_typed::RuleStruct<'i, #root::Rule> for #id<'i> {}
             },
-            Emission::InnerToken => quote! {
+            Emission::Span | Emission::InnerToken => quote! {
                 impl<'i> #pest_typed::RuleStruct<'i, #root::Rule> for #id<'i> {
                     fn span(&self) -> #span<'i> {
                         self.span
@@ -709,6 +682,7 @@ struct Output {
     #[cfg(feature = "grammar-extras")]
     tagged_nodes: BTreeMap<Ident, Vec<TokenStream>>,
     sequences: BTreeSet<usize>,
+    choices: BTreeSet<usize>,
 }
 impl Output {
     fn new() -> Self {
@@ -719,15 +693,24 @@ impl Output {
             #[cfg(feature = "grammar-extras")]
             tagged_nodes: BTreeMap::new(),
             sequences: BTreeSet::new(),
+            choices: BTreeSet::new(),
         }
     }
     /// Record usage of Seq* generics.
     fn record_seq(&mut self, index: usize) {
         self.sequences.insert(index);
     }
+    /// Record usage of Choices* generics.
+    fn record_choice(&mut self, index: usize) {
+        self.choices.insert(index);
+    }
     /// Used sequences.
     fn seq(&self) -> &BTreeSet<usize> {
         &self.sequences
+    }
+    /// Used choices.
+    fn choices(&self) -> &BTreeSet<usize> {
+        &self.choices
     }
     /// Insert rule struct to rule module.
     fn insert(&mut self, tokens: TokenStream) {
@@ -1070,25 +1053,29 @@ fn generate_graph_node<'g>(
                 explicit,
             )
         }
-        OptimizedExpr::Choice(lhs, rhs) => {
-            let (first, acc_first) =
-                generate_graph_node(lhs, rule_config, map, false, emission, config, root);
-            let acc_first = acc_first.optional_first();
-            let (second, acc_second) =
-                generate_graph_node(rhs, rule_config, map, false, emission, config, root);
-            let acc_second = acc_second.optional_second();
+        OptimizedExpr::Choice(_, _) => {
+            let vec = walk!(expr, Choice);
+            let mut types = Vec::<TokenStream>::with_capacity(vec.len());
+            let mut accesser = Accesser::new();
+            for (i, expr) in vec.into_iter().enumerate() {
+                let (child, acc) =
+                    generate_graph_node(expr, rule_config, map, false, emission, config, root);
+                types.push(child);
+                accesser = accesser.join(acc.choice(i));
+            }
+            let choice = format_ident!("Choice_{}", types.len());
+            map.record_choice(types.len());
             process_single_alias(
                 map,
                 expr,
                 rule_config,
                 quote! {
-                    #root::#generics::Choice::<
+                    #root::#generics::#choice::<
                         'i,
-                        #first,
-                        #second,
+                        #(#types, )*
                     >
                 },
-                acc_first.join(acc_second),
+                accesser,
                 root,
                 emission,
                 explicit,
@@ -1309,26 +1296,58 @@ pub(crate) fn generate_typed_pair_from_rule(
         let pairs = pairs();
         let _i32 = _i32();
         let char = _char();
-        let mut seq = vec![];
-        for sequence in graph.seq() {
-            let type_i = format_ident!("Seq_{}", sequence);
-            let generics_i = format_ident!("Seq{}", sequence);
-            let (types, field): (Vec<_>, Vec<_>) = (0..*sequence)
-                .map(|i| (format_ident!("T{}", i), Index::from(i)))
-                .unzip();
-            if *sequence >= 8 {
-                seq.push(quote! {
-                    pest_typed::seq!(#generics_i, pest_typed, #(#types, #field, )*);
-                });
-            } else {
-                seq.push(quote! {
-                    use pest_typed::sequence::#generics_i;
-                })
+        let fill = |set: &BTreeSet<usize>,
+                    target: &mut Vec<TokenStream>,
+                    prefix: &str,
+                    mac: &Ident,
+                    module: &Ident,
+                    ign: bool| {
+            for item in set {
+                let type_i = format_ident!("{}_{}", prefix, item);
+                let generics_i = format_ident!("{}{}", prefix, item);
+                let (types, field): (Vec<_>, Vec<_>) = (0..*item)
+                    .map(|i| (format_ident!("T{}", i), Index::from(i)))
+                    .unzip();
+                if *item >= 8 {
+                    target.push(quote! {
+                        pest_typed::#mac!(#generics_i, pest_typed, #(#types, #field, )*);
+                    });
+                } else {
+                    target.push(quote! {
+                        use pest_typed::#module::#generics_i;
+                    })
+                }
+                let ign = if ign {
+                    quote! {Ignored<'i>,}
+                } else {
+                    quote![]
+                };
+                target.push(
+                    quote!{
+                        pub type #type_i<'i, #(#types: TypedNode<'i, #root::Rule>, )*> = #generics_i<'i, #root::Rule, #(#types, )* #ign>;
+                    }
+                );
             }
-            seq.push(quote!{
-                pub type #type_i<'i, #(#types: TypedNode<'i, #root::Rule>, )*> = #generics_i<'i, #root::Rule, #(#types, )* Ignored<'i>>;
-            });
-        }
+        };
+        let mut seq = vec![];
+        let mut chs = vec![];
+        fill(
+            graph.seq(),
+            &mut seq,
+            "Seq",
+            &format_ident!("seq"),
+            &format_ident!("sequence"),
+            true,
+        );
+        fill(
+            graph.choices(),
+            &mut chs,
+            "Choice",
+            &format_ident!("choices"),
+            &format_ident!("choices"),
+            false,
+        );
+
         quote! {
             #[doc(hidden)]
             mod generics {
@@ -1352,7 +1371,7 @@ pub(crate) fn generate_typed_pair_from_rule(
                 pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<'i, #root::Rule, T>;
                 pub type Restorable<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Restorable<'i, #root::Rule, T>;
                 #(#seq)*
-                pub type Choice<'i, T1: TypedNode<'i, #root::Rule>, T2: TypedNode<'i, #root::Rule>> = predefined_node::Choice<'i, #root::Rule, T1, T2>;
+                #(#chs)*
                 pub type Opt<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Opt<'i, #root::Rule, T>;
                 pub type Rep<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Rep<'i, #root::Rule, T, Ignored<'i>>;
                 pub type RepOnce<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::RepOnce<'i, #root::Rule, T, Ignored<'i>>;
@@ -1437,8 +1456,8 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
                     }
                 }
                 impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #property_ident<'i> {
-                    type Iter = ::core::iter::Empty<&'n dyn #pest_typed::RuleStruct<'i, #root::Rule>>;
-                    type IntoIter = ::core::iter::Empty<#box_<dyn #pest_typed::RuleStruct<'i, #root::Rule> + 'n>>;
+                    type Iter = ::core::iter::Empty<&'n dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>>;
+                    type IntoIter = ::core::iter::Empty<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>>;
 
                     fn iter(&'n self) -> Self::Iter {
                         ::core::iter::empty()

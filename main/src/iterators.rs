@@ -9,36 +9,92 @@
 
 use crate::{
     predefined_node::{
-        AtomicRule, Box, CharRange, Choice, Insens, Negative, NonAtomicRule, Opt, PeekSlice1,
-        PeekSlice2, Positive, Push, RepMin, Restorable, Rule, Skip, Str, DROP, NEWLINE, PEEK,
-        PEEK_ALL, POP, POP_ALL, SOI, ANY,
+        AtomicRule, Box, CharRange, Insens, Negative, NonAtomicRule, Opt, PeekSlice1, PeekSlice2,
+        Positive, Push, RepMin, Restorable, Rule, Skip, Str, ANY, DROP, NEWLINE, PEEK, PEEK_ALL,
+        POP, POP_ALL, SOI,
     },
     typed_node::RuleStruct,
     NeverFailedTypedNode, RuleWrapper, Span, StringArrayWrapper, StringWrapper, TypedNode,
 };
-use alloc::{boxed, vec};
-use core::iter::{empty, Empty, FlatMap, Iterator};
+use alloc::{boxed, collections::VecDeque, vec, vec::Vec};
+use core::{
+    iter::{empty, once, Empty, FlatMap, Iterator},
+    mem::swap,
+};
 use pest::RuleType;
 
+/// Simulate [`pest::iterators::Pairs`].
 pub trait Pairs<'i: 'n, 'n, R: RuleType + 'n> {
-    type Iter: Iterator<Item = &'n (dyn RuleStruct<'i, R>)>;
-    type IntoIter: Iterator<Item = boxed::Box<dyn RuleStruct<'i, R> + 'n>>;
+    /// Iterator type that iterate on inner pairs by reference.
+    type Iter: Iterator<Item = &'n (dyn Pair<'i, 'n, R>)>;
+    /// Iterator type that iterate on inner pairs by value.
+    type IntoIter: Iterator<Item = boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
+    /// Iterate on inner pairs by reference. Returns [`Pairs::Iter`].
     fn iter(&'n self) -> Self::Iter;
+    /// Iterate on inner pairs by value. Returns [`Pairs::IntoIter`].
     fn into_iter(self) -> Self::IntoIter;
 }
 
-pub trait Pair<'i: 'n, 'n, R: RuleType + 'n>: Pairs<'i, 'n, R> {
-    type Inner: Iterator<Item = &'n (dyn RuleStruct<'i, R>)>;
-    type IntoInner: Iterator<Item = boxed::Box<dyn RuleStruct<'i, R> + 'n>>;
-    fn inner(&'n self) -> Self::Inner;
-    fn into_inner(self) -> Self::IntoInner;
+/// Simulate [`pest::iterators::Pair`].
+pub trait Pair<'i: 'n, 'n, R: RuleType + 'n>: RuleStruct<'i, R> {
+    /// Collect inner pairs' [`Pairs::Iter`] and make them into a [`vec::IntoIter`].
+    fn inner(&'n self) -> vec::IntoIter<&'n (dyn Pair<'i, 'n, R>)>;
+    /// Collect inner pairs [`Pairs::IntoIter`] and make them into a [`vec::IntoIter`].
+    fn into_inner(self) -> vec::IntoIter<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
+}
+
+/// A trait to traverse the pair as the root of a tree.
+pub trait PairTree<'i: 'n, 'n, R: RuleType + 'n>: Pair<'i, 'n, R> + Sized {
+    /// Level order traversal
+    fn iterate_level_order(&'n self, mut f: impl FnMut(&'n (dyn Pair<'i, 'n, R>), usize)) {
+        let mut queue: VecDeque<&'n (dyn Pair<'i, 'n, R>)> = VecDeque::new();
+        let mut next = VecDeque::new();
+        queue.push_back(self);
+        loop {
+            while let Some(p) = queue.pop_front() {
+                f(p, queue.len());
+                for child in p.inner() {
+                    next.push_back(child);
+                }
+            }
+            swap(&mut queue, &mut next);
+            if queue.is_empty() {
+                break;
+            }
+        }
+    }
+    /// Pre-order traversal
+    fn iterate_pre_order(&'n self, mut f: impl FnMut(&'n (dyn Pair<'i, 'n, R>), usize)) {
+        let mut stack: Vec<VecDeque<&'n (dyn Pair<'i, 'n, R>)>> = Vec::new();
+
+        let root: &'n (dyn Pair<'i, 'n, R>) = self;
+        stack.push(VecDeque::<&'n (dyn Pair<'i, 'n, R>)>::from_iter(once(root)));
+
+        loop {
+            if let Some(parent) = stack.last_mut() {
+                if let Some(first) = parent.pop_front() {
+                    f(first, stack.len() - 1);
+                    stack.push(first.inner().collect::<VecDeque<_>>());
+                } else {
+                    stack.pop();
+                }
+            } else {
+                break;
+            }
+        }
+    }
+}
+
+impl<'i: 'n, 'n, R: RuleType + 'n, T: RuleStruct<'i, R> + Pairs<'i, 'n, R> + Pair<'i, 'n, R>>
+    PairTree<'i, 'n, R> for T
+{
 }
 
 macro_rules! impl_empty {
     ($node:ty, $($tt:tt)*) => {
         impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> Pairs<'i, 'n, R> for $node {
-            type Iter = Empty<&'n (dyn RuleStruct<'i, R>)>;
-            type IntoIter = Empty<boxed::Box<dyn RuleStruct<'i, R> + 'n>>;
+            type Iter = Empty<&'n (dyn Pair<'i, 'n, R>)>;
+            type IntoIter = Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
 
             fn iter(&'n self) -> Self::Iter {
                 empty()
@@ -80,36 +136,11 @@ impl_forward_inner!(Positive);
 impl_empty!(Negative<'i, R, T>, T: TypedNode<'i, R>);
 impl_forward_inner!(Restorable);
 
-impl<
-        'i: 'n,
-        'n,
-        R: RuleType + 'n,
-        T1: TypedNode<'i, R> + Pairs<'i, 'n, R>,
-        T2: TypedNode<'i, R> + Pairs<'i, 'n, R>,
-    > Pairs<'i, 'n, R> for Choice<'i, R, T1, T2>
-{
-    type Iter = Either<&'n (dyn RuleStruct<'i, R>), T1::Iter, T2::Iter>;
-    type IntoIter = Either<boxed::Box<dyn RuleStruct<'i, R> + 'n>, T1::IntoIter, T2::IntoIter>;
-
-    fn iter(&'n self) -> Self::Iter {
-        match self {
-            Self::First(first, _) => Either::First(first.iter()),
-            Self::Second(second, _) => Either::Second(second.iter()),
-        }
-    }
-    fn into_iter(self) -> Self::IntoIter {
-        match self {
-            Self::First(first, _) => Either::First(first.into_iter()),
-            Self::Second(second, _) => Either::Second(second.into_iter()),
-        }
-    }
-}
-
 impl<'i: 'n, 'n, R: RuleType + 'n, T: TypedNode<'i, R> + Pairs<'i, 'n, R>> Pairs<'i, 'n, R>
     for Opt<'i, R, T>
 {
-    type Iter = Maybe<&'n (dyn RuleStruct<'i, R>), T::Iter>;
-    type IntoIter = Maybe<boxed::Box<dyn RuleStruct<'i, R> + 'n>, T::IntoIter>;
+    type Iter = Maybe<&'n (dyn Pair<'i, 'n, R>), T::Iter>;
+    type IntoIter = Maybe<boxed::Box<dyn Pair<'i, 'n, R> + 'n>, T::IntoIter>;
 
     fn iter(&'n self) -> Self::Iter {
         match &self.content {
@@ -148,8 +179,8 @@ impl<
 macro_rules! impl_easiest {
     ($id: ident) => {
         impl<'i: 'n, 'n, R: RuleType + 'n> Pairs<'i, 'n, R> for $id<'i> {
-            type Iter = Empty<&'n (dyn RuleStruct<'i, R>)>;
-            type IntoIter = Empty<boxed::Box<dyn RuleStruct<'i, R> + 'n>>;
+            type Iter = Empty<&'n (dyn Pair<'i, 'n, R>)>;
+            type IntoIter = Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
 
             fn iter(&'n self) -> Self::Iter {
                 empty()
@@ -174,18 +205,26 @@ impl_easiest!(DROP);
 macro_rules! impl_self {
     ($node:ty, $($tt:tt)*) => {
         impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> Pairs<'i, 'n, R> for $node {
-            type Iter = core::iter::Once<&'n dyn RuleStruct<'i, R>>;
-            type IntoIter = core::iter::Once<boxed::Box<dyn RuleStruct<'i, R> + 'n>>;
+            type Iter = core::iter::Once<&'n dyn Pair<'i, 'n, R>>;
+            type IntoIter = core::iter::Once<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
 
             fn iter(&'n self) -> Self::Iter {
-                core::iter::once(self)
+                once(self)
             }
             fn into_iter(self) -> Self::IntoIter {
-                core::iter::once(boxed::Box::new(self))
+                once(boxed::Box::new(self))
             }
         }
         impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> RuleStruct<'i, R> for $node {
             fn span(&self) -> Span<'i> { self.span }
+        }
+        impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> Pair<'i, 'n, R> for $node {
+            fn inner(&'n self) -> alloc::vec::IntoIter<&'n (dyn Pair<'i, 'n, R> + 'n)> {
+                vec![].into_iter()
+            }
+            fn into_inner(self) -> alloc::vec::IntoIter<alloc::boxed::Box<(dyn Pair<'i, 'n, R> + 'n)>> {
+                vec![].into_iter()
+            }
         }
     };
 }
@@ -211,22 +250,7 @@ impl_self!(
     IGNORED: NeverFailedTypedNode<'i, R>,
 );
 
-pub enum Either<Item, T1: Iterator<Item = Item>, T2: Iterator<Item = Item>> {
-    First(T1),
-    Second(T2),
-}
-
-impl<Item, T1: Iterator<Item = Item>, T2: Iterator<Item = Item>> Iterator for Either<Item, T1, T2> {
-    type Item = Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Self::First(first) => first.next(),
-            Self::Second(second) => second.next(),
-        }
-    }
-}
-
+/// An iterator that maybe contain another iterator.
 pub struct Maybe<Item, T: Iterator<Item = Item>>(Option<T>);
 impl<Item, T: Iterator<Item = Item>> Iterator for Maybe<Item, T> {
     type Item = Item;

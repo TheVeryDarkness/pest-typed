@@ -690,93 +690,6 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> D
     }
 }
 
-/// Help to invoke if-else-if-else-if-else structure.
-pub struct ChoiceHelper<'n, T, Ret> {
-    result: Result<Ret, &'n T>,
-}
-impl<'n, T, Ret> ChoiceHelper<'n, T, Ret> {
-    pub(super) fn from(value: &'n T) -> Self {
-        Self { result: Err(value) }
-    }
-    pub fn else_then(self, f: impl FnOnce(&T) -> Ret) -> Ret {
-        match self.result {
-            Ok(ret) => ret,
-            Err(r) => f(r),
-        }
-    }
-}
-impl<'i, 'n, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>, Ret>
-    ChoiceHelper<'n, Choice<'i, R, T1, T2>, Ret>
-{
-    pub fn else_if(self, f: impl FnOnce(&T1) -> Ret) -> ChoiceHelper<'n, T2, Ret> {
-        match self.result {
-            Err(Choice::First(first, _)) => {
-                let result = f(first);
-                ChoiceHelper { result: Ok(result) }
-            }
-            Err(Choice::Second(second, _)) => ChoiceHelper::from(second),
-            Ok(ret) => ChoiceHelper { result: Ok(ret) },
-        }
-    }
-}
-
-/// Match either of two expressions.
-#[derive(Clone)]
-pub enum Choice<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> {
-    /// Matched first expression.
-    First(T1, PhantomData<&'i R>),
-    /// Matched second expression.
-    Second(T2, PhantomData<&'i R>),
-}
-impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> Choice<'i, R, T1, T2> {
-    /// Get the first case if exists.
-    #[inline]
-    pub fn get_first(&self) -> Option<&T1> {
-        match self {
-            Self::First(res, _) => Some(res),
-            Self::Second(_, _) => None,
-        }
-    }
-    /// Get the second case if exists.
-    #[inline]
-    pub fn get_second(&self) -> Option<&T2> {
-        match self {
-            Self::First(_, _) => None,
-            Self::Second(res, _) => Some(res),
-        }
-    }
-    /// Invoke if is not None and is the first case.
-    pub fn if_then<Ret>(&self, f: impl FnOnce(&T1) -> Ret) -> ChoiceHelper<T2, Ret> {
-        ChoiceHelper::from(self).else_if(f)
-    }
-}
-impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> TypedNode<'i, R>
-    for Choice<'i, R, T1, T2>
-{
-    #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
-        input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        match T1::try_parse_with::<ATOMIC>(input, stack, tracker) {
-            Ok((input, first)) => Ok((input, Self::First(first, PhantomData))),
-            Err(_) => match T2::try_parse_with::<ATOMIC>(input, stack, tracker) {
-                Ok((input, second)) => Ok((input, Self::Second(second, PhantomData))),
-                Err(_) => Err(()),
-            },
-        }
-    }
-}
-impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> Debug for Choice<'i, R, T1, T2> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::First(first, _) => f.debug_tuple("First").field(first).finish(),
-            Self::Second(second, _) => f.debug_tuple("Second").field(second).finish(),
-        }
-    }
-}
-
 /// Repeatably match `T` at least `MIN` times.
 #[derive(Clone)]
 pub struct RepMin<
@@ -1673,14 +1586,11 @@ pub type ASCII_BIN_DIGIT<'i, R> = CharRange<'i, R, '0', '1'>;
 #[allow(non_camel_case_types)]
 pub type ASCII_OCT_DIGIT<'i, R> = CharRange<'i, R, '0', '7'>;
 
+use crate::choices::{Choice2, Choice3};
 /// Hexadecimal ASCII Digit. `'0'..'9' | 'a'..'f' | 'A'..'F'`
 #[allow(non_camel_case_types)]
-pub type ASCII_HEX_DIGIT<'i, R> = Choice<
-    'i,
-    R,
-    ASCII_DIGIT<'i, R>,
-    Choice<'i, R, CharRange<'i, R, 'a', 'f'>, CharRange<'i, R, 'A', 'F'>>,
->;
+pub type ASCII_HEX_DIGIT<'i, R> =
+    Choice3<'i, R, ASCII_DIGIT<'i, R>, CharRange<'i, R, 'a', 'f'>, CharRange<'i, R, 'A', 'F'>>;
 
 /// Lower case ASCII alphabet.
 #[allow(non_camel_case_types)]
@@ -1692,11 +1602,11 @@ pub type ASCII_ALPHA_UPPER<'i, R> = CharRange<'i, R, 'A', 'Z'>;
 
 /// ASCII alphabet.
 #[allow(non_camel_case_types)]
-pub type ASCII_ALPHA<'i, R> = Choice<'i, R, ASCII_ALPHA_LOWER<'i, R>, ASCII_ALPHA_UPPER<'i, R>>;
+pub type ASCII_ALPHA<'i, R> = Choice2<'i, R, ASCII_ALPHA_LOWER<'i, R>, ASCII_ALPHA_UPPER<'i, R>>;
 
 /// ASCII alphabet or digit.
 #[allow(non_camel_case_types)]
-pub type ASCII_ALPHANUMERIC<'i, R> = Choice<'i, R, ASCII_ALPHA<'i, R>, ASCII_DIGIT<'i, R>>;
+pub type ASCII_ALPHANUMERIC<'i, R> = Choice2<'i, R, ASCII_ALPHA<'i, R>, ASCII_DIGIT<'i, R>>;
 
 /// ASCII alphabet.
 #[allow(non_camel_case_types)]

@@ -50,3 +50,12 @@ pub fn vec_type() -> TokenStream {
     #[cfg(not(feature = "std"))]
     quote! { ::alloc::vec::Vec }
 }
+
+/// `vec` in corresponding context.
+pub fn vec_mod() -> TokenStream {
+    #[cfg(feature = "std")]
+    quote! { ::std::vec }
+
+    #[cfg(not(feature = "std"))]
+    quote! { ::alloc::vec }
+}
