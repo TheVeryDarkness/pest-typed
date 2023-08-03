@@ -9,11 +9,10 @@
 
 //! Types for statically typed nodes and parser.
 //!
-//! Modules:
+//! Features:
 //!
-//! - [Predefined generics](`predefined_node`).
-//! - [Error tracker](`tracker`).
-//! - [Error type](`error`) (copied from [`pest`]).
+//! - `std`: include [`std`] support.
+//! - ~`verbose`~ (TODO): provide verbose error messages.
 
 #![no_std]
 #![warn(
