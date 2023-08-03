@@ -7,7 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use pest_typed::{error::Error, ParsableTypedNode};
 use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
@@ -27,19 +26,40 @@ s12 = { "a" ~ "b" ~ "c" ~ "d" ~ "e" ~ "f" ~ "g" ~ "h" ~ "i" ~ "j" ~ "k" ~ "l" }
 "#]
 struct Parser;
 
-#[test]
-fn main() -> Result<(), Error<Rule>> {
-    pairs::s1::parse("a")?;
-    pairs::s2::parse("ab")?;
-    pairs::s3::parse("abc")?;
-    pairs::s4::parse("abcd")?;
-    pairs::s5::parse("abcde")?;
-    pairs::s6::parse("abcdef")?;
-    pairs::s7::parse("abcdefg")?;
-    pairs::s8::parse("abcdefgh")?;
-    pairs::s9::parse("abcdefghi")?;
-    pairs::s10::parse("abcdefghij")?;
-    pairs::s11::parse("abcdefghijk")?;
-    pairs::s12::parse("abcdefghijkl")?;
-    Ok(())
+macro_rules! test {
+    ($name:ident, $input:literal) => {
+        mod $name {
+            use super::{pairs, Rule};
+            use pest_typed::{error::Error, ParsableTypedNode};
+
+            #[test]
+            fn matched() -> Result<(), Error<Rule>> {
+                pairs::$name::parse($input)?;
+                Ok(())
+            }
+            #[test]
+            #[should_panic]
+            fn unmatched() {
+                pairs::$name::parse(concat!("_", $input)).unwrap();
+            }
+            #[test]
+            #[should_panic]
+            fn incomplete() {
+                pairs::$name::parse(concat!($input, "_")).unwrap();
+            }
+        }
+    };
 }
+
+test!(s1, "a");
+test!(s2, "ab");
+test!(s3, "abc");
+test!(s4, "abcd");
+test!(s5, "abcde");
+test!(s6, "abcdef");
+test!(s7, "abcdefg");
+test!(s8, "abcdefgh");
+test!(s9, "abcdefghi");
+test!(s10, "abcdefghij");
+test!(s11, "abcdefghijk");
+test!(s12, "abcdefghijkl");

@@ -7,7 +7,6 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use pest_typed::{error::Error, ParsableTypedNode};
 use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
@@ -27,19 +26,45 @@ c12 = { ("a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l"){
 "#]
 struct Parser;
 
-#[test]
-fn main() -> Result<(), Error<Rule>> {
-    pairs::c1::parse("a")?;
-    pairs::c2::parse("ab")?;
-    pairs::c3::parse("abc")?;
-    pairs::c4::parse("abcd")?;
-    pairs::c5::parse("abcde")?;
-    pairs::c6::parse("abcdef")?;
-    pairs::c7::parse("abcdefg")?;
-    pairs::c8::parse("abcdefgh")?;
-    pairs::c9::parse("abcdefghi")?;
-    pairs::c10::parse("abcdefghij")?;
-    pairs::c11::parse("abcdefghijk")?;
-    pairs::c12::parse("abcdefghijkl")?;
-    Ok(())
+macro_rules! test {
+    ($name:ident, $input:literal) => {
+        mod $name {
+            use super::{pairs, Rule};
+            use pest_typed::{
+                error::Error,
+                iterators::{Pair, Pairs},
+                ParsableTypedNode,
+            };
+            #[test]
+            fn success() -> Result<(), Error<Rule>> {
+                let $name = pairs::$name::parse($input)?;
+                let span = $name.span;
+                assert_eq!(span, $name.iter().next().unwrap().span());
+                assert_eq!(span, $name.clone().into_iter().next().unwrap().span());
+                assert!($name.inner().next().is_none());
+                assert!($name.clone().into_inner().next().is_none());
+
+                Ok(())
+            }
+            #[test]
+            #[should_panic]
+            fn failed() {
+                let mut buf = String::from($input);
+                buf.pop();
+                pairs::$name::parse(buf.as_str()).unwrap();
+            }
+        }
+    };
 }
+test!(c1, "a");
+test!(c2, "ab");
+test!(c3, "abc");
+test!(c4, "abcd");
+test!(c5, "abcde");
+test!(c6, "abcdef");
+test!(c7, "abcdefg");
+test!(c8, "abcdefgh");
+test!(c9, "abcdefghi");
+test!(c10, "abcdefghij");
+test!(c11, "abcdefghijk");
+test!(c12, "abcdefghijkl");
