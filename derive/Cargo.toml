@@ -13,8 +13,6 @@ license = "MIT/Apache-2.0"
 proc-macro = true
 
 [features]
-default = ["std"]
-std = ["pest_typed/std", "pest_typed_generator/std"]
 grammar-extras = ["pest_typed_generator/grammar-extras"]
 
 [package.metadata.docs.rs]

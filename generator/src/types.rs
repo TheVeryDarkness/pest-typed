@@ -8,7 +8,7 @@
 // modified, or distributed except according to those terms.
 
 //! Extracted from **pest/generator/src/generator.rs** (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
-//! and modified.
+//! and modified, but re-written then.
 //!
 //! It's for convenient use of types in standard library whether or not feature **std** is enabled.
 
@@ -17,45 +17,25 @@ use quote::quote;
 
 /// `Box` in corresponding context.
 pub fn box_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::boxed::Box }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::alloc::boxed::Box }
+    quote! { ::pest_typed::re_exported::Box }
 }
 
 /// `Result` in corresponding context.
 pub fn result_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::result::Result }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::core::result::Result }
+    quote! { ::pest_typed::re_exported::Result }
 }
 
 /// `Option` in corresponding context.
 pub fn option_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::option::Option }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::core::option::Option }
+    quote! { ::pest_typed::re_exported::Option }
 }
 
 /// `Vec` in corresponding context.
 pub fn vec_type() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::vec::Vec }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::alloc::vec::Vec }
+    quote! { ::pest_typed::re_exported::Vec }
 }
 
 /// `vec` in corresponding context.
 pub fn vec_mod() -> TokenStream {
-    #[cfg(feature = "std")]
-    quote! { ::std::vec }
-
-    #[cfg(not(feature = "std"))]
-    quote! { ::alloc::vec }
+    quote! { ::pest_typed::re_exported::vec }
 }

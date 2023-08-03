@@ -11,7 +11,7 @@ license = "MIT/Apache-2.0"
 
 [features]
 default = ["std"]
-std = ["pest/std"]
+std = ["pest/std", "pest_typed/std"]
 grammar-extras = ["pest_meta/grammar-extras"]
 
 [dependencies]
@@ -20,3 +20,6 @@ proc-macro2 = { version = "^1.0.66" }
 pest_meta = { version = ">=2.7.1" }
 quote = { version = "^1.0.31" }
 syn = { version = "^2.0.26" }
+
+[dev-dependencies]
+pest_typed = { path = "../main", version = "0.3.4", default-features = false }

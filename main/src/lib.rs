@@ -38,6 +38,7 @@ pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeW
 pub mod choices;
 mod macros;
 mod pratt;
+pub mod re_exported;
 pub mod sequence;
 pub use alloc::boxed::Box;
 

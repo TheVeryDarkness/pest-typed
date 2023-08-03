@@ -30,4 +30,4 @@ pub use typed::derive_typed_parser;
 mod docs;
 mod generator;
 mod helper;
-pub mod types;
+mod types;
