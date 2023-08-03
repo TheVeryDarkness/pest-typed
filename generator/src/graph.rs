@@ -1301,26 +1301,43 @@ pub(crate) fn generate_typed_pair_from_rule(
                     prefix: &str,
                     mac: &Ident,
                     module: &Ident,
-                    ign: bool| {
+                    helper_iter: bool,
+                    seq: bool| {
             for item in set {
                 let type_i = format_ident!("{}_{}", prefix, item);
                 let generics_i = format_ident!("{}{}", prefix, item);
                 let (types, field): (Vec<_>, Vec<_>) = (0..*item)
-                    .map(|i| (format_ident!("T{}", i), Index::from(i)))
+                    .map(|i| {
+                        let field = if seq {
+                            let i = Index::from(i);
+                            quote! {#i}
+                        } else {
+                            let i = format_ident!("_{}", i);
+                            quote! {#i}
+                        };
+                        (format_ident!("T{}", i), field)
+                    })
                     .unzip();
                 if *item >= 8 {
+                    let helper_iter = if helper_iter {
+                        let helper = format_ident!("helper_{}", item);
+                        let iter = format_ident!("iter_{}", item);
+                        quote! {#helper, #iter, }
+                    } else {
+                        quote! {}
+                    };
                     target.push(quote! {
-                        pest_typed::#mac!(#generics_i, pest_typed, #(#types, #field, )*);
+                        pest_typed::#mac!(#generics_i, pest_typed, #helper_iter #(#types, #field, )*);
                     });
                 } else {
                     target.push(quote! {
                         use pest_typed::#module::#generics_i;
                     })
                 }
-                let ign = if ign {
+                let ign = if seq {
                     quote! {Ignored<'i>,}
                 } else {
-                    quote![]
+                    quote! {}
                 };
                 target.push(
                     quote!{
@@ -1337,6 +1354,7 @@ pub(crate) fn generate_typed_pair_from_rule(
             "Seq",
             &format_ident!("seq"),
             &format_ident!("sequence"),
+            false,
             true,
         );
         fill(
@@ -1345,6 +1363,7 @@ pub(crate) fn generate_typed_pair_from_rule(
             "Choice",
             &format_ident!("choices"),
             &format_ident!("choices"),
+            true,
             false,
         );
 
