@@ -45,45 +45,105 @@ pub trait Pair<'i: 'n, 'n, R: RuleType + 'n>: RuleStruct<'i, R> {
     fn into_inner(self) -> vec::IntoIter<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
 }
 
+fn iterate_level_order<'i: 'n, 'n, R: RuleType + 'n, E>(
+    p: &'n impl Pair<'i, 'n, R>,
+    mut f: impl FnMut(
+        &'n (dyn Pair<'i, 'n, R>),
+        usize,
+        &VecDeque<&dyn Pair<'i, 'n, R>>,
+    ) -> Result<(), E>,
+) -> Result<(), E> {
+    let mut queue: VecDeque<&'n (dyn Pair<'i, 'n, R>)> = VecDeque::new();
+    let mut next = VecDeque::new();
+    queue.push_back(p);
+    loop {
+        while let Some(p) = queue.pop_front() {
+            let mut children = p.inner().collect::<VecDeque<_>>();
+            f(p, queue.len(), &children)?;
+            next.append(&mut children);
+        }
+        swap(&mut queue, &mut next);
+        if queue.is_empty() {
+            return Ok(());
+        }
+    }
+}
+/// Pre-order traversal
+fn iterate_pre_order<'i: 'n, 'n, R: RuleType + 'n, E>(
+    p: &'n impl Pair<'i, 'n, R>,
+    mut f: impl FnMut(
+        &'n (dyn Pair<'i, 'n, R>),
+        usize,
+        &VecDeque<&dyn Pair<'i, 'n, R>>,
+    ) -> Result<(), E>,
+) -> Result<(), E> {
+    let mut stack: Vec<VecDeque<&'n (dyn Pair<'i, 'n, R>)>> = Vec::new();
+
+    let root: &'n (dyn Pair<'i, 'n, R>) = p;
+    stack.push(VecDeque::<&'n (dyn Pair<'i, 'n, R>)>::from_iter(once(root)));
+
+    loop {
+        if let Some(parent) = stack.last_mut() {
+            if let Some(first) = parent.pop_front() {
+                let children = first.inner().collect::<VecDeque<_>>();
+                f(first, stack.len() - 1, &children)?;
+                stack.push(children);
+            } else {
+                stack.pop();
+            }
+        } else {
+            return Ok(());
+        }
+    }
+}
+
+/// Write the tree to.
+fn write_tree_to<'i: 'n, 'n, R: RuleType + 'n>(
+    p: &'n impl Pair<'i, 'n, R>,
+    buf: &mut impl core::fmt::Write,
+) -> core::fmt::Result {
+    iterate_pre_order(p, |p, depth, children| {
+        if children.is_empty() {
+            buf.write_fmt(format_args!(
+                "{}{:?} {:?}\n",
+                &"    ".repeat(depth),
+                p.rule(),
+                p.span().as_str()
+            ))
+        } else {
+            buf.write_fmt(format_args!("{}{:?}\n", &"    ".repeat(depth), p.rule()))
+        }
+    })
+}
+
 /// A trait to traverse the pair as the root of a tree.
 pub trait PairTree<'i: 'n, 'n, R: RuleType + 'n>: Pair<'i, 'n, R> + Sized {
     /// Level order traversal
-    fn iterate_level_order(&'n self, mut f: impl FnMut(&'n (dyn Pair<'i, 'n, R>), usize)) {
-        let mut queue: VecDeque<&'n (dyn Pair<'i, 'n, R>)> = VecDeque::new();
-        let mut next = VecDeque::new();
-        queue.push_back(self);
-        loop {
-            while let Some(p) = queue.pop_front() {
-                f(p, queue.len());
-                for child in p.inner() {
-                    next.push_back(child);
-                }
-            }
-            swap(&mut queue, &mut next);
-            if queue.is_empty() {
-                break;
-            }
-        }
+    fn iterate_level_order<E>(
+        &'n self,
+        f: impl FnMut(
+            &'n (dyn Pair<'i, 'n, R>),
+            usize,
+            &VecDeque<&dyn Pair<'i, 'n, R>>,
+        ) -> Result<(), E>,
+    ) -> Result<(), E> {
+        iterate_level_order(self, f)
     }
     /// Pre-order traversal
-    fn iterate_pre_order(&'n self, mut f: impl FnMut(&'n (dyn Pair<'i, 'n, R>), usize)) {
-        let mut stack: Vec<VecDeque<&'n (dyn Pair<'i, 'n, R>)>> = Vec::new();
+    fn iterate_pre_order<E>(
+        &'n self,
+        f: impl FnMut(
+            &'n (dyn Pair<'i, 'n, R>),
+            usize,
+            &VecDeque<&dyn Pair<'i, 'n, R>>,
+        ) -> Result<(), E>,
+    ) -> Result<(), E> {
+        iterate_pre_order(self, f)
+    }
 
-        let root: &'n (dyn Pair<'i, 'n, R>) = self;
-        stack.push(VecDeque::<&'n (dyn Pair<'i, 'n, R>)>::from_iter(once(root)));
-
-        loop {
-            if let Some(parent) = stack.last_mut() {
-                if let Some(first) = parent.pop_front() {
-                    f(first, stack.len() - 1);
-                    stack.push(first.inner().collect::<VecDeque<_>>());
-                } else {
-                    stack.pop();
-                }
-            } else {
-                break;
-            }
-        }
+    /// Write the tree to the `buf`.
+    fn write_tree_to(&'n self, buf: &mut impl core::fmt::Write) -> core::fmt::Result {
+        write_tree_to(self, buf)
     }
 }
 
