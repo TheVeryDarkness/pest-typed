@@ -1723,14 +1723,9 @@ mod tests {
         .unwrap();
     }
 
-    type R<'i> = super::Rule<
-        'i,
-        Rule,
-        Rep<'i, Rule, Str<'i, Rule, Foo>, Ignore<'i>>,
-        rule_wrappers::RepFoo,
-        rule_wrappers::EOI,
-        Ignore<'i>,
-    >;
+    type REP<'i> = Rep<'i, Rule, Str<'i, Rule, Foo>, Ignore<'i>>;
+    type R<'i> =
+        super::Rule<'i, Rule, REP<'i>, rule_wrappers::RepFoo, rule_wrappers::EOI, Ignore<'i>>;
     #[test]
     fn repetition() {
         let rep = R::parse("foofoofoo").unwrap();
@@ -1748,5 +1743,6 @@ mod tests {
             format!("{:?}", rep),
             "Rule { rule: RepFoo, content: RepMin { content: [Str, Str, Str] } }"
         );
+        assert_eq!(REP::MIN, 0);
     }
 }
