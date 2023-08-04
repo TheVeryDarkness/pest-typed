@@ -44,7 +44,7 @@ pub(crate) fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream
     let len = include_tokens.len();
     quote! {
         #[allow(non_upper_case_globals)]
-        const #const_name: [&'static str; #len] = [
+        const #const_name: [&'static ::core::primitive::str; #len] = [
             #(#include_tokens),*
         ];
     }

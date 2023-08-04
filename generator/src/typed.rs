@@ -129,7 +129,7 @@ fn generate_typed(
         #[allow(clippy::all)]
         impl #impl_generics #pest_typed::TypedParser<Rule> for #name #ty_generics #where_clause {
             fn parse<'i, T: #pest_typed::ParsableTypedNode<'i, Rule>>(
-                input: &'i str
+                input: &'i ::core::primitive::str
             ) -> #result<
                 T,
                 #pest::error::Error<Rule>
