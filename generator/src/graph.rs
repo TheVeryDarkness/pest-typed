@@ -1328,6 +1328,7 @@ pub(crate) fn generate_typed_pair_from_rule(
                         (format_ident!("T{}", i), field)
                     })
                     .unzip();
+                // `pest_typed` and `TypedNode` is already imported, so can be referred directly.
                 if *item >= 12 {
                     let helper_iter = if helper_iter {
                         let helper = format_ident!("helper_{}", item);
