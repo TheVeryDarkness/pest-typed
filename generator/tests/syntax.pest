@@ -1,0 +1,51 @@
+// pest-typed. A statically typed version of pest.
+// Copyright (c) 2023 黄博奕
+// 
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
+
+/// Regular rule.
+Regular         =  { ('0'..'9')+ ~ "+" ~ ('0'..'9')+ }
+/// Atomic rule.
+Atomic          = @{ ('0'..'9')+ }
+/// Silent rule.
+Silent          = _{ "(" | ")" }
+/// Compound atomic rule.
+CompoundAtomic  = ${ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+/// Tagged rule.
+Tag             =  { ANY ~ (#Second = Any) } // It's weird that this line can't be formatted.
+/// Non-atomic rule.
+NonAtomic       = !{ "a" ~ ("b" | "BB")+ ~ ^"c"* }
+ExactString     =  { "r#" }
+CaseInsensitive =  { ^"0x" }
+CharRange       =  { 'a'..'f' }
+Any             =  { ANY }
+Seq             =  { "1" ~ '2'..'9' ~ "." }
+Choice          =  { "a" | ^"b"+ | &"c" }
+Rep             =  { ^"b"* }
+RepAtLeastOnce  =  { '0'..'9'+ }
+Opt             =  { "?"? }
+RepExact        =  { "a"{3} }
+RepLeft         =  { "0"{1, } }
+RepRight        =  { "1"{,2} }
+RepLeftRight    =  { "2"{1, 2} }
+
+Pos = { &SOI }
+Neg = { !EOI }
+
+Push = { PUSH(" ") }
+
+Pop    = { POP }
+PopAll = { POP_ALL }
+
+Peek          = { PEEK[..] }
+PeekLeft      = { PEEK[1..] }
+PeekRight     = { PEEK[..] }
+PeekLeftRight = { PEEK[1..2] }
+
+Drop = { DROP }
+
+PeekAll = { PEEK_ALL }
