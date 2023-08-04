@@ -680,7 +680,10 @@ fn rule<'a, 'g>(
         }};
     }
     match rule_config.rule_doc {
-        Some(rule_doc) => create!(docs.into_iter().chain(std::iter::once(rule_doc))),
+        Some(rule_doc) => create!(docs
+            .into_iter()
+            .chain(std::iter::once(""))
+            .chain(std::iter::once(rule_doc))),
         None => create!(docs.into_iter()),
     }
 }
