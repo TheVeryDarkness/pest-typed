@@ -19,7 +19,6 @@ mid  = { "+" | "-" | "*" | "/" }
 "#]
 struct Parser;
 
-#[cfg(feature = "std")]
 #[test]
 fn tree() {
     /// Note that [`indoc!`] is used.
