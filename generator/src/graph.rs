@@ -1261,6 +1261,13 @@ fn collect_used_rule<'s>(rule: &'s OptimizedRule, res: &mut BTreeSet<&'s str>) {
         }
     }
 }
+fn collect_used_rules<'s>(rules: &'s [OptimizedRule]) -> BTreeSet<&'s str> {
+    let mut res = BTreeSet::<&'s str>::new();
+    for rule in rules {
+        collect_used_rule(rule, &mut res);
+    }
+    res
+}
 
 pub(crate) fn generate_typed_pair_from_rule(
     rules: &[OptimizedRule],
@@ -1293,13 +1300,7 @@ pub(crate) fn generate_typed_pair_from_rule(
     });
     let mods = graph.collect();
     let unicode = unicode_mod();
-    let referenced_rules = {
-        let mut res = BTreeSet::new();
-        for rule in rules {
-            collect_used_rule(rule, &mut res)
-        }
-        res
-    };
+    let referenced_rules = collect_used_rules(rules);
     let unicode_rule = generate_unicode(&defined_rules, &referenced_rules);
     let generics = {
         let root = quote! {super};
@@ -1557,5 +1558,17 @@ fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
 
     quote! {
         #(#results)*
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pest_meta::parse_and_optimize;
+    #[test]
+    fn used_rules() {
+        let (_, rules) = parse_and_optimize(r#"x = { a ~ b } a = { "a" } b = { ^"b" }"#).unwrap();
+        let used = collect_used_rules(&rules);
+        assert_eq!(used, BTreeSet::from(["a", "b"]));
     }
 }
