@@ -36,8 +36,8 @@ enum SpecialError {
     EmptyStack,
 }
 
-impl<R: RuleType> From<SpecialError> for ErrorVariant<R> {
-    fn from(special: SpecialError) -> Self {
+impl<R: RuleType> From<&SpecialError> for ErrorVariant<R> {
+    fn from(special: &SpecialError) -> Self {
         match special {
             SpecialError::SliceOutOfBound(start, end) => ErrorVariant::CustomError {
                 message: match end {
@@ -52,6 +52,12 @@ impl<R: RuleType> From<SpecialError> for ErrorVariant<R> {
                 message: "Nothing to pop or drop.".to_owned(),
             },
         }
+    }
+}
+
+impl<R: RuleType> From<SpecialError> for ErrorVariant<R> {
+    fn from(special: SpecialError) -> Self {
+        ErrorVariant::from(&special)
     }
 }
 
@@ -240,8 +246,8 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             return Error::new_from_pos(ErrorVariant::CustomError { message }, pos);
         }
 
-        for special in self.special {
-            return Error::new_from_pos(special.into(), pos);
+        if let Some(special) = self.special.first() {
+            return Error::new_from_pos(ErrorVariant::from(special), pos);
         }
 
         Error::new_from_pos(
@@ -251,5 +257,94 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             },
             pos,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[derive(Clone, Copy, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
+    enum Rule {
+        Program,
+        SOI,
+        Main,
+        EOI,
+    }
+    mod rule_wrappers {
+        use super::Rule;
+        use crate::RuleWrapper;
+
+        macro_rules! wrap {
+            ($name:ident) => {
+                #[derive(Clone, PartialEq)]
+                pub struct $name;
+                impl RuleWrapper<Rule> for $name {
+                    const RULE: Rule = Rule::$name;
+                    type Rule = Rule;
+                }
+            };
+        }
+        wrap!(Program);
+        wrap!(SOI);
+        wrap!(Main);
+        wrap!(EOI);
+    }
+    #[test]
+    fn negative() -> Result<(), ()> {
+        let pos = Position::from_start("abc\ndef\nghi");
+        let mut tracker = Tracker::<'_, Rule>::new(pos);
+        let _ = tracker.record_during(pos, |tracker| {
+            tracker.positive_during(|tracker| {
+                tracker.record_during(pos, |_| Ok((pos, rule_wrappers::Main)))
+            })?;
+            tracker.negative_during(|tracker| {
+                tracker.record_during(pos, |_| Ok((pos, rule_wrappers::Main)))
+            })?;
+            Ok((pos, rule_wrappers::Program))
+        })?;
+
+        assert_eq!(
+            format!("{}", tracker.collect()),
+            " --> 1:1
+  |
+1 | abc
+  | ^---
+  |
+  = Unexpected [Main], by Program"
+        );
+        Ok(())
+    }
+    #[test]
+    fn positive() -> Result<(), ()> {
+        let pos = Position::from_start("abc\ndef\nghi");
+        let mut tracker = Tracker::<'_, Rule>::new(pos);
+        let _ = tracker.record_during(pos, |tracker| {
+            let _ = tracker.positive_during(|tracker| {
+                if false {
+                    Ok((pos, rule_wrappers::SOI))
+                } else {
+                    tracker.record_during(pos, |_| Err(()))
+                }
+            });
+            let _ = tracker.negative_during(|tracker| {
+                if false {
+                    Ok((pos, rule_wrappers::SOI))
+                } else {
+                    tracker.record_during(pos, |_| Err(()))
+                }
+            });
+            Ok((pos, rule_wrappers::Program))
+        })?;
+
+        assert_eq!(
+            format!("{}", tracker.collect()),
+            " --> 1:1
+  |
+1 | abc
+  | ^---
+  |
+  = Expected [SOI], by Program"
+        );
+        Ok(())
     }
 }
