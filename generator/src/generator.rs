@@ -109,8 +109,9 @@ mod tests {
                 #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
                 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
                 pub enum Rule {
+                    EOI,
                     #[doc = "This is rule comment"]
-                    r#f
+                    r#f,
                 }
             }
             .to_string()
