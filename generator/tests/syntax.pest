@@ -8,20 +8,25 @@
 // modified, or distributed except according to those terms.
 
 /// Regular rule.
-Regular         =  { ('0'..'9')+ ~ "+" ~ ('0'..'9')+ }
+Regular = { CharRange+ ~ "+" ~ CharRange+ }
+
 /// Atomic rule.
-Atomic          = @{ ('0'..'9')+ }
+Atomic = @{ ('0'..'9')+ }
+
 /// Silent rule.
-Silent          = _{ "(" | ")" }
+Silent = _{ "(" | ")" }
+
 /// Compound atomic rule.
-CompoundAtomic  = ${ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+CompoundAtomic = ${ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+
 /// Tagged rule.
-Tag             =  { ANY ~ (#Second = Any) } // It's weird that this line can't be formatted.
+Tag = { ANY ~ (#Second = Any) }
+// It's weird that this line can't be formatted.
 /// Non-atomic rule.
-NonAtomic       = !{ "a" ~ ("b" | "BB")+ ~ ^"c"* }
+NonAtomic       = !{ (CaseInsensitive? ~ CharRange+)? ~ ("b" | "BB" ~ "b"?)? ~ ^"c"* }
 ExactString     =  { "r#" }
 CaseInsensitive =  { ^"0x" }
-CharRange       =  { 'a'..'f' }
+CharRange       =  { '0'..'9' }
 Any             =  { ANY }
 Seq             =  { "1" ~ '2'..'9' ~ "." }
 Choice          =  { "a" | ^"b"+ | &"c" }
