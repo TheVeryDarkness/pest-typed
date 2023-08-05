@@ -1567,11 +1567,29 @@ fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lazy_static::lazy_static;
     use pest_meta::parse_and_optimize;
+
+    lazy_static! {
+        static ref PARSE_RESULT: (Vec<&'static str>, Vec<OptimizedRule>) =
+            { parse_and_optimize(include_str!("../tests/syntax.pest")).unwrap() };
+    }
+
     #[test]
-    fn used_rules() {
+    fn inlined_used_rules() {
         let (_, rules) = parse_and_optimize(r#"x = { a ~ b } a = { "a" } b = { ^"b" }"#).unwrap();
         let used = collect_used_rules(&rules);
         assert_eq!(used, BTreeSet::from(["a", "b"]));
+    }
+    #[test]
+    /// Check collected used rules in a complex grammar.
+    ///
+    /// PEEK and PUSH are translated to [`OptimizedExpr::PeekSlice`] and [`OptimizedExpr::Push`].
+    fn used_rules() {
+        let rules = &PARSE_RESULT.1;
+        let used = collect_used_rules(&rules);
+        let expected = include!("../tests/syntax.used.rules.txt");
+        let expected = BTreeSet::from(expected);
+        assert_eq!(used, expected);
     }
 }

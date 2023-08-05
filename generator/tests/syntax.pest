@@ -20,28 +20,28 @@ Silent = _{ "(" | ")" }
 CompoundAtomic = ${ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 
 /// Tagged rule.
-Tag = { ANY ~ (#Second = Any) }
+Tag = { ANY ~ (#Second = (PUSH(CompoundAtomic) ~ &Silent ~ !Atomic))? ~ (#Third = NonAtomic* ~ Regular+)? }
 // It's weird that this line can't be formatted.
 /// Non-atomic rule.
-NonAtomic       = !{ (CaseInsensitive? ~ CharRange+)? ~ ("b" | "BB" ~ "b"?)? ~ ^"c"* }
+NonAtomic       = !{ (CaseInsensitive? ~ CharRange+ ~ Tag*)? ~ ("b" | "BB" ~ "b"?)? ~ ^"c"* ~ (!Seq ~ Any)+ }
 ExactString     =  { "r#" }
 CaseInsensitive =  { ^"0x" }
 CharRange       =  { '0'..'9' }
 Any             =  { ANY }
 Seq             =  { "1" ~ '2'..'9' ~ "." }
-Choice          =  { "a" | ^"b"+ | &"c" }
+Choice          =  { "a" | ^"b"+ ~ RepAtLeastOnce | &"c" ~ Choice ~ Rep ~ Opt | Peek | PeekLeft | PeekRight | PeekLeftRight | Drop | PeekAll }
 Rep             =  { ^"b"* }
 RepAtLeastOnce  =  { '0'..'9'+ }
 Opt             =  { "?"? }
-RepExact        =  { "a"{3} }
-RepLeft         =  { "0"{1, } }
-RepRight        =  { "1"{,2} }
-RepLeftRight    =  { "2"{1, 2} }
+RepExact        =  { RepAtLeastOnce{3} }
+RepLeft         =  { RepExact{1, } }
+RepRight        =  { RepLeft{, 2} }
+RepLeftRight    =  { RepRight{1, 2} }
 
-Pos = { &SOI }
-Neg = { !EOI }
+Pos = { &(SOI ~ RepLeftRight{2, 4}) }
+Neg = { !(EOI ~ Pos) }
 
-Push = { PUSH(" ") }
+Push = { PUSH(RepLeft* ~ Neg ~ ExactString+ ~ Push ~ Pop ~ Push ~ PopAll) }
 
 Pop    = { POP }
 PopAll = { POP_ALL }
