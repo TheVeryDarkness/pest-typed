@@ -49,10 +49,7 @@ pub(crate) fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream
         ];
     }
 }
-pub(crate) fn generate_enum(
-    rules: &[OptimizedRule],
-    doc_comment: &DocComment,
-) -> TokenStream {
+pub(crate) fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment) -> TokenStream {
     let rules = rules.iter().map(|rule| {
         let rule_name = format_ident!("r#{}", rule.name);
 
@@ -76,5 +73,47 @@ pub(crate) fn generate_enum(
             EOI,
             #( #rules, )*
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::*;
+    use pest_meta::ast::RuleType;
+
+    use proc_macro2::Span;
+    use std::collections::HashMap;
+    use syn::Generics;
+
+    #[test]
+    fn rule_enum_simple() {
+        let rules = vec![OptimizedRule {
+            name: "f".to_owned(),
+            ty: RuleType::Normal,
+            expr: OptimizedExpr::Ident("g".to_owned()),
+        }];
+
+        let mut line_docs = HashMap::new();
+        line_docs.insert("f".to_owned(), "This is rule comment".to_owned());
+
+        let doc_comment = &DocComment {
+            grammar_doc: "Rule doc\nhello".to_owned(),
+            line_docs,
+        };
+
+        assert_eq!(
+            generate_enum(&rules, doc_comment,).to_string(),
+            quote! {
+                #[doc = "Rule doc\nhello"]
+                #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
+                #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+                pub enum Rule {
+                    #[doc = "This is rule comment"]
+                    r#f
+                }
+            }
+            .to_string()
+        );
     }
 }
