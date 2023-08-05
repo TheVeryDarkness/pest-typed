@@ -74,7 +74,7 @@ pub(crate) fn generate_enum(
         #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
         pub enum Rule {
             EOI,
-            #( #rules ),*
+            #( #rules, )*
         }
     }
 }
