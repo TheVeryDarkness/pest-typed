@@ -31,13 +31,13 @@ macro_rules! choices_helper {
         }
 
         impl<'i: 'n, 'n, Ret, R: $pest_typed::RuleType, $_V0: $pest_typed::TypedNode<'i, R>, $($_V: $pest_typed::TypedNode<'i, R>, )*>
-            $pest_typed::choices::NextChoice for $v0<'i, 'n, Ret, R, $_V0, $($_V, )* > {
+            $pest_typed::predefined_node::NextChoice for $v0<'i, 'n, Ret, R, $_V0, $($_V, )* > {
             type Next = $v1<'i, 'n, Ret, R, $_V0, $($_V, )* >;
         }
         impl<'i: 'n, 'n, Ret, R: $pest_typed::RuleType, $_V0: $pest_typed::TypedNode<'i, R>, $($_V: $pest_typed::TypedNode<'i, R>, )*>
             $v0<'i, 'n, Ret, R, $_V0, $($_V, )* >
         {
-            pub fn else_if(self, f: impl FnOnce(&$V0) -> Ret) -> <Self as $pest_typed::choices::NextChoice>::Next {
+            pub fn else_if(self, f: impl FnOnce(&$V0) -> Ret) -> <Self as $pest_typed::predefined_node::NextChoice>::Next {
                 match self.result {
                     Err(super::$name::$v0(matched, _)) => {
                         let result: Ret = f(matched);
@@ -109,7 +109,7 @@ macro_rules! choices {
         }
         impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* > $name<'i, R, $V0, $($V, )* > {
             /// Invoke if is not None and is the first case.
-            pub fn if_then<'n, Ret>(&'n self, f: impl FnOnce(&$V0) -> Ret) -> <$helper::$v0<'i, 'n, Ret, R, $V0, $($V, )* > as $crate::choices::NextChoice>::Next {
+            pub fn if_then<'n, Ret>(&'n self, f: impl FnOnce(&$V0) -> Ret) -> <$helper::$v0<'i, 'n, Ret, R, $V0, $($V, )* > as $crate::predefined_node::NextChoice>::Next {
                 let helper = $helper::$v0 { result: Err(self) };
                 helper.else_if(f)
             }
@@ -174,6 +174,29 @@ macro_rules! choices {
                     Self::$v0($v0, _) => Self::IntoIter::$v0($v0.into_iter(), ::core::marker::PhantomData),
                     $(Self::$v($v, _) => Self::IntoIter::$v($v.into_iter(), ::core::marker::PhantomData), )*
                 }
+            }
+        }
+        impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* >
+            ::core::ops::Deref for $name<'i, R, $V0, $($V, )* >
+        {
+            type Target = Self;
+            fn deref(&self) -> &Self {
+                self
+            }
+        }
+        impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* >
+            ::core::ops::DerefMut for $name<'i, R, $V0, $($V, )* >
+        {
+            fn deref_mut(&mut self) -> &mut Self {
+                self
+            }
+        }
+        impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* >
+            $pest_typed::Take for $name<'i, R, $V0, $($V, )* >
+        {
+            type Inner = Self;
+            fn take(self) -> Self::Inner {
+                self
             }
         }
         impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* >

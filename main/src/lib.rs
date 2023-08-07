@@ -33,13 +33,11 @@ pub mod tracker;
 mod typed_node;
 mod wrapper;
 pub use pest::RuleType;
-pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, RuleStruct, TypedNode};
-pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper};
-pub mod choices;
+pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, RuleStruct, Take, TypedNode};
+pub use wrapper::{RuleWrapper, Storage, StringArrayWrapper, StringWrapper};
 mod macros;
 mod pratt;
 pub mod re_exported;
-pub mod sequence;
 pub use alloc::boxed::Box;
 
 // Below modules are copied from pest.

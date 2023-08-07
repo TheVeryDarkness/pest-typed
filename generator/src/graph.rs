@@ -1572,7 +1572,7 @@ mod tests {
 
     lazy_static! {
         static ref PARSE_RESULT: (Vec<&'static str>, Vec<OptimizedRule>) =
-            { parse_and_optimize(include_str!("../tests/syntax.pest")).unwrap() };
+            parse_and_optimize(include_str!("../tests/syntax.pest")).unwrap();
     }
 
     #[test]

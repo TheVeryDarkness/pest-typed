@@ -125,6 +125,19 @@ macro_rules! seq {
                 $T0: $pest_typed::TypedNode<'i, R>,
                 $($T: $pest_typed::TypedNode<'i, R>, )*
                 IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
+            > $pest_typed::Take for $name<'i, R, T0, $($T, )* IGNORED>
+        {
+            type Inner = Self::Target;
+            fn take(self) -> Self::Inner {
+                self.content
+            }
+        }
+        impl<
+                'i,
+                R: $pest_typed::RuleType,
+                $T0: $pest_typed::TypedNode<'i, R>,
+                $($T: $pest_typed::TypedNode<'i, R>, )*
+                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
             > ::core::cmp::PartialEq for $name<'i, R, T0, $($T, )* IGNORED>
         {
             fn eq(&self, other: &Self) -> ::core::primitive::bool {

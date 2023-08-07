@@ -9,7 +9,10 @@
 
 //! Wrappers of constants and types, so that they can be used in generics easier.
 
+use alloc::vec::Vec;
+
 use crate::RuleType;
+use core::ops::Deref;
 
 /// An object containing a constant.
 pub trait Storage<T> {
@@ -47,14 +50,8 @@ pub trait RuleWrapper<R: RuleType>: Clone + PartialEq {
     type Rule;
 }
 
-/// Type wrapper.
-pub trait TypeWrapper: Clone + PartialEq {
-    /// Wrapped type.
-    type Inner;
-}
-
 /// Bound for the length of vector.
-pub trait BoundWrapper: Clone + PartialEq {
+pub trait BoundWrapper<T>: Deref<Target = Vec<T>> + Into<Vec<T>> {
     const MIN: usize;
     const MAX: usize;
 }

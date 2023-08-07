@@ -7,14 +7,12 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use core::fmt::Debug;
-
-pub use alloc::rc::Rc;
-use pest::RuleType;
-
-use crate::RuleWrapper;
-
 use super::{error::Error, position::Position, span::Span, stack::Stack, tracker::Tracker};
+use crate::RuleType;
+use crate::RuleWrapper;
+pub use alloc::rc::Rc;
+use core::ops::DerefMut;
+use core::{fmt::Debug, ops::Deref};
 
 /// Node of concrete syntax tree that never fails.
 pub trait NeverFailedTypedNode<'i, R: RuleType>
@@ -32,7 +30,7 @@ where
 /// Node of concrete syntax tree.
 pub trait TypedNode<'i, R: RuleType>
 where
-    Self: Sized + Debug + Clone + PartialEq,
+    Self: Sized + Debug + Clone + PartialEq + Deref + DerefMut + Take,
 {
     /// Create typed node.
     /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
@@ -66,4 +64,12 @@ impl<R: RuleType, T: RuleWrapper<R>> RuleStorage<R> for T {
 pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
     /// The span of a matched expression by a non-silent rule.
     fn span(&self) -> Span<'i>;
+}
+
+/// A trait for taking a node's content.
+pub trait Take: Deref + DerefMut {
+    /// Type of taken value.
+    type Inner: Sized;
+    /// Take something's content.
+    fn take(self) -> Self::Inner;
 }

@@ -79,12 +79,8 @@ pub(crate) fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::*;
     use pest_meta::ast::RuleType;
-
-    use proc_macro2::Span;
     use std::collections::HashMap;
-    use syn::Generics;
 
     #[test]
     fn rule_enum_simple() {
