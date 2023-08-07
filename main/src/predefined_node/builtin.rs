@@ -405,7 +405,7 @@ impl_generics_with_span!(PeekSlice1, ('i, const START: i32), ('i, START));
 /// Match char by a predicate.
 ///
 /// Return Some(char) if matched.
-fn match_char_by(position: &mut Position<'_>, pred: impl FnOnce(char) -> bool) -> Option<char> {
+pub fn match_char_by(position: &mut Position<'_>, pred: impl FnOnce(char) -> bool) -> Option<char> {
     let mut res = None;
     position.match_char_by(|c| {
         let matched = pred(c);
