@@ -15,7 +15,7 @@ use crate::{
     wrapper::{StringArrayWrapper, StringWrapper},
     TypedNode,
 };
-use core::ops::{Deref, DerefMut};
+use core::ops::Deref;
 use core::{fmt, fmt::Debug, marker::PhantomData};
 use derive_debug::Dbg;
 use pest::RuleType;
@@ -63,25 +63,22 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> Deref for Str<'i, R, T> {
-    type Target = Self;
+    type Target = str;
     fn deref(&self) -> &Self::Target {
-        self
-    }
-}
-impl<'i, R: RuleType, T: StringWrapper> DerefMut for Str<'i, R, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self
+        Self::CONTENT
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> Take for Str<'i, R, T> {
-    type Inner = Self;
+    type Inner = &'static str;
     fn take(self) -> Self::Inner {
-        self
+        Self::CONTENT
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> Debug for Str<'i, R, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Str").finish()
+        f.debug_struct("Str")
+            .field("content", &Self::CONTENT)
+            .finish()
     }
 }
 
@@ -127,20 +124,15 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> Deref for Insens<'i, R, T> {
-    type Target = Self;
+    type Target = str;
     fn deref(&self) -> &Self::Target {
-        self
-    }
-}
-impl<'i, R: RuleType, T: StringWrapper> DerefMut for Insens<'i, R, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self
+        self.content
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> Take for Insens<'i, R, T> {
-    type Inner = Self;
+    type Inner = &'i str;
     fn take(self) -> Self::Inner {
-        self
+        self.content
     }
 }
 
@@ -177,20 +169,15 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i,
     }
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> Deref for Skip<'i, R, Strings> {
-    type Target = Self;
+    type Target = str;
     fn deref(&self) -> &Self::Target {
-        self
-    }
-}
-impl<'i, R: RuleType, Strings: StringArrayWrapper> DerefMut for Skip<'i, R, Strings> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self
+        self.span
     }
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> Take for Skip<'i, R, Strings> {
-    type Inner = Self;
+    type Inner = &'i str;
     fn take(self) -> Self::Inner {
-        self
+        self.span
     }
 }
 
@@ -223,20 +210,15 @@ impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, R, N> {
     }
 }
 impl<'i, R: RuleType, const N: usize> Deref for SkipChar<'i, R, N> {
-    type Target = Self;
+    type Target = str;
     fn deref(&self) -> &Self::Target {
-        self
-    }
-}
-impl<'i, R: RuleType, const N: usize> DerefMut for SkipChar<'i, R, N> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self
+        self.span
     }
 }
 impl<'i, R: RuleType, const N: usize> Take for SkipChar<'i, R, N> {
-    type Inner = Self;
+    type Inner = &'i str;
     fn take(self) -> Self::Inner {
-        self
+        self.span
     }
 }
 
@@ -277,19 +259,14 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
     }
 }
 impl<'i, R: RuleType, const MIN: char, const MAX: char> Deref for CharRange<'i, R, MIN, MAX> {
-    type Target = Self;
+    type Target = char;
     fn deref(&self) -> &Self::Target {
-        self
-    }
-}
-impl<'i, R: RuleType, const MIN: char, const MAX: char> DerefMut for CharRange<'i, R, MIN, MAX> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self
+        &self.content
     }
 }
 impl<'i, R: RuleType, const MIN: char, const MAX: char> Take for CharRange<'i, R, MIN, MAX> {
-    type Inner = Self;
+    type Inner = char;
     fn take(self) -> Self::Inner {
-        self
+        self.content
     }
 }

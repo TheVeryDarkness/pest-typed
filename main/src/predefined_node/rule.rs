@@ -54,11 +54,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Silent<'i, R, T> {
         &self.content
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Silent<'i, R, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
-    }
-}
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Silent<'i, R, T> {
     type Inner = T::Inner;
     fn take(self) -> Self::Inner {
@@ -142,13 +137,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapp
     type Target = T::Target;
     fn deref(&self) -> &Self::Target {
         &self.content
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>> DerefMut
-    for AtomicRule<'i, R, T, RULE, _EOI>
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>> Take
@@ -270,19 +258,6 @@ impl<
     type Target = T::Target;
     fn deref(&self) -> &Self::Target {
         &self.content
-    }
-}
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        RULE: RuleWrapper<R>,
-        _EOI: RuleWrapper<R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-    > DerefMut for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
     }
 }
 impl<

@@ -57,11 +57,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Positive<'i, R, T> {
         &self.content
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Positive<'i, R, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
-    }
-}
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Positive<'i, R, T> {
     type Inner = T::Inner;
     fn take(self) -> Self::Inner {

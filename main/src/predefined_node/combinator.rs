@@ -380,11 +380,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for RestoreOnError<'i, R, T> {
         &self.content
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for RestoreOnError<'i, R, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
-    }
-}
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for RestoreOnError<'i, R, T> {
     type Inner = T::Inner;
     fn take(self) -> Self::Inner {
@@ -448,11 +443,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Push<'i, R, T> {
     type Target = T::Target;
     fn deref(&self) -> &Self::Target {
         &self.content
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Push<'i, R, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Push<'i, R, T> {
