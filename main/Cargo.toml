@@ -18,5 +18,4 @@ std = ["pest/std", "ucd-trie/std", "dep:thiserror"]
 pest = { version = ">=2.7.1" }
 ucd-trie = { version = "0.1.5", default-features = false }
 thiserror = { version = "1.0.37", optional = true }
-derive-debug = { version = "0.1.2" }
 derived-deref = { version = "1.0.0" }

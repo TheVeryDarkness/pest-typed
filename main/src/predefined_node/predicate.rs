@@ -10,16 +10,14 @@
 use crate::{position::Position, stack::Stack, Take};
 use crate::{span::Span, tracker::Tracker, TypedNode};
 use core::marker::PhantomData;
-use core::ops::{Deref, DerefMut};
-use derive_debug::Dbg;
+use core::{fmt::Debug, ops::Deref};
 use pest::RuleType;
 
 /// Positive predicate.
-#[derive(Clone, Dbg, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Positive<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Mathed content.
     pub(super) content: T,
-    #[dbg(skip)]
     _phantom: PhantomData<(&'i R, &'i T)>,
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, T> {
@@ -54,7 +52,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> From<T> for Positive<'i, R, T> {
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Positive<'i, R, T> {
     type Target = T::Target;
     fn deref(&self) -> &Self::Target {
-        &self.content
+        self.content.deref()
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Positive<'i, R, T> {
@@ -63,15 +61,20 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Positive<'i, R, T> {
         self.content.take()
     }
 }
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Positive<'i, R, T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Positve")
+            .field("content", &self.content)
+            .finish()
+    }
+}
 
 /// Negative predicate.
 ///
 /// Will not contain anything.
-#[derive(Dbg, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Negative<'i, R: RuleType, T: TypedNode<'i, R>> {
-    #[dbg(skip)]
     content: (),
-    #[dbg(skip)]
     _phantom: PhantomData<(&'i R, &'i T)>,
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<'i, R, T> {
@@ -109,14 +112,14 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Negative<'i, R, T> {
         &self.content
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Negative<'i, R, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
-    }
-}
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Negative<'i, R, T> {
     type Inner = ();
     fn take(self) -> Self::Inner {
         self.content
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Negative<'i, R, T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Negative").finish()
     }
 }

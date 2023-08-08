@@ -19,8 +19,35 @@ use crate::{
 use alloc::{vec, vec::Vec};
 use core::ops::{Deref, DerefMut};
 use core::{fmt, fmt::Debug, marker::PhantomData};
-use derive_debug::Dbg;
-use derived_deref::{Deref, DerefMut};
+
+macro_rules! impl_with_content {
+    ($name:ident, ($($generics_args:tt)*), ($($generics_params:tt)*), $type:ty) => {
+        impl<$($generics_args)*> Deref for $name<$($generics_params)*> {
+            type Target = $type;
+            fn deref(&self) -> &Self::Target {
+                &self.content
+            }
+        }
+        impl<$($generics_args)*> DerefMut for $name<$($generics_params)*> {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.content
+            }
+        }
+        impl<$($generics_args)*> Take for $name<$($generics_params)*> {
+            type Inner = $type;
+            fn take(self) -> Self::Inner {
+                self.content
+            }
+        }
+        impl<$($generics_args)*> Debug for $name<$($generics_params)*> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.debug_struct(stringify!($name))
+                    .field("content", &self.content)
+                    .finish()
+            }
+        }
+    };
+}
 
 /// Optionally match `T`.
 #[derive(Clone, PartialEq)]
@@ -50,48 +77,28 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Opt<'i, R, T> {
         }
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Opt<'i, R, T> {
-    type Target = Option<T>;
-    fn deref(&self) -> &Self::Target {
-        &self.content
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Opt<'i, R, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Opt<'i, R, T> {
-    type Inner = Option<T>;
-    fn take(self) -> Self::Inner {
-        self.content
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Opt<'i, R, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Opt")
-            .field("content", &self.content)
-            .finish()
-    }
-}
+impl_with_content!(
+    Opt,
+    ('i, R: RuleType, T: TypedNode<'i, R>),
+    ('i, R, T),
+    Option<T>
+);
 
 /// Ignored single comment or white space.
-#[derive(Dbg, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum IgnoredUnit<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> {
     /// Auto-skipped comment.
     Comment(COMMENT),
     /// Auto-skipped white space.
     WhiteSpace(WHITESPACE),
-    #[doc(hidden)]
+    /// An impossible case.
     ERROR(PhantomData<&'i R>),
 }
 /// Skip comments (by rule `COMMENT`) or white spaces (by rule `WHITESPACE`) if there is any.
 /// Never fail.
-#[derive(Clone, Dbg, Deref, DerefMut, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Ignored<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> {
-    #[target]
     content: Vec<IgnoredUnit<'i, R, COMMENT, WHITESPACE>>,
-    #[dbg(skip)]
     _phantom: PhantomData<&'i R>,
 }
 impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>>
@@ -150,14 +157,12 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> T
         Ok(Self::parse_with::<ATOMIC>(input, stack))
     }
 }
-impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> Take
-    for Ignored<'i, R, COMMENT, WHITESPACE>
-{
-    type Inner = Self::Target;
-    fn take(self) -> Self::Inner {
-        self.content
-    }
-}
+impl_with_content!(
+    Ignored,
+    ('i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>),
+    ('i, R, COMMENT, WHITESPACE),
+    Vec<IgnoredUnit<'i, R, COMMENT, WHITESPACE>>
+);
 
 /// Repeatably match `T` at least `MIN` times.
 #[derive(Clone, PartialEq)]

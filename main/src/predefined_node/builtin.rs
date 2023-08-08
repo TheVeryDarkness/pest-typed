@@ -14,8 +14,25 @@ use crate::{parser_state::constrain_idxs, position::Position, stack::Stack};
 use crate::{span::Span, tracker::Tracker, RuleType, TypedNode};
 use core::ops::DerefMut;
 use core::{fmt::Debug, marker::PhantomData, ops::Deref};
-use derive_debug::Dbg;
 
+macro_rules! impl_debug_with_content_if {
+    ($name:ident, ()) => {
+        impl<'i> Debug for $name<'i> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                f.debug_struct(stringify!($name)).finish()
+            }
+        }
+    };
+    ($name:ident, $type:ty) => {
+        impl<'i> Debug for $name<'i> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                f.debug_struct(stringify!($name))
+                    .field("content", &self.content)
+                    .finish()
+            }
+        }
+    };
+}
 macro_rules! impl_with_content {
     ($name:ident, $type:ty) => {
         impl<'i> From<$type> for $name<'i> {
@@ -43,8 +60,10 @@ macro_rules! impl_with_content {
                 self.content
             }
         }
+        impl_debug_with_content_if!($name, $type);
     };
 }
+
 macro_rules! impl_with_span {
     ($name:ident) => {
         impl<'i> From<Span<'i>> for $name<'i> {
@@ -99,11 +118,10 @@ macro_rules! impl_generics_with_span {
 }
 
 /// Match any character.
-#[derive(Dbg, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct ANY<'i> {
     /// Matched character.
     content: char,
-    #[dbg(skip)]
     _phantom: PhantomData<&'i str>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
@@ -126,11 +144,9 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
 impl_with_content!(ANY, char);
 
 /// Match the start of input.
-#[derive(Dbg, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct SOI<'i> {
-    #[dbg(skip)]
     content: (),
-    #[dbg(skip)]
     _phantom: PhantomData<&'i str>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
@@ -152,11 +168,9 @@ impl_with_content!(SOI, ());
 /// Match the end of input.
 ///
 /// [`EOI`] will record its rule if not matched.
-#[derive(Dbg, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct EOI<'i> {
-    #[dbg(skip)]
     content: (),
-    #[dbg(skip)]
     _phantom: PhantomData<&'i str>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
@@ -187,10 +201,9 @@ pub enum NewLineType {
 }
 /// Match a new-line character.
 /// A built-in rule. Equivalent to `"\r\n" | "\n" | "\r"`.
-#[derive(Dbg, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct NEWLINE<'i> {
     content: NewLineType,
-    #[dbg(skip)]
     _phantom: PhantomData<&'i str>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
@@ -267,11 +280,9 @@ impl_with_span!(PEEK);
 
 /// Drop the top of the stack.
 /// Fail if there is no span in the stack.
-#[derive(Dbg, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct DROP<'i> {
-    #[dbg(skip)]
     content: (),
-    #[dbg(skip)]
     _phantom: PhantomData<&'i str>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for DROP<'i> {
@@ -341,11 +352,9 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
 impl_with_span!(POP_ALL);
 
 /// Always fail.
-#[derive(Dbg, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct AlwaysFail<'i> {
-    #[dbg(skip)]
     content: (),
-    #[dbg(skip)]
     _phantom: PhantomData<&'i ()>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for AlwaysFail<'i> {

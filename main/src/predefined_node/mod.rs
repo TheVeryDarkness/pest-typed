@@ -40,6 +40,12 @@ use core::{
     ops::Deref,
 };
 
+/// Choice helper with a next branch.
+pub trait NextChoice {
+    /// The choice helper that corresponds to the next branch.
+    type Next;
+}
+
 macro_rules! impl_empty {
     ($node:ty, $($tt:tt)*) => {
         impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> Pairs<'i, 'n, R> for $node {

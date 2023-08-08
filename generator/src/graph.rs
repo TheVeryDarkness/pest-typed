@@ -96,7 +96,7 @@ enum Edge {
 #[derive(Clone)]
 enum Node {
     /// - Type: `&#ident`
-    /// - Path: `.content.deref()`
+    /// - Path: ``
     Rule(TokenStream),
     /// - Type: `&#ident`
     /// - Path: ``
@@ -198,10 +198,7 @@ impl Node {
         };
         let vec = vec_type();
         match self {
-            Node::Rule(t) => (
-                quote! {{let res = res.content.deref(); res}},
-                quote! {&'s #root::#t::<'i>},
-            ),
+            Node::Rule(t) => (quote! {{res}}, quote! {&'s #root::#t::<'i>}),
             #[cfg(feature = "grammar-extras")]
             Node::Tag(t) => (quote! {res}, quote! {&'s #root::#t::<'i>}),
             Node::Content(inner) => {
@@ -450,19 +447,33 @@ fn create<'g>(
     let deref = if emit_content {
         quote! {
             impl<'i> ::core::ops::Deref for #id<'i> {
-                type Target = #type_name;
+                type Target = <#type_name as ::core::ops::Deref>::Target;
                 fn deref(&self) -> &Self::Target {
                     &self.content
                 }
             }
-            impl<'i> ::core::ops::DerefMut for #id<'i> {
-                fn deref_mut(&mut self) -> &mut Self::Target {
-                    &mut self.content
+            impl<'i> #pest_typed::Take for #id<'i> {
+                type Inner = <#type_name as #pest_typed::Take>::Inner;
+                fn take(self) -> Self::Inner {
+                    self.content.take()
                 }
             }
         }
     } else {
-        quote! {}
+        quote! {
+            impl<'i> ::core::ops::Deref for #id<'i> {
+                type Target = #span<'i>;
+                fn deref(&self) -> &Self::Target {
+                    &self.span
+                }
+            }
+            impl<'i> #pest_typed::Take for #id<'i> {
+                type Inner = #span<'i>;
+                fn take(self) -> Self::Inner {
+                    self.span
+                }
+            }
+        }
     };
     let pairs_impl = match emission {
         Emission::Span | Emission::InnerToken => quote! {
@@ -592,9 +603,6 @@ fn create<'g>(
         impl<'i> #pest_typed::RuleWrapper<#root::Rule> for #id<'i> {
             const RULE: #root::Rule = #root::Rule::#rule_id;
             type Rule = #root::Rule;
-        }
-        impl<'i> #pest_typed::TypeWrapper for #id<'i> {
-            type Inner = #type_name;
         }
         impl<'i> #pest_typed::TypedNode<'i, #rule> for #id<'i> {
             #[inline]
@@ -1313,13 +1321,14 @@ pub(crate) fn generate_typed_pair_from_rule(
         let fill = |set: &BTreeSet<usize>,
                     target: &mut Vec<TokenStream>,
                     prefix: &str,
+                    inner_prefix: &str,
                     mac: &Ident,
-                    module: &Ident,
                     helper_iter: bool,
                     seq: bool| {
             for item in set {
                 let type_i = format_ident!("{}_{}", prefix, item);
                 let generics_i = format_ident!("{}{}", prefix, item);
+                let inner_i = format_ident!("{}{}", inner_prefix, item);
                 let (types, field): (Vec<_>, Vec<_>) = (0..*item)
                     .map(|i| {
                         let field = if seq {
@@ -1342,11 +1351,11 @@ pub(crate) fn generate_typed_pair_from_rule(
                         quote! {}
                     };
                     target.push(quote! {
-                        pest_typed::#mac!(#generics_i, pest_typed, #helper_iter #(#types, #field, )*);
+                        pest_typed::#mac!(#generics_i, #inner_i, pest_typed, #helper_iter #(#types, #field, )*);
                     });
                 } else {
                     target.push(quote! {
-                        use pest_typed::#module::#generics_i;
+                        use pest_typed::predefined_node::#generics_i;
                     })
                 }
                 let ign = if seq {
@@ -1367,8 +1376,8 @@ pub(crate) fn generate_typed_pair_from_rule(
             graph.seq(),
             &mut seq,
             "Seq",
+            "Tuple",
             &format_ident!("seq"),
-            &format_ident!("sequence"),
             false,
             true,
         );
@@ -1376,7 +1385,7 @@ pub(crate) fn generate_typed_pair_from_rule(
             graph.choices(),
             &mut chs,
             "Choice",
-            &format_ident!("choices"),
+            "Variant",
             &format_ident!("choices"),
             true,
             false,
@@ -1387,7 +1396,7 @@ pub(crate) fn generate_typed_pair_from_rule(
             mod generics {
                 use #pest_typed as pest_typed;
                 use #pest_typed::{NeverFailedTypedNode, predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
-                pub type Ignored<'i> = predefined_node::Ign::<
+                pub type Ignored<'i> = predefined_node::Ignored::<
                     'i,
                     #root::Rule,
                     #root::#pairs::COMMENT::<'i>,
@@ -1395,15 +1404,15 @@ pub(crate) fn generate_typed_pair_from_rule(
                 >;
                 pub type Str<'i, Wrapper: StringWrapper> = predefined_node::Str::<'i, #root::Rule, Wrapper>;
                 pub type Insens<'i, Wrapper: StringWrapper> = predefined_node::Insens::<'i, #root::Rule, Wrapper>;
-                pub type PeekSlice2<'i, const START: #_i32, const END: #_i32> = predefined_node::PeekSlice2::<'i, #root::Rule, START, END>;
-                pub type PeekSlice1<'i, const START: #_i32> = predefined_node::PeekSlice1::<'i, #root::Rule, START>;
+                pub type PeekSlice2<'i, const START: #_i32, const END: #_i32> = predefined_node::PeekSlice2::<'i, START, END>;
+                pub type PeekSlice1<'i, const START: #_i32> = predefined_node::PeekSlice1::<'i, START>;
                 pub type Push<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Push<'i, #root::Rule, T>;
                 pub type Skip<'i, Strings: StringArrayWrapper> = predefined_node::Skip::<'i, #root::Rule, Strings>;
                 pub type CharRange<'i, const START: #char, const END: #char> = predefined_node::CharRange::<'i, #root::Rule, START, END>;
-                pub type Box<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Box<'i, #root::Rule, T>;
+                pub type Box<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Ref<'i, #root::Rule, T>;
                 pub type Positive<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Positive<'i, #root::Rule, T>;
                 pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<'i, #root::Rule, T>;
-                pub type Restorable<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Restorable<'i, #root::Rule, T>;
+                pub type Restorable<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::RestoreOnError<'i, #root::Rule, T>;
                 #(#seq)*
                 #(#chs)*
                 pub type Opt<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Opt<'i, #root::Rule, T>;
@@ -1487,6 +1496,18 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
                         f.debug_struct(#property)
                             .field("content", &self.content)
                             .finish()
+                    }
+                }
+                impl<'i> ::core::ops::Deref for #property_ident<'i> {
+                    type Target = #char;
+                    fn deref(&self) -> &Self::Target {
+                        &self.content
+                    }
+                }
+                impl<'i> #pest_typed::Take for #property_ident<'i> {
+                    type Inner = #char;
+                    fn take(self) -> Self::Inner {
+                        self.content
                     }
                 }
                 impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #property_ident<'i> {

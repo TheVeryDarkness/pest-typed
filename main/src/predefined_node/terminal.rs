@@ -17,7 +17,6 @@ use crate::{
 };
 use core::ops::Deref;
 use core::{fmt, fmt::Debug, marker::PhantomData};
-use derive_debug::Dbg;
 use pest::RuleType;
 
 trait FromSpan<'i>: Sized {
@@ -90,11 +89,10 @@ impl<'i, R: RuleType, T: StringWrapper> Debug for Str<'i, R, T> {
 ///   For example, A `^"x"` may match `"X"`, and in the parsing result, `content` is `"X"`, while `CONTENT` is still `"x"`.    
 ///
 /// See [`Str`] for case-sensitive matching.
-#[derive(Dbg, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Insens<'i, R: RuleType, T: StringWrapper> {
     /// Matched content.
     content: &'i str,
-    #[dbg(skip)]
     _phantom: PhantomData<(&'i R, &'i T)>,
 }
 impl<'i, R: RuleType, T: StringWrapper> StringWrapper for Insens<'i, R, T> {
@@ -135,13 +133,19 @@ impl<'i, R: RuleType, T: StringWrapper> Take for Insens<'i, R, T> {
         self.content
     }
 }
+impl<'i, R: RuleType, T: StringWrapper> Debug for Insens<'i, R, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Insens")
+            .field("content", &self.content)
+            .finish()
+    }
+}
 
 /// Skips until one of the given `strings`
-#[derive(Clone, Dbg, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Skip<'i, R: RuleType, Strings: StringArrayWrapper> {
     /// Skipped span.
     span: &'i str,
-    #[dbg(skip)]
     _phantom: PhantomData<(&'i R, &'i Strings)>,
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> FromSpan<'i> for Skip<'i, R, Strings> {
@@ -180,12 +184,16 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> Take for Skip<'i, R, Strings>
         self.span
     }
 }
+impl<'i, R: RuleType, Strings: StringArrayWrapper> Debug for Skip<'i, R, Strings> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Skip").field("span", &self.span).finish()
+    }
+}
 
 /// Skip `n` characters if there are.
-#[derive(Dbg, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct SkipChar<'i, R: RuleType, const N: usize> {
     span: &'i str,
-    #[dbg(skip)]
     _phantom: PhantomData<&'i R>,
 }
 impl<'i, R: RuleType, const N: usize> FromStr<'i> for SkipChar<'i, R, N> {
@@ -221,14 +229,20 @@ impl<'i, R: RuleType, const N: usize> Take for SkipChar<'i, R, N> {
         self.span
     }
 }
+impl<'i, R: RuleType, const N: usize> Debug for SkipChar<'i, R, N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SkipChar")
+            .field("span", &self.span)
+            .finish()
+    }
+}
 
 /// Match a character in the range `[MIN, MAX]`.
 /// Inclusively both below and above.
-#[derive(Clone, Dbg, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct CharRange<'i, R: RuleType, const MIN: char, const MAX: char> {
     /// Matched character.
     content: char,
-    #[dbg(skip)]
     _phantom: PhantomData<&'i R>,
 }
 impl<'i, R: RuleType, const MIN: char, const MAX: char> FromChar for CharRange<'i, R, MIN, MAX> {
@@ -268,5 +282,12 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> Take for CharRange<'i, R
     type Inner = char;
     fn take(self) -> Self::Inner {
         self.content
+    }
+}
+impl<'i, R: RuleType, const MIN: char, const MAX: char> Debug for CharRange<'i, R, MIN, MAX> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CharRange")
+            .field("content", &self.content)
+            .finish()
     }
 }

@@ -26,9 +26,9 @@ macro_rules! chains {
 /// Used by [`crate::seq`].
 macro_rules! chain {
     ($pest_typed:ident, $self: ident, $f: ident, $t0:tt, ) => {
-        $self.content.$t0.$f()
+        $self.$t0.$f()
     };
     ($pest_typed:ident, $self: ident, $f: ident, $t0:tt, $($t:tt, )+) => {
-        $self.content.$t0.$f().chain($pest_typed::chain!($pest_typed, $self, $f, $($t, )*))
+        $self.$t0.$f().chain($pest_typed::chain!($pest_typed, $self, $f, $($t, )*))
     };
 }
