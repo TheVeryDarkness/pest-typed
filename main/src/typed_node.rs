@@ -29,7 +29,7 @@ where
 /// Node of concrete syntax tree.
 pub trait TypedNode<'i, R: RuleType>
 where
-    Self: Sized + Debug + Clone + PartialEq + Deref + Take,
+    Self: Sized + Debug + Clone + PartialEq,
 {
     /// Create typed node.
     /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
@@ -63,12 +63,4 @@ impl<R: RuleType, T: RuleWrapper<R>> RuleStorage<R> for T {
 pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
     /// The span of a matched expression by a non-silent rule.
     fn span(&self) -> Span<'i>;
-}
-
-/// A trait for taking a node's content.
-pub trait Take: Deref {
-    /// Type of taken value.
-    type Inner: Sized;
-    /// Take something's content.
-    fn take(self) -> Self::Inner;
 }

@@ -460,6 +460,12 @@ fn create<'g>(
                     &mut self.content
                 }
             }
+            impl<'i> #pest_typed::Take for #id<'i> {
+                type Inner = #type_name;
+                fn take(self) -> Self::Target {
+                    self.content
+                }
+            }
         }
     } else {
         quote! {}
@@ -592,9 +598,6 @@ fn create<'g>(
         impl<'i> #pest_typed::RuleWrapper<#root::Rule> for #id<'i> {
             const RULE: #root::Rule = #root::Rule::#rule_id;
             type Rule = #root::Rule;
-        }
-        impl<'i> #pest_typed::TypeWrapper for #id<'i> {
-            type Inner = #type_name;
         }
         impl<'i> #pest_typed::TypedNode<'i, #rule> for #id<'i> {
             #[inline]
@@ -1346,7 +1349,7 @@ pub(crate) fn generate_typed_pair_from_rule(
                     });
                 } else {
                     target.push(quote! {
-                        use pest_typed::#module::#generics_i;
+                        use pest_typed::predefined_node::#generics_i;
                     })
                 }
                 let ign = if seq {
@@ -1387,7 +1390,7 @@ pub(crate) fn generate_typed_pair_from_rule(
             mod generics {
                 use #pest_typed as pest_typed;
                 use #pest_typed::{NeverFailedTypedNode, predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
-                pub type Ignored<'i> = predefined_node::Ign::<
+                pub type Ignored<'i> = predefined_node::Ignored::<
                     'i,
                     #root::Rule,
                     #root::#pairs::COMMENT::<'i>,
@@ -1395,15 +1398,14 @@ pub(crate) fn generate_typed_pair_from_rule(
                 >;
                 pub type Str<'i, Wrapper: StringWrapper> = predefined_node::Str::<'i, #root::Rule, Wrapper>;
                 pub type Insens<'i, Wrapper: StringWrapper> = predefined_node::Insens::<'i, #root::Rule, Wrapper>;
-                pub type PeekSlice2<'i, const START: #_i32, const END: #_i32> = predefined_node::PeekSlice2::<'i, #root::Rule, START, END>;
-                pub type PeekSlice1<'i, const START: #_i32> = predefined_node::PeekSlice1::<'i, #root::Rule, START>;
+                pub type PeekSlice2<'i, const START: #_i32, const END: #_i32> = predefined_node::PeekSlice2::<'i, START, END>;
+                pub type PeekSlice1<'i, const START: #_i32> = predefined_node::PeekSlice1::<'i, START>;
                 pub type Push<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Push<'i, #root::Rule, T>;
                 pub type Skip<'i, Strings: StringArrayWrapper> = predefined_node::Skip::<'i, #root::Rule, Strings>;
                 pub type CharRange<'i, const START: #char, const END: #char> = predefined_node::CharRange::<'i, #root::Rule, START, END>;
-                pub type Box<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Box<'i, #root::Rule, T>;
+                pub type Box<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Ref<'i, #root::Rule, T>;
                 pub type Positive<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Positive<'i, #root::Rule, T>;
                 pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<'i, #root::Rule, T>;
-                pub type Restorable<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Restorable<'i, #root::Rule, T>;
                 #(#seq)*
                 #(#chs)*
                 pub type Opt<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Opt<'i, #root::Rule, T>;

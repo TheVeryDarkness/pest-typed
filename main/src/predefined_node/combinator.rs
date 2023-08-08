@@ -8,13 +8,8 @@
 // modified, or distributed except according to those terms.
 
 use crate::{
-    position::Position,
-    span::Span,
-    stack::Stack,
-    tracker::Tracker,
-    typed_node::{NeverFailedTypedNode, Take},
-    wrapper::BoundWrapper,
-    RuleType, TypedNode,
+    position::Position, span::Span, stack::Stack, tracker::Tracker,
+    typed_node::NeverFailedTypedNode, wrapper::BoundWrapper, RuleType, TypedNode,
 };
 use alloc::{vec, vec::Vec};
 use core::ops::{Deref, DerefMut};
@@ -26,7 +21,7 @@ use derived_deref::{Deref, DerefMut};
 #[derive(Clone, PartialEq)]
 pub struct Opt<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Matched content.
-    content: Option<T>,
+    pub content: Option<T>,
     _phantom: PhantomData<&'i R>,
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> From<Option<T>> for Opt<'i, R, T> {
@@ -44,9 +39,16 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Opt<'i, R, T> {
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
+        stack.snapshot();
         match T::try_parse_with::<ATOMIC>(input, stack, tracker) {
-            Ok((input, inner)) => Ok((input, Self::from(Some(inner)))),
-            Err(_) => Ok((input, Self::from(None))),
+            Ok((input, inner)) => {
+                stack.clear_snapshot();
+                Ok((input, Self::from(Some(inner))))
+            }
+            Err(_) => {
+                stack.restore();
+                Ok((input, Self::from(None)))
+            }
         }
     }
 }
@@ -90,7 +92,7 @@ pub enum IgnoredUnit<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: Typ
 #[derive(Clone, Dbg, Deref, DerefMut, PartialEq)]
 pub struct Ignored<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> {
     #[target]
-    content: Vec<IgnoredUnit<'i, R, COMMENT, WHITESPACE>>,
+    pub content: Vec<IgnoredUnit<'i, R, COMMENT, WHITESPACE>>,
     #[dbg(skip)]
     _phantom: PhantomData<&'i R>,
 }
@@ -354,58 +356,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Ref<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Ref<'i, R, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.content.fmt(f)
-    }
-}
-
-/// Restore stack state on error.
-#[derive(Clone, PartialEq)]
-pub struct RestoreOnError<'i, R: RuleType, T: TypedNode<'i, R>> {
-    /// Matched content.
-    pub(super) content: T,
-    _phantom: PhantomData<&'i R>,
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> From<T> for RestoreOnError<'i, R, T> {
-    fn from(content: T) -> Self {
-        Self {
-            content,
-            _phantom: PhantomData,
-        }
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for RestoreOnError<'i, R, T> {
-    type Target = T::Target;
-    fn deref(&self) -> &Self::Target {
-        &self.content
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for RestoreOnError<'i, R, T> {
-    type Inner = T::Inner;
-    fn take(self) -> Self::Inner {
-        self.content.take()
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for RestoreOnError<'i, R, T> {
-    fn try_parse_with<const ATOMIC: bool>(
-        input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        stack.snapshot();
-        match T::try_parse_with::<ATOMIC>(input, stack, tracker) {
-            Ok((input, res)) => {
-                stack.clear_snapshot();
-                Ok((input, Self::from(res)))
-            }
-            Err(err) => {
-                stack.restore();
-                Err(err)
-            }
-        }
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for RestoreOnError<'i, R, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.content.fmt(f)
     }

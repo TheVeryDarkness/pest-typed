@@ -9,7 +9,6 @@
 
 use super::choices::{Choice2, Choice3};
 use super::terminal::CharRange;
-use crate::typed_node::Take;
 use crate::{parser_state::constrain_idxs, position::Position, stack::Stack};
 use crate::{span::Span, tracker::Tracker, RuleType, TypedNode};
 use core::ops::DerefMut;
@@ -102,7 +101,7 @@ macro_rules! impl_generics_with_span {
 #[derive(Dbg, Clone, PartialEq)]
 pub struct ANY<'i> {
     /// Matched character.
-    content: char,
+    pub content: char,
     #[dbg(skip)]
     _phantom: PhantomData<&'i str>,
 }
@@ -129,7 +128,7 @@ impl_with_content!(ANY, char);
 #[derive(Dbg, Clone, PartialEq)]
 pub struct SOI<'i> {
     #[dbg(skip)]
-    content: (),
+    pub content: (),
     #[dbg(skip)]
     _phantom: PhantomData<&'i str>,
 }
@@ -155,7 +154,7 @@ impl_with_content!(SOI, ());
 #[derive(Dbg, Clone, PartialEq)]
 pub struct EOI<'i> {
     #[dbg(skip)]
-    content: (),
+    pub content: (),
     #[dbg(skip)]
     _phantom: PhantomData<&'i str>,
 }
@@ -189,7 +188,7 @@ pub enum NewLineType {
 /// A built-in rule. Equivalent to `"\r\n" | "\n" | "\r"`.
 #[derive(Dbg, Clone, PartialEq)]
 pub struct NEWLINE<'i> {
-    content: NewLineType,
+    pub content: NewLineType,
     #[dbg(skip)]
     _phantom: PhantomData<&'i str>,
 }
@@ -219,7 +218,7 @@ impl_with_content!(NEWLINE, NewLineType);
 #[derive(Debug, Clone, PartialEq)]
 pub struct PEEK_ALL<'i> {
     /// Pair span.
-    span: Span<'i>,
+    pub span: Span<'i>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
     #[inline]
@@ -241,7 +240,7 @@ impl_with_span!(PEEK_ALL);
 #[derive(Debug, Clone, PartialEq)]
 pub struct PEEK<'i> {
     /// Pair span.
-    span: Span<'i>,
+    pub span: Span<'i>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
     #[inline]
@@ -270,7 +269,7 @@ impl_with_span!(PEEK);
 #[derive(Dbg, Clone, PartialEq)]
 pub struct DROP<'i> {
     #[dbg(skip)]
-    content: (),
+    pub content: (),
     #[dbg(skip)]
     _phantom: PhantomData<&'i str>,
 }
@@ -296,7 +295,7 @@ impl_with_content!(DROP, ());
 #[derive(Debug, Clone, PartialEq)]
 pub struct POP<'i> {
     /// Matched span.
-    span: Span<'i>,
+    pub span: Span<'i>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
     #[inline]
@@ -324,7 +323,7 @@ impl_with_span!(POP);
 #[derive(Debug, Clone, PartialEq)]
 pub struct POP_ALL<'i> {
     /// Matched span.
-    span: Span<'i>,
+    pub span: Span<'i>,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
     #[inline]
@@ -344,7 +343,7 @@ impl_with_span!(POP_ALL);
 #[derive(Dbg, Clone, PartialEq)]
 pub struct AlwaysFail<'i> {
     #[dbg(skip)]
-    content: (),
+    pub content: (),
     #[dbg(skip)]
     _phantom: PhantomData<&'i ()>,
 }
@@ -363,7 +362,7 @@ impl_with_content!(AlwaysFail, ());
 /// Match `[START:END]` in top-to-bottom order of the stack.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PeekSlice2<'i, const START: i32, const END: i32> {
-    span: Span<'i>,
+    pub span: Span<'i>,
 }
 impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
     for PeekSlice2<'i, START, END>
@@ -385,7 +384,7 @@ impl_generics_with_span!(PeekSlice2, ('i, const START: i32, const END: i32), ('i
 /// Match `[START:END]` in top-to-bottom order of the stack.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PeekSlice1<'i, const START: i32> {
-    span: Span<'i>,
+    pub span: Span<'i>,
 }
 impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<'i, START> {
     #[inline]

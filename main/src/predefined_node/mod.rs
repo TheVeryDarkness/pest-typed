@@ -84,7 +84,6 @@ impl_empty!(CharRange<'i, R, MIN, MAX>, const MIN: char, const MAX: char);
 impl_forward_inner!(Ref);
 impl_forward_inner!(Positive);
 impl_empty!(Negative<'i, R, T>, T: TypedNode<'i, R>);
-impl_forward_inner!(RestoreOnError);
 
 impl<'i: 'n, 'n, R: RuleType + 'n, T: TypedNode<'i, R> + Pairs<'i, 'n, R>> Pairs<'i, 'n, R>
     for Opt<'i, R, T>

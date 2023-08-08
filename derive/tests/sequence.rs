@@ -32,7 +32,7 @@ macro_rules! test {
     ($name:ident, $input:literal, $($fields:tt)*) => {
         mod $name {
             use super::{pairs, Rule};
-            use pest_typed::{error::Error, ParsableTypedNode, TypeWrapper};
+            use pest_typed::{error::Error, ParsableTypedNode, Take};
 
             #[test]
             fn matched() -> Result<(), Error<Rule>> {
@@ -40,7 +40,7 @@ macro_rules! test {
                 assert_eq!(res, res.clone());
                 assert_eq!(res.content, res.content.clone());
                 let ( $($fields, )* ) = res.as_ref();
-                assert_eq!(res.content, <pairs::$name as TypeWrapper>::Inner::from(( $($fields.clone(), )* )));
+                assert_eq!(res.content, <pairs::$name as Take>::Inner::from(( $($fields.clone(), )* )));
                 Ok(())
             }
             #[test]
