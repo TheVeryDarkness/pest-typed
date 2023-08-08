@@ -8,6 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use crate::{
+    iterators::Pairs,
     position::Position,
     span::Span,
     stack::Stack,
@@ -17,8 +18,11 @@ use crate::{
     RuleType, TypedNode,
 };
 use alloc::{vec, vec::Vec};
-use core::ops::{Deref, DerefMut};
 use core::{fmt, fmt::Debug, marker::PhantomData};
+use core::{
+    iter::FlatMap,
+    ops::{Deref, DerefMut},
+};
 
 macro_rules! impl_with_content {
     ($name:ident, ($($generics_args:tt)*), ($($generics_params:tt)*), $type:ty) => {
@@ -34,8 +38,8 @@ macro_rules! impl_with_content {
             }
         }
         impl<$($generics_args)*> Take for $name<$($generics_params)*> {
-            type Inner = $type;
-            fn take(self) -> Self::Inner {
+            type Taken = $type;
+            fn take(self) -> Self::Taken {
                 self.content
             }
         }
@@ -48,6 +52,27 @@ macro_rules! impl_with_content {
         }
     };
 }
+
+macro_rules! impl_forward_inner {
+    ($node:ident) => {
+        impl<'i: 'n, 'n, R: RuleType + 'n, T: TypedNode<'i, R> + Pairs<'i, 'n, R>> Pairs<'i, 'n, R>
+            for $node<'i, R, T>
+        {
+            type Iter = T::Iter;
+            type IntoIter = T::IntoIter;
+
+            fn iter(&'n self) -> Self::Iter {
+                self.content.iter()
+            }
+            fn into_iter(self) -> Self::IntoIter {
+                self.content.into_iter()
+            }
+        }
+    };
+}
+impl_forward_inner!(Push);
+impl_forward_inner!(Ref);
+impl_forward_inner!(RestoreOnError);
 
 /// Optionally match `T`.
 #[derive(Clone, PartialEq)]
@@ -75,6 +100,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Opt<'i, R, T> {
             Ok((input, inner)) => Ok((input, Self::from(Some(inner)))),
             Err(_) => Ok((input, Self::from(None))),
         }
+    }
+    type Inner = Option<T>;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
     }
 }
 impl_with_content!(
@@ -156,6 +185,10 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> T
     ) -> Result<(Position<'i>, Self), ()> {
         Ok(Self::parse_with::<ATOMIC>(input, stack))
     }
+    type Inner = Vec<IgnoredUnit<'i, R, COMMENT, WHITESPACE>>;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl_with_content!(
     Ignored,
@@ -235,6 +268,10 @@ impl<
             },
         ))
     }
+    type Inner = Vec<T>;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<
         'i,
@@ -280,8 +317,8 @@ impl<
         const MIN: usize,
     > Take for RepMin<'i, R, T, IGNORED, MIN>
 {
-    type Inner = Self::Target;
-    fn take(self) -> Self::Inner {
+    type Taken = Vec<T>;
+    fn take(self) -> Self::Taken {
         self.content
     }
 }
@@ -297,6 +334,25 @@ impl<
         f.debug_struct("RepMin")
             .field("content", &self.content)
             .finish()
+    }
+}
+impl<
+        'i: 'n,
+        'n,
+        R: RuleType + 'n,
+        T: TypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+        const MIN: usize,
+    > Pairs<'i, 'n, R> for RepMin<'i, R, T, IGNORED, MIN>
+{
+    type Iter = FlatMap<core::slice::Iter<'n, T>, T::Iter, fn(&'n T) -> T::Iter>;
+    type IntoIter = FlatMap<vec::IntoIter<T>, T::IntoIter, fn(T) -> T::IntoIter>;
+
+    fn iter(&'n self) -> Self::Iter {
+        self.content.iter().flat_map(|e: &'n T| e.iter())
+    }
+    fn into_iter(self) -> Self::IntoIter {
+        self.content.into_iter().flat_map(|e| e.into_iter())
     }
 }
 
@@ -342,8 +398,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Ref<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Ref<'i, R, T> {
-    type Inner = T;
-    fn take(self) -> Self::Inner {
+    type Taken = T;
+    fn take(self) -> Self::Taken {
         *self.content
     }
 }
@@ -356,6 +412,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Ref<'i, R, T> {
     ) -> Result<(Position<'i>, Self), ()> {
         let (input, res) = T::try_parse_with::<ATOMIC>(input, stack, tracker)?;
         Ok((input, Self::from(res)))
+    }
+    type Inner = T;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Ref<'i, R, T> {
@@ -386,8 +446,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for RestoreOnError<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for RestoreOnError<'i, R, T> {
-    type Inner = T::Inner;
-    fn take(self) -> Self::Inner {
+    type Taken = T::Taken;
+    fn take(self) -> Self::Taken {
         self.content.take()
     }
 }
@@ -408,6 +468,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for RestoreOnError<'
                 Err(err)
             }
         }
+    }
+    type Inner = T;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for RestoreOnError<'i, R, T> {
@@ -443,6 +507,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<'i, R, T> {
         stack.push(start.span(&input));
         Ok((input, Self::from(content)))
     }
+    type Inner = T;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Push<'i, R, T> {
     type Target = T::Target;
@@ -451,8 +519,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Push<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Push<'i, R, T> {
-    type Inner = T::Inner;
-    fn take(self) -> Self::Inner {
+    type Taken = T::Taken;
+    fn take(self) -> Self::Taken {
         self.content.take()
     }
 }

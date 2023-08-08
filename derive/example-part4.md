@@ -6,7 +6,7 @@ Sometimes, you may encounter a lifetime error. Do not panic, just consider them 
 
 ```rust
 use pest_typed_derive::TypedParser;
-use pest_typed::{error::Error, ParsableTypedNode as _};
+use pest_typed::{error::Error, ParsableTypedNode as _, RuleStruct as _};
 
 #[derive(TypedParser)]
 #[grammar_inline = r#"
@@ -20,9 +20,9 @@ struct Parser;
 fn parse<'i>(input: &'i str) -> Result<&'i str, Error<Rule>> {
     let a = pairs::a::parse(input)?;
     let res = if let Some(b1) = a.b1() {
-        b1.span.as_str()
+        b1.span().as_str()
     } else if let Some(b2) = a.b2() {
-        b2.span.as_str()
+        b2.span().as_str()
     } else {
         panic!("All branches failed in succeeded matching");
     };

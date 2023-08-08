@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use pest_typed::{error::Error, ParsableTypedNode};
+use pest_typed::{error::Error, ParsableTypedNode, RuleStruct};
 use pest_typed_derive::TypedParser;
 use std::iter::once;
 
@@ -32,9 +32,9 @@ A,B,C
             let columns = columns.map(|item: &pairs::item<'_>| {
                 item.if_then(|escaped| {
                     let (_, content, _) = escaped.as_ref();
-                    content.span.as_str()
+                    content.span().as_str()
                 })
-                .else_then(|unescaped| unescaped.span.as_str())
+                .else_then(|unescaped| unescaped.span().as_str())
             });
             let columns: Vec<_> = columns.collect();
             columns

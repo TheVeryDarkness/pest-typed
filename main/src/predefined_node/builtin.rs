@@ -9,10 +9,12 @@
 
 use super::choices::{Choice2, Choice3};
 use super::terminal::CharRange;
+use super::{Pair, Pairs};
 use crate::typed_node::Take;
 use crate::{parser_state::constrain_idxs, position::Position, stack::Stack};
 use crate::{span::Span, tracker::Tracker, RuleType, TypedNode};
-use core::ops::DerefMut;
+use alloc::boxed::Box;
+use core::iter::{empty, Empty};
 use core::{fmt::Debug, marker::PhantomData, ops::Deref};
 
 macro_rules! impl_debug_with_content_if {
@@ -49,69 +51,97 @@ macro_rules! impl_with_content {
                 &self.content
             }
         }
-        impl<'i> DerefMut for $name<'i> {
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                &mut self.content
-            }
-        }
         impl<'i> Take for $name<'i> {
-            type Inner = $type;
-            fn take(self) -> Self::Inner {
+            type Taken = $type;
+            fn take(self) -> Self::Taken {
                 self.content
             }
         }
         impl_debug_with_content_if!($name, $type);
+        impl<'i: 'n, 'n, R: RuleType + 'n> Pairs<'i, 'n, R> for $name<'i> {
+            type Iter = Empty<&'n (dyn Pair<'i, 'n, R>)>;
+            type IntoIter = Empty<Box<dyn Pair<'i, 'n, R> + 'n>>;
+
+            fn iter(&'n self) -> Self::Iter {
+                empty()
+            }
+            fn into_iter(self) -> Self::IntoIter {
+                empty()
+            }
+        }
     };
 }
 
 macro_rules! impl_with_span {
     ($name:ident) => {
-        impl<'i> From<Span<'i>> for $name<'i> {
-            fn from(span: Span<'i>) -> Self {
-                Self { span }
+        impl<'i> From<&'i str> for $name<'i> {
+            fn from(content: &'i str) -> Self {
+                Self { content }
             }
         }
         impl<'i> Deref for $name<'i> {
-            type Target = Span<'i>;
+            type Target = &'i str;
             fn deref(&self) -> &Self::Target {
-                &self.span
-            }
-        }
-        impl<'i> DerefMut for $name<'i> {
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                &mut self.span
+                &self.content
             }
         }
         impl<'i> Take for $name<'i> {
-            type Inner = Span<'i>;
-            fn take(self) -> Self::Inner {
-                self.span
+            type Taken = &'i str;
+            fn take(self) -> Self::Taken {
+                self.content
+            }
+        }
+        /*
+        impl<'i> Debug for $name<'i> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                f.debug_struct(stringify!($name))
+                    .field("content", &self.content)
+                    .finish()
+            }
+        }
+        */
+        impl<'i: 'n, 'n, R: RuleType + 'n> Pairs<'i, 'n, R> for $name<'i> {
+            type Iter = Empty<&'n (dyn Pair<'i, 'n, R>)>;
+            type IntoIter = Empty<Box<dyn Pair<'i, 'n, R> + 'n>>;
+
+            fn iter(&'n self) -> Self::Iter {
+                empty()
+            }
+            fn into_iter(self) -> Self::IntoIter {
+                empty()
             }
         }
     };
 }
 macro_rules! impl_generics_with_span {
     ($name:ident, ($($args:tt)*), ($($params:tt)*)) => {
-        impl<$($args)*> From<Span<'i>> for $name<$($params)*> {
-            fn from(span: Span<'i>) -> Self {
-                Self { span }
+        impl<$($args)*> From<&'i str> for $name<$($params)*> {
+            fn from(content: &'i str) -> Self {
+                Self { content }
             }
         }
         impl<$($args)*> Deref for $name<$($params)*> {
-            type Target = Span<'i>;
+            type Target = &'i str;
             fn deref(&self) -> &Self::Target {
-                &self.span
-            }
-        }
-        impl<$($args)*> DerefMut for $name<$($params)*> {
-            fn deref_mut(&mut self) -> &mut Self::Target {
-                &mut self.span
+                &self.content
             }
         }
         impl<$($args)*> Take for $name<$($params)*> {
-            type Inner = Span<'i>;
-            fn take(self) -> Self::Inner {
-                self.span
+            type Taken = &'i str;
+            fn take(self) -> Self::Taken {
+                self.content
+            }
+        }
+        impl<'n, $($args)*, R: RuleType + 'n> Pairs<'i, 'n, R> for $name<$($params)*>
+        where 'i: 'n {
+            type Iter = Empty<&'n (dyn Pair<'i, 'n, R>)>;
+            type IntoIter = Empty<Box<dyn Pair<'i, 'n, R> + 'n>>;
+
+            fn iter(&'n self) -> Self::Iter {
+                empty()
+            }
+            fn into_iter(self) -> Self::IntoIter {
+                empty()
             }
         }
     };
@@ -140,6 +170,10 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
             false => Err(()),
         }
     }
+    type Inner = char;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl_with_content!(ANY, char);
 
@@ -161,6 +195,10 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
         } else {
             Err(())
         }
+    }
+    type Inner = ();
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
     }
 }
 impl_with_content!(SOI, ());
@@ -185,6 +223,10 @@ impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
         } else {
             Err(())
         }
+    }
+    type Inner = ();
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
     }
 }
 impl_with_content!(EOI, ());
@@ -223,6 +265,10 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
             Err(())
         }
     }
+    type Inner = NewLineType;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl_with_content!(NEWLINE, NewLineType);
 
@@ -232,7 +278,7 @@ impl_with_content!(NEWLINE, NewLineType);
 #[derive(Debug, Clone, PartialEq)]
 pub struct PEEK_ALL<'i> {
     /// Pair span.
-    span: Span<'i>,
+    content: &'i str,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
     #[inline]
@@ -242,8 +288,13 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         let spans = stack[0..stack.len()].iter().rev();
-        let (input, span) = peek_spans::<R>(input, spans, tracker)?;
-        Ok((input, Self { span }))
+        let (input, content) = peek_spans::<R>(input, spans, tracker)?;
+        let content = content.as_str();
+        Ok((input, Self { content }))
+    }
+    type Inner = &'i str;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
     }
 }
 impl_with_span!(PEEK_ALL);
@@ -254,7 +305,7 @@ impl_with_span!(PEEK_ALL);
 #[derive(Debug, Clone, PartialEq)]
 pub struct PEEK<'i> {
     /// Pair span.
-    span: Span<'i>,
+    content: &'i str,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
     #[inline]
@@ -266,7 +317,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
         let start = input;
         match stack.peek() {
             Some(string) => match input.match_string(string.as_str()) {
-                true => Ok((input, Self::from(start.span(&input)))),
+                true => Ok((input, Self::from(start.span(&input).as_str()))),
                 false => Err(()),
             },
             None => {
@@ -274,6 +325,10 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
                 Err(())
             }
         }
+    }
+    type Inner = &'i str;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
     }
 }
 impl_with_span!(PEEK);
@@ -300,6 +355,10 @@ impl<'i, R: RuleType> TypedNode<'i, R> for DROP<'i> {
             }
         }
     }
+    type Inner = ();
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl_with_content!(DROP, ());
 
@@ -307,7 +366,7 @@ impl_with_content!(DROP, ());
 #[derive(Debug, Clone, PartialEq)]
 pub struct POP<'i> {
     /// Matched span.
-    span: Span<'i>,
+    content: &'i str,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
     #[inline]
@@ -318,7 +377,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
     ) -> Result<(Position<'i>, Self), ()> {
         match stack.pop() {
             Some(span) => match input.match_string(span.as_str()) {
-                true => Ok((input, Self::from(span))),
+                true => Ok((input, Self::from(span.as_str()))),
                 false => Err(()),
             },
             None => {
@@ -326,6 +385,10 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
                 Err(())
             }
         }
+    }
+    type Inner = &'i str;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
     }
 }
 impl_with_span!(POP);
@@ -335,7 +398,7 @@ impl_with_span!(POP);
 #[derive(Debug, Clone, PartialEq)]
 pub struct POP_ALL<'i> {
     /// Matched span.
-    span: Span<'i>,
+    content: &'i str,
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
     #[inline]
@@ -346,7 +409,11 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
     ) -> Result<(Position<'i>, Self), ()> {
         let (input, res) = PEEK_ALL::try_parse_with::<ATOMIC>(input, stack, tracker)?;
         while stack.pop().is_some() {}
-        Ok((input, Self::from(res.span)))
+        Ok((input, Self::from(res.content)))
+    }
+    type Inner = &'i str;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
     }
 }
 impl_with_span!(POP_ALL);
@@ -366,13 +433,17 @@ impl<'i, R: RuleType> TypedNode<'i, R> for AlwaysFail<'i> {
     ) -> Result<(Position<'i>, Self), ()> {
         Err(())
     }
+    type Inner = ();
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl_with_content!(AlwaysFail, ());
 
 /// Match `[START:END]` in top-to-bottom order of the stack.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PeekSlice2<'i, const START: i32, const END: i32> {
-    span: Span<'i>,
+    content: &'i str,
 }
 impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
     for PeekSlice2<'i, START, END>
@@ -386,7 +457,11 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
         let start = input;
         let spans = stack_slice(input, START, Some(END), stack, tracker)?;
         let (input, _) = peek_spans::<R>(input, spans, tracker)?;
-        Ok((input, Self::from(start.span(&input))))
+        Ok((input, Self::from(start.span(&input).as_str())))
+    }
+    type Inner = &'i str;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
     }
 }
 impl_generics_with_span!(PeekSlice2, ('i, const START: i32, const END: i32), ('i, START, END));
@@ -394,7 +469,7 @@ impl_generics_with_span!(PeekSlice2, ('i, const START: i32, const END: i32), ('i
 /// Match `[START:END]` in top-to-bottom order of the stack.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PeekSlice1<'i, const START: i32> {
-    span: Span<'i>,
+    content: &'i str,
 }
 impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<'i, START> {
     #[inline]
@@ -406,7 +481,11 @@ impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<'i, STAR
         let start = input;
         let spans = stack_slice(input, START, None, stack, tracker)?;
         let (input, _) = peek_spans::<R>(input, spans, tracker)?;
-        Ok((input, Self::from(start.span(&input))))
+        Ok((input, Self::from(start.span(&input).as_str())))
+    }
+    type Inner = &'i str;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
     }
 }
 impl_generics_with_span!(PeekSlice1, ('i, const START: i32), ('i, START));

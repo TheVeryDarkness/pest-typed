@@ -198,23 +198,32 @@ impl Node {
         };
         let vec = vec_type();
         match self {
-            Node::Rule(t) => (quote! {{res}}, quote! {&'s #root::#t::<'i>}),
+            Node::Rule(t) => (
+                quote! {{let res = res.deref_self_once(); res}},
+                quote! {&'s #root::#t::<'i>},
+            ),
             #[cfg(feature = "grammar-extras")]
             Node::Tag(t) => (quote! {res}, quote! {&'s #root::#t::<'i>}),
             Node::Content(inner) => {
                 let (pa, ty) = inner.expand(root);
-                (quote! {{let res = &res.content; #pa}}, quote! {#ty})
+                (
+                    quote! {{let res = res.deref_self_once(); #pa}},
+                    quote! {#ty},
+                )
             }
             Node::ContentI(i, inner) => {
                 let (pa, ty) = inner.expand(root);
                 let i = Index::from(*i);
-                (quote! {{let res = &res.content.#i; #pa}}, quote! {#ty})
+                (
+                    quote! {{let res = &res.deref_self_once().as_ref().#i; #pa}},
+                    quote! {#ty},
+                )
             }
             Node::OptionalContent(flatten, inner) => {
                 let (pa, ty) = inner.expand(root);
                 let flat = flat(flatten);
                 (
-                    quote! {{let res = res.content.as_ref().and_then(|res| Some(#pa)) #flat; res}},
+                    quote! {{let res = res.deref_self_once().as_ref().and_then(|res| Some(#pa)) #flat; res}},
                     opt(flatten, ty),
                 )
             }
@@ -230,7 +239,7 @@ impl Node {
             Node::Contents(inner) => {
                 let (pa, ty) = inner.expand(root);
                 (
-                    quote! {{let res = res.content.iter().map(|res| #pa).collect::<#vec<_>>(); res}},
+                    quote! {{let res = res.deref_self_once().iter().map(|res| #pa).collect::<#vec<_>>(); res}},
                     quote! {#vec::<#ty>},
                 )
             }
@@ -429,7 +438,7 @@ fn create<'g>(
         let content = if emit_content {
             quote! {
                 #[doc = "Matched content."]
-                pub content: #type_name,
+                content: #type_name,
             }
         } else {
             quote! {}
@@ -437,7 +446,7 @@ fn create<'g>(
         let span = if emit_span {
             quote! {
                 #[doc = "Matched span."]
-                pub span: #span<'i>,
+                span: #span<'i>,
             }
         } else {
             quote! {}
@@ -453,8 +462,8 @@ fn create<'g>(
                 }
             }
             impl<'i> #pest_typed::Take for #id<'i> {
-                type Inner = <#type_name as #pest_typed::Take>::Inner;
-                fn take(self) -> Self::Inner {
+                type Taken = <#type_name as #pest_typed::Take>::Taken;
+                fn take(self) -> Self::Taken {
                     self.content.take()
                 }
             }
@@ -462,15 +471,15 @@ fn create<'g>(
     } else {
         quote! {
             impl<'i> ::core::ops::Deref for #id<'i> {
-                type Target = #span<'i>;
+                type Target = ();
                 fn deref(&self) -> &Self::Target {
-                    &self.span
+                    &()
                 }
             }
             impl<'i> #pest_typed::Take for #id<'i> {
-                type Inner = #span<'i>;
-                fn take(self) -> Self::Inner {
-                    self.span
+                type Taken = ();
+                fn take(self) -> Self::Taken {
+                    ()
                 }
             }
         }
@@ -589,6 +598,21 @@ fn create<'g>(
             },
         }
     };
+    let deref_once = if emit_content {
+        quote! {
+            type Inner = #type_name;
+            fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+                &node.content
+            }
+        }
+    } else {
+        quote! {
+            type Inner = ();
+            fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+                &()
+            }
+        }
+    };
     quote! {
         #(#[doc = #doc])*
         #[allow(non_camel_case_types)]
@@ -613,6 +637,7 @@ fn create<'g>(
             ) -> #result<(#position<'i>, Self), ()> {
                 #parse_impl
             }
+            #deref_once
         }
         impl<'i> #pest_typed::ParsableTypedNode<'i, #rule> for #id<'i> {
             #[inline]
@@ -1463,7 +1488,7 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
                 #[doc = #doc]
                 #[derive(Clone, PartialEq)]
                 pub struct #property_ident<'i> {
-                    pub content: #char,
+                    content: #char,
                     _phantom: ::core::marker::PhantomData<&'i #char>
                 }
                 impl<'i> ::core::convert::From<#char> for #property_ident<'i> {
@@ -1490,6 +1515,10 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
                             }
                         }
                     }
+                    type Inner = char;
+                    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+                        &node.content
+                    }
                 }
                 impl<'i> ::core::fmt::Debug for #property_ident<'i> {
                     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
@@ -1505,8 +1534,8 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
                     }
                 }
                 impl<'i> #pest_typed::Take for #property_ident<'i> {
-                    type Inner = #char;
-                    fn take(self) -> Self::Inner {
+                    type Taken = #char;
+                    fn take(self) -> Self::Taken {
                         self.content
                     }
                 }

@@ -160,6 +160,10 @@ macro_rules! choices {
                 )*
                 Err(())
             }
+            type Inner = $inner<$V0, $($V, )*>;
+            fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+                &node.content
+            }
         }
         impl<
             'i: 'n,
@@ -190,8 +194,8 @@ macro_rules! choices {
         impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* >
             $pest_typed::Take for $name<'i, R, $V0, $($V, )* >
         {
-            type Inner = $inner<$V0, $($V, )*>;
-            fn take(self) -> Self::Inner {
+            type Taken = $inner<$V0, $($V, )*>;
+            fn take(self) -> Self::Taken {
                 self.content
             }
         }

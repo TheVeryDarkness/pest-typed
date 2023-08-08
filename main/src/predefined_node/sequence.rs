@@ -119,6 +119,10 @@ macro_rules! seq {
 
                 Ok((input, Self::from(content)))
             }
+            type Inner = $inner_type<T0, $($T, )*>;
+            fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+                &node.content
+            }
         }
         $pest_typed::impl_tuples!($inner_type, $pest_typed, $T0, $t0, $( $T, $t, )* );
         impl<
@@ -151,8 +155,8 @@ macro_rules! seq {
             $($T: $pest_typed::TypedNode<'i, R>, )*
             IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
         > $pest_typed::Take for $name<'i, R, T0, $($T, )* IGNORED> {
-            type Inner = Self::Target;
-            fn take(self) -> Self::Inner {
+            type Taken = $inner_type<T0, $($T, )*>;
+            fn take(self) -> Self::Taken {
                 self.content
             }
         }

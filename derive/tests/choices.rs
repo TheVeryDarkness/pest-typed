@@ -35,11 +35,12 @@ macro_rules! test {
                 error::Error,
                 iterators::{Pair, Pairs},
                 ParsableTypedNode,
+                RuleStruct,
             };
             #[test]
             fn success() -> Result<(), Error<Rule>> {
                 let res = pairs::$name::parse($input)?;
-                let span = res.span;
+                let span = res.span();
                 assert_eq!(span, res.iter().next().unwrap().span());
                 assert_eq!(span, res.clone().into_iter().next().unwrap().span());
                 assert!(res.inner().next().is_none());

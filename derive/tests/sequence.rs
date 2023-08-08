@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use pest_typed::{ParsableTypedNode, Storage};
+use pest_typed::{ParsableTypedNode, Storage, TypedNode};
 use pest_typed_derive::TypedParser;
 use std::ops::Deref;
 
@@ -33,15 +33,15 @@ macro_rules! test {
         mod $name {
             use std::ops::Deref;
             use super::{pairs, Rule};
-            use pest_typed::{error::Error, ParsableTypedNode, Take};
+            use pest_typed::{error::Error, ParsableTypedNode, Take, TypedNode};
 
             #[test]
             fn matched() -> Result<(), Error<Rule>> {
                 let res = pairs::$name::parse($input)?;
                 assert_eq!(res, res.clone());
-                assert_eq!(res.content, res.content.clone());
+                assert_eq!(res.deref_self_once(), &res.deref_self_once().clone());
                 let ( $($fields, )* ) = res.as_ref();
-                assert_eq!(res.deref(), &<pairs::$name as Take>::Inner::from( ($($fields.clone(), )*) ));
+                assert_eq!(res.deref(), &<pairs::$name as Take>::Taken::from( ($($fields.clone(), )*) ));
                 Ok(())
             }
             #[test]
@@ -81,11 +81,11 @@ fn as_ref() {
 
     assert_eq!(
         generics::Seq_4::from((a.clone(), b.clone(), c.clone(), d.clone())),
-        s4.content
+        s4.deref_self_once().clone()
     );
     assert_eq!(&s4.deref().clone(), s4.deref());
     assert_eq!(
         format!("{:?}", s4.deref()),
-        format!("Seq({:?}, {:?}, {:?}, {:?})", a, b, c, d)
+        format!("Tuple4({:?}, {:?}, {:?}, {:?})", a, b, c, d)
     );
 }

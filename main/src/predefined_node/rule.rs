@@ -8,6 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use super::builtin::EOI;
+use crate::predefined_node::{Pair, Pairs};
 use crate::typed_node::Take;
 use crate::{error::Error, position::Position, stack::Stack};
 use crate::{
@@ -15,11 +16,61 @@ use crate::{
     tracker::Tracker,
     typed_node::{NeverFailedTypedNode, ParsableTypedNode},
     wrapper::RuleWrapper,
-    TypedNode,
+    RuleStruct, TypedNode,
 };
+use alloc::{boxed::Box, vec};
+use core::iter::{once, Once};
 use core::ops::{Deref, DerefMut};
 use core::{fmt, fmt::Debug, marker::PhantomData};
 use pest::RuleType;
+
+macro_rules! impl_self {
+    ($node:ty, $($tt:tt)*) => {
+        impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> Pairs<'i, 'n, R> for $node {
+            type Iter = Once<&'n dyn Pair<'i, 'n, R>>;
+            type IntoIter = Once<Box<dyn Pair<'i, 'n, R> + 'n>>;
+
+            fn iter(&'n self) -> Self::Iter {
+                once(self)
+            }
+            fn into_iter(self) -> Self::IntoIter {
+                once(Box::new(self))
+            }
+        }
+        impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> RuleStruct<'i, R> for $node {
+            fn span(&self) -> Span<'i> { self.span }
+        }
+        impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> Pair<'i, 'n, R> for $node {
+            fn inner(&'n self) -> alloc::vec::IntoIter<&'n (dyn Pair<'i, 'n, R> + 'n)> {
+                vec![].into_iter()
+            }
+            fn into_inner(self) -> alloc::vec::IntoIter<Box<(dyn Pair<'i, 'n, R> + 'n)>> {
+                vec![].into_iter()
+            }
+        }
+    };
+}
+
+impl_self!(
+    AtomicRule<'i, R, T, RULE, _EOI>,
+    T: TypedNode<'i, R> + 'n,
+    RULE: RuleWrapper<R>,
+    _EOI: RuleWrapper<R>
+);
+impl_self!(
+    Rule<'i, R, T, RULE, _EOI, IGNORED>,
+    T: TypedNode<'i, R> + 'n,
+    RULE: RuleWrapper<R>,
+    _EOI: RuleWrapper<R>,
+    IGNORED: NeverFailedTypedNode<'i, R>,
+);
+impl_self!(
+    NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>,
+    T: TypedNode<'i, R>,
+    RULE: RuleWrapper<R>,
+    _EOI: RuleWrapper<R>,
+    IGNORED: NeverFailedTypedNode<'i, R>,
+);
 
 /// Errors on current rule will **not** be tracked.
 #[derive(Clone, PartialEq)]
@@ -47,6 +98,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Silent<'i, R, T>
             Err(_) => Err(()),
         }
     }
+    type Inner = T;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Silent<'i, R, T> {
     type Target = T::Target;
@@ -55,8 +110,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Silent<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Silent<'i, R, T> {
-    type Inner = T::Inner;
-    fn take(self) -> Self::Inner {
+    type Taken = T::Taken;
+    fn take(self) -> Self::Taken {
         self.content.take()
     }
 }
@@ -84,7 +139,7 @@ pub struct AtomicRule<
     /// Matched content.
     content: T,
     /// Matched span.
-    pub(super) span: Span<'i>,
+    span: Span<'i>,
     _phantom: PhantomData<(&'i R, &'i RULE, &'i _EOI)>,
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>>
@@ -120,6 +175,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapp
             Ok((input, res))
         })
     }
+    type Inner = T;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>>
     ParsableTypedNode<'i, R> for AtomicRule<'i, R, T, RULE, _EOI>
@@ -142,8 +201,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapp
 impl<'i, R: RuleType, T: TypedNode<'i, R>, RULE: RuleWrapper<R>, _EOI: RuleWrapper<R>> Take
     for AtomicRule<'i, R, T, RULE, _EOI>
 {
-    type Inner = T::Inner;
-    fn take(self) -> Self::Inner {
+    type Taken = T::Taken;
+    fn take(self) -> Self::Taken {
         self.content.take()
     }
 }
@@ -229,6 +288,10 @@ impl<
             Ok((input, Self::from((res, start.span(&input)))))
         })
     }
+    type Inner = T;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<
         'i,
@@ -269,8 +332,8 @@ impl<
         IGNORED: NeverFailedTypedNode<'i, R>,
     > Take for NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>
 {
-    type Inner = T::Inner;
-    fn take(self) -> Self::Inner {
+    type Taken = T::Taken;
+    fn take(self) -> Self::Taken {
         self.content.take()
     }
 }
@@ -361,6 +424,10 @@ impl<
             Ok((input, Self::from((res, start.span(&input)))))
         })
     }
+    type Inner = T;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<
         'i,
@@ -416,8 +483,8 @@ impl<
         IGNORED: NeverFailedTypedNode<'i, R>,
     > Take for Rule<'i, R, T, RULE, _EOI, IGNORED>
 {
-    type Inner = T::Inner;
-    fn take(self) -> Self::Inner {
+    type Taken = T::Taken;
+    fn take(self) -> Self::Taken {
         self.content.take()
     }
 }

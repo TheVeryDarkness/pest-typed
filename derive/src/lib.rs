@@ -63,7 +63,7 @@
 //! use alloc::vec::Vec;
 //! use core::{iter, result::Result};
 //! use pest_typed_derive::TypedParser;
-//! use pest_typed::{ParsableTypedNode as _, TypedParser as _, error::Error};
+//! use pest_typed::{ParsableTypedNode as _, RuleStruct as _, TypedParser as _, error::Error};
 //!
 //! /// See https://datatracker.ietf.org/doc/html/rfc4180.html for CSV's format.
 //! #[derive(TypedParser)]
@@ -82,7 +82,7 @@
 //!         |row| {
 //!             let (first_column, following_columns) = row.item();
 //!             let columns = iter::once(first_column).chain(following_columns.into_iter());
-//!             let line = columns.map(|column| column.span.as_str()).collect::<Vec<_>>().join(",");
+//!             let line = columns.map(|column| column.span().as_str()).collect::<Vec<_>>().join(",");
 //!             line
 //!         }
 //!     );

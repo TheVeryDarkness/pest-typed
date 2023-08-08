@@ -60,6 +60,10 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<'i, R, T> {
             Err(())
         }
     }
+    type Inner = &'static str;
+    fn deref_once<'n>(_: &'n Self) -> &'n Self::Inner {
+        &Self::CONTENT
+    }
 }
 impl<'i, R: RuleType, T: StringWrapper> Deref for Str<'i, R, T> {
     type Target = str;
@@ -68,8 +72,8 @@ impl<'i, R: RuleType, T: StringWrapper> Deref for Str<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> Take for Str<'i, R, T> {
-    type Inner = &'static str;
-    fn take(self) -> Self::Inner {
+    type Taken = &'static str;
+    fn take(self) -> Self::Taken {
         Self::CONTENT
     }
 }
@@ -120,6 +124,10 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
             Err(())
         }
     }
+    type Inner = &'i str;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<'i, R: RuleType, T: StringWrapper> Deref for Insens<'i, R, T> {
     type Target = str;
@@ -128,8 +136,8 @@ impl<'i, R: RuleType, T: StringWrapper> Deref for Insens<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> Take for Insens<'i, R, T> {
-    type Inner = &'i str;
-    fn take(self) -> Self::Inner {
+    type Taken = &'i str;
+    fn take(self) -> Self::Taken {
         self.content
     }
 }
@@ -145,13 +153,13 @@ impl<'i, R: RuleType, T: StringWrapper> Debug for Insens<'i, R, T> {
 #[derive(Clone, PartialEq)]
 pub struct Skip<'i, R: RuleType, Strings: StringArrayWrapper> {
     /// Skipped span.
-    span: &'i str,
+    content: &'i str,
     _phantom: PhantomData<(&'i R, &'i Strings)>,
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> FromSpan<'i> for Skip<'i, R, Strings> {
-    fn from_span(span: Span<'i>) -> Self {
+    fn from_span(content: Span<'i>) -> Self {
         Self {
-            span: span.as_str(),
+            content: content.as_str(),
             _phantom: PhantomData,
         }
     }
@@ -171,35 +179,39 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i,
             false => Err(()),
         }
     }
+    type Inner = &'i str;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> Deref for Skip<'i, R, Strings> {
     type Target = str;
     fn deref(&self) -> &Self::Target {
-        self.span
+        self.content
     }
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> Take for Skip<'i, R, Strings> {
-    type Inner = &'i str;
-    fn take(self) -> Self::Inner {
-        self.span
+    type Taken = &'i str;
+    fn take(self) -> Self::Taken {
+        self.content
     }
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> Debug for Skip<'i, R, Strings> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Skip").field("span", &self.span).finish()
+        f.debug_struct("Skip").field("content", &self.content).finish()
     }
 }
 
 /// Skip `n` characters if there are.
 #[derive(Clone, PartialEq)]
 pub struct SkipChar<'i, R: RuleType, const N: usize> {
-    span: &'i str,
+    content: &'i str,
     _phantom: PhantomData<&'i R>,
 }
 impl<'i, R: RuleType, const N: usize> FromStr<'i> for SkipChar<'i, R, N> {
     fn from_str(span: &'i str) -> Self {
         Self {
-            span,
+            content: span,
             _phantom: PhantomData,
         }
     }
@@ -216,23 +228,27 @@ impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, R, N> {
             false => Err(()),
         }
     }
+    type Inner = &'i str;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<'i, R: RuleType, const N: usize> Deref for SkipChar<'i, R, N> {
     type Target = str;
     fn deref(&self) -> &Self::Target {
-        self.span
+        self.content
     }
 }
 impl<'i, R: RuleType, const N: usize> Take for SkipChar<'i, R, N> {
-    type Inner = &'i str;
-    fn take(self) -> Self::Inner {
-        self.span
+    type Taken = &'i str;
+    fn take(self) -> Self::Taken {
+        self.content
     }
 }
 impl<'i, R: RuleType, const N: usize> Debug for SkipChar<'i, R, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SkipChar")
-            .field("span", &self.span)
+            .field("span", &self.content)
             .finish()
     }
 }
@@ -271,6 +287,10 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
             false => Err(()),
         }
     }
+    type Inner = char;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<'i, R: RuleType, const MIN: char, const MAX: char> Deref for CharRange<'i, R, MIN, MAX> {
     type Target = char;
@@ -279,8 +299,8 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> Deref for CharRange<'i, 
     }
 }
 impl<'i, R: RuleType, const MIN: char, const MAX: char> Take for CharRange<'i, R, MIN, MAX> {
-    type Inner = char;
-    fn take(self) -> Self::Inner {
+    type Taken = char;
+    fn take(self) -> Self::Taken {
         self.content
     }
 }

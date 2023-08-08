@@ -53,14 +53,14 @@ struct Parser;
 
 fn parse(input: &str) -> Result<(), pest_typed::error::Error<Rule>> {
     let a = pairs::a::parse(input)?;
-    let (str_a, var_b, c) = a.content.as_ref();
+    let (str_a, var_b, c) = a.as_ref();
     assert_eq!(str_a.get_content(), "a");
     var_b
-        .if_then(|b1| assert_eq!(b1.get_content(), "bbb"))
-        .else_if(|b2| assert_eq!(b2.get_content(), "cc"))
-        .else_then(|b3| assert_eq!(b3.get_content(), "d"));
+        .if_then(|b1| assert_eq!(b1, "bbb"))
+        .else_if(|b2| assert_eq!(b2, "cc"))
+        .else_then(|b3| assert_eq!(b3, "d"));
     assert_eq!(c.get_content(), "c");
-    assert!(c.content == "C" || c.content == "c");
+    assert!(c.deref() == "C" || c.deref() == "c");
     Ok(())
 }
 

@@ -17,7 +17,7 @@ use pest::RuleType;
 #[derive(Clone, PartialEq)]
 pub struct Positive<'i, R: RuleType, T: TypedNode<'i, R>> {
     /// Mathed content.
-    pub(super) content: T,
+    content: T,
     _phantom: PhantomData<(&'i R, &'i T)>,
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, T> {
@@ -40,6 +40,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, 
             }
         })
     }
+    type Inner = T;
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> From<T> for Positive<'i, R, T> {
     fn from(value: T) -> Self {
@@ -56,8 +60,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Positive<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Positive<'i, R, T> {
-    type Inner = T::Inner;
-    fn take(self) -> Self::Inner {
+    type Taken = T::Taken;
+    fn take(self) -> Self::Taken {
         self.content.take()
     }
 }
@@ -97,6 +101,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<'i, R, 
             }
         })
     }
+    type Inner = ();
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner {
+        &node.content
+    }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> From<()> for Negative<'i, R, T> {
     fn from(value: ()) -> Self {
@@ -113,8 +121,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Negative<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Take for Negative<'i, R, T> {
-    type Inner = ();
-    fn take(self) -> Self::Inner {
+    type Taken = ();
+    fn take(self) -> Self::Taken {
         self.content
     }
 }

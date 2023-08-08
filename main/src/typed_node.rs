@@ -31,6 +31,8 @@ pub trait TypedNode<'i, R: RuleType>
 where
     Self: Sized + Debug + Clone + PartialEq + Deref + Take,
 {
+    /// Wrapped type.
+    type Inner: Sized;
     /// Create typed node.
     /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
     fn try_parse_with<const ATOMIC: bool>(
@@ -38,6 +40,12 @@ where
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()>;
+    /// Dereference once.
+    fn deref_once<'n>(node: &'n Self) -> &'n Self::Inner;
+    /// Dereference self once.
+    fn deref_self_once<'n>(&'n self) -> &'n Self::Inner {
+        Self::deref_once(self)
+    }
 }
 
 /// Node of concrete syntax tree.
@@ -66,9 +74,9 @@ pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
 }
 
 /// A trait for taking a node's content.
-pub trait Take: Deref {
+pub trait Take {
     /// Type of taken value.
-    type Inner: Sized;
+    type Taken: Sized;
     /// Take something's content.
-    fn take(self) -> Self::Inner;
+    fn take(self) -> Self::Taken;
 }
