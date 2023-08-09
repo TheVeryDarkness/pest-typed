@@ -13,9 +13,9 @@ license = "MIT/Apache-2.0"
 grammar-extras = ["pest_meta/grammar-extras"]
 
 [dependencies]
-pest = { version = ">=2.7.1" }
+pest = { version = "2.7.2" }
 proc-macro2 = { version = "^1.0.66" }
-pest_meta = { version = ">=2.7.1" }
+pest_meta = { version = "2.7.2" }
 quote = { version = "^1.0.31" }
 syn = { version = "^2.0.26" }
 
