@@ -9,14 +9,11 @@
 
 //! Tracker for parsing failures.
 
-use core::{cmp::Ordering, iter::once};
-
-use crate::RuleWrapper;
-
 use super::{
     error::{Error, ErrorVariant},
     position::Position,
 };
+use crate::RuleWrapper;
 use alloc::{
     borrow::{Cow, ToOwned},
     collections::BTreeMap,
@@ -25,6 +22,7 @@ use alloc::{
     vec,
     vec::Vec,
 };
+use core::{cmp::Ordering, iter::once};
 use pest::RuleType;
 
 enum SpecialError {
@@ -232,14 +230,22 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             let (line, col) = self.position.line_col();
             let spacing = format!("{}", line).len() + 3;
             let spacing = "\n".to_owned() + &" ".repeat(spacing);
-            let line_remained = Cow::Owned(format!(
+            // Will not remove trailing CR or LF.
+            let line_string = pos.line_of();
+            let line_remained_index = line_string
+                .char_indices()
+                .nth(col.saturating_sub(1))
+                .unwrap_or((0, '\0'))
+                .0;
+            let line_remained = &line_string[line_remained_index..];
+            let line_message = Cow::Owned(format!(
                 "Remained part of current line: {:?}.",
-                &pos.line_of()[col..]
+                line_remained
             ));
             let attempts_logs = attempts.iter().map(|(upper_rule, (positives, negatives))| {
                 collect_attempts(upper_rule, positives, negatives)
             });
-            let message = once(line_remained)
+            let message = once(line_message)
                 .chain(attempts_logs)
                 .collect::<Vec<_>>()
                 .join(spacing.as_str());
@@ -310,7 +316,7 @@ mod tests {
 1 | abc
   | ^---
   |
-  = Remained part of current line: "bc\n".
+  = Remained part of current line: "abc\n".
     Unexpected [Main], by Program."#
         );
         Ok(())
@@ -344,8 +350,36 @@ mod tests {
 1 | abc
   | ^---
   |
-  = Remained part of current line: "bc\n".
+  = Remained part of current line: "abc\n".
     Expected [SOI], by Program."#
+        );
+        Ok(())
+    }
+    #[test]
+    fn unicode() -> Result<(), ()> {
+        let mut pos = Position::from_start("αβψ\nδεφ\nγηι");
+        let mut tracker = Tracker::<'_, Rule>::new(pos);
+        let _ = tracker.record_during(pos, |tracker| {
+            let suc = pos.match_string("α");
+            assert!(suc);
+            tracker.positive_during(|tracker| {
+                tracker.record_during(pos, |_| Ok((pos, rule_wrappers::Main)))
+            })?;
+            tracker.negative_during(|tracker| {
+                tracker.record_during(pos, |_| Ok((pos, rule_wrappers::Main)))
+            })?;
+            Ok((pos, rule_wrappers::Program))
+        })?;
+
+        assert_eq!(
+            format!("{}", tracker.collect()),
+            r#" --> 1:2
+  |
+1 | αβψ
+  |  ^---
+  |
+  = Remained part of current line: "βψ\n".
+    Unexpected [Main], by Program."#
         );
         Ok(())
     }
