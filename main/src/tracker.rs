@@ -9,7 +9,7 @@
 
 //! Tracker for parsing failures.
 
-use core::cmp::Ordering;
+use core::{cmp::Ordering, iter::once};
 
 use crate::RuleWrapper;
 
@@ -68,7 +68,7 @@ pub struct Tracker<'i, R: RuleType> {
     /// upper rule -> (positives, negatives)
     attempts: BTreeMap<R, (Vec<R>, Vec<R>)>,
     special: Vec<SpecialError>,
-    stack: Vec<(R, bool)>,
+    stack: Vec<(R,)>,
 }
 impl<'i, R: RuleType> Tracker<'i, R> {
     /// Create an empty tracker for attempts.
@@ -139,7 +139,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     fn record(&mut self, rule: R, pos: Position<'i>, succeeded: bool) {
         if self.prepare(pos) {
             if succeeded != self.positive {
-                if let Some(&(key, _)) = self.stack.last() {
+                if let Some(&(key, ..)) = self.stack.last() {
                     let value = self.attempts.entry(key).or_default();
                     let vec = if self.positive {
                         &mut value.0
@@ -160,16 +160,11 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         pos: Position<'i>,
         f: impl FnOnce(&mut Self) -> Result<(Position<'i>, T), E>,
     ) -> Result<(Position<'i>, T), E> {
-        if let Some((_, has_children)) = self.stack.last_mut() {
-            *has_children = true;
-        }
-        self.stack.push((T::RULE, false));
+        self.stack.push((T::RULE,));
         let res = f(self);
         let succeeded = res.is_ok();
-        let (rule, has_children) = self.stack.pop().unwrap();
-        if !has_children {
-            self.record(rule, pos, succeeded);
-        }
+        let (rule,) = self.stack.pop().unwrap();
+        self.record(rule, pos, succeeded);
         res
     }
     /// Collect attempts to [`Error<R>`].
@@ -234,13 +229,18 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         if !attempts.is_empty() {
             // "{} | "
             // "{} = "
-            let spacing = format!("{}", self.position.line_col().0).len() + 3;
+            let (line, col) = self.position.line_col();
+            let spacing = format!("{}", line).len() + 3;
             let spacing = "\n".to_owned() + &" ".repeat(spacing);
-            let message = attempts
-                .iter()
-                .map(|(upper_rule, (positives, negatives))| {
-                    collect_attempts(upper_rule, positives, negatives)
-                })
+            let line_remained = Cow::Owned(format!(
+                "Remained part of current line: {:?}.",
+                &pos.line_of()[col..]
+            ));
+            let attempts_logs = attempts.iter().map(|(upper_rule, (positives, negatives))| {
+                collect_attempts(upper_rule, positives, negatives)
+            });
+            let message = once(line_remained)
+                .chain(attempts_logs)
                 .collect::<Vec<_>>()
                 .join(spacing.as_str());
             return Error::new_from_pos(ErrorVariant::CustomError { message }, pos);
@@ -305,12 +305,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", tracker.collect()),
-            " --> 1:1
+            r#" --> 1:1
   |
 1 | abc
   | ^---
   |
-  = Unexpected [Main], by Program"
+  = Remained part of current line: "abc"
+    Unexpected [Main], by Program"#
         );
         Ok(())
     }
@@ -338,12 +339,13 @@ mod tests {
 
         assert_eq!(
             format!("{}", tracker.collect()),
-            " --> 1:1
+            r#" --> 1:1
   |
 1 | abc
   | ^---
   |
-  = Expected [SOI], by Program"
+  = Remained part of current line: "abc"
+    Expected [SOI], by Program"#
         );
         Ok(())
     }
