@@ -15,14 +15,14 @@ use super::{
 };
 use crate::RuleWrapper;
 use alloc::{
-    borrow::{Cow, ToOwned},
+    borrow::ToOwned,
     collections::BTreeMap,
     format,
-    string::String,
+    string::{String, ToString},
     vec,
     vec::Vec,
 };
-use core::{cmp::Ordering, iter::once};
+use core::cmp::Ordering;
 use pest::RuleType;
 
 enum SpecialError {
@@ -34,21 +34,23 @@ enum SpecialError {
     EmptyStack,
 }
 
+impl ToString for SpecialError {
+    fn to_string(&self) -> String {
+        match self {
+            SpecialError::SliceOutOfBound(start, end) => match end {
+                Some(end) => format!("Peek slice {}..{} out of bound.", start, end),
+                None => format!("Peek slice {}.. out of bound.", start),
+            },
+            SpecialError::RepeatTooManyTimes => "Repeated too many times.".to_owned(),
+            SpecialError::EmptyStack => "Nothing to pop or drop.".to_owned(),
+        }
+    }
+}
+
 impl<R: RuleType> From<&SpecialError> for ErrorVariant<R> {
     fn from(special: &SpecialError) -> Self {
-        match special {
-            SpecialError::SliceOutOfBound(start, end) => ErrorVariant::CustomError {
-                message: match end {
-                    Some(end) => format!("Peek slice {}..{} out of bound.", start, end),
-                    None => format!("Peek slice {}.. out of bound.", start),
-                },
-            },
-            SpecialError::RepeatTooManyTimes => ErrorVariant::CustomError {
-                message: "Repeated too many times.".to_owned(),
-            },
-            SpecialError::EmptyStack => ErrorVariant::CustomError {
-                message: "Nothing to pop or drop.".to_owned(),
-            },
+        ErrorVariant::CustomError {
+            message: special.to_string(),
         }
     }
 }
@@ -64,9 +66,8 @@ pub struct Tracker<'i, R: RuleType> {
     position: Position<'i>,
     positive: bool,
     /// upper rule -> (positives, negatives)
-    attempts: BTreeMap<R, (Vec<R>, Vec<R>)>,
-    special: Vec<SpecialError>,
-    stack: Vec<(R,)>,
+    attempts: BTreeMap<Option<R>, (Vec<R>, Vec<R>, Vec<SpecialError>)>,
+    stack: Vec<R>,
 }
 impl<'i, R: RuleType> Tracker<'i, R> {
     /// Create an empty tracker for attempts.
@@ -75,13 +76,11 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             position: pos,
             positive: true,
             attempts: BTreeMap::new(),
-            special: vec![],
             stack: vec![],
         }
     }
     fn clear(&mut self) {
         self.attempts.clear();
-        self.special.clear();
     }
     fn prepare(&mut self, pos: Position<'i>) -> bool {
         match pos.cmp(&self.position) {
@@ -109,22 +108,27 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     pub fn negative_during<Ret>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
         self.during::<Ret, false>(f)
     }
+    fn get_entry<'s>(&'s mut self) -> &'s mut (Vec<R>, Vec<R>, Vec<SpecialError>) {
+        self.attempts.entry(self.stack.last().cloned()).or_default()
+    }
     /// Report a repetition that exceeds the limit.
     pub fn repeat_too_many_times(&mut self, pos: Position<'i>) {
         if self.prepare(pos) {
-            self.special.push(SpecialError::RepeatTooManyTimes);
+            self.get_entry().2.push(SpecialError::RepeatTooManyTimes);
         }
     }
     /// Reports a stack slice operation that is out of bound.
     pub fn out_of_bound(&mut self, pos: Position<'i>, start: i32, end: Option<i32>) {
         if self.prepare(pos) {
-            self.special.push(SpecialError::SliceOutOfBound(start, end));
+            self.get_entry()
+                .2
+                .push(SpecialError::SliceOutOfBound(start, end));
         }
     }
     /// Reports accessing operations on empty stack.
     pub fn empty_stack(&mut self, pos: Position<'i>) {
         if self.prepare(pos) {
-            self.special.push(SpecialError::EmptyStack);
+            self.get_entry().2.push(SpecialError::EmptyStack);
         }
     }
     fn same_with_last(vec: &[R], rule: R) -> bool {
@@ -137,16 +141,11 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     fn record(&mut self, rule: R, pos: Position<'i>, succeeded: bool) {
         if self.prepare(pos) {
             if succeeded != self.positive {
-                if let Some(&(key, ..)) = self.stack.last() {
-                    let value = self.attempts.entry(key).or_default();
-                    let vec = if self.positive {
-                        &mut value.0
-                    } else {
-                        &mut value.1
-                    };
-                    if !Self::same_with_last(vec, rule) {
-                        vec.push(rule);
-                    }
+                let positive = self.positive;
+                let value = self.get_entry();
+                let vec = if positive { &mut value.0 } else { &mut value.1 };
+                if !Self::same_with_last(vec, rule) {
+                    vec.push(rule);
                 }
             }
         }
@@ -158,26 +157,79 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         pos: Position<'i>,
         f: impl FnOnce(&mut Self) -> Result<(Position<'i>, T), E>,
     ) -> Result<(Position<'i>, T), E> {
-        self.stack.push((T::RULE,));
+        self.stack.push(T::RULE);
         let res = f(self);
         let succeeded = res.is_ok();
-        let (rule,) = self.stack.pop().unwrap();
+        let rule = self.stack.pop().unwrap();
         self.record(rule, pos, succeeded);
         res
     }
     /// Collect attempts to [`Error<R>`].
     pub fn collect(self) -> Error<R> {
         let pos = self.position;
-        let mut attempts = self.attempts;
-        for (_, (positives, negatives)) in attempts.iter_mut() {
+        // "{} | "
+        // "{} = "
+        let (line, col) = self.position.line_col();
+        let spacing = format!("{}", line).len() + 3;
+        let spacing = "\n".to_owned() + &" ".repeat(spacing);
+        // Will not remove trailing CR or LF.
+        let line_string = pos.line_of();
+        let line_remained_index = line_string
+            .char_indices()
+            .nth(col.saturating_sub(1))
+            .unwrap_or((0, '\0'))
+            .0;
+        let line_remained = &line_string[line_remained_index..];
+
+        use core::fmt::Write;
+        let mut message = String::new();
+
+        let _ = write!(
+            message,
+            "Remained part of current line: {:?}.",
+            line_remained
+        );
+
+        let mut write_message = |(rule, (mut positives, mut negatives, special)): (
+            Option<R>,
+            (Vec<R>, Vec<R>, Vec<SpecialError>),
+        )| {
             positives.sort();
             positives.dedup();
             negatives.sort();
             negatives.dedup();
+            fn collect_rules<R: RuleType>(vec: Vec<R>) -> String {
+                format!("{:?}", vec)
+            }
+            let _ = message.write_str(&spacing);
+            let _ = match (positives.is_empty(), negatives.is_empty()) {
+                (true, true) => write!(message, "Unknown error (no rule tracked)"),
+                (false, true) => write!(message, "Expected {}", collect_rules(positives)),
+                (true, false) => write!(message, "Unexpected {}", collect_rules(negatives),),
+                (false, false) => write!(
+                    message,
+                    "Unexpected {}, expected {}",
+                    collect_rules(negatives),
+                    collect_rules(positives),
+                ),
+            };
+            if let Some(upper_rule) = rule {
+                let _ = write!(message, ", by {:?}", upper_rule);
+            };
+            let _ = write!(message, ".");
+
+            for special in special {
+                let _ = message.write_str(&spacing);
+                let _ = write!(message, "{}", special.to_string());
+                if let Some(upper_rule) = rule {
+                    let _ = write!(message, " (By {:?})", upper_rule);
+                };
+            }
+        };
+        for attempt in self.attempts {
+            write_message(attempt);
         }
-        fn collect_rules<R: RuleType>(vec: &Vec<R>) -> String {
-            format!("{:?}", vec)
-        }
+
         /// Reserved for future usage.
         #[allow(dead_code)]
         fn collect_rule_stack<R: RuleType>(vec: &[R]) -> String {
@@ -199,70 +251,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
                 chain
             }
         }
-        fn collect_attempts<R: RuleType>(
-            upper_rule: &R,
-            positives: &Vec<R>,
-            negatives: &Vec<R>,
-        ) -> Cow<'static, str> {
-            match (positives.is_empty(), negatives.is_empty()) {
-                (true, true) => Cow::Borrowed("Unknown error (no rule tracked)."),
-                (false, true) => Cow::Owned(format!(
-                    "Expected {}, by {:?}.",
-                    collect_rules(positives),
-                    upper_rule,
-                )),
-                (true, false) => Cow::Owned(format!(
-                    "Unexpected {}, by {:?}.",
-                    collect_rules(negatives),
-                    upper_rule,
-                )),
-                (false, false) => Cow::Owned(format!(
-                    "Unexpected {}, expected {}, by {:?}.",
-                    collect_rules(negatives),
-                    collect_rules(positives),
-                    upper_rule,
-                )),
-            }
-        }
-        if !attempts.is_empty() {
-            // "{} | "
-            // "{} = "
-            let (line, col) = self.position.line_col();
-            let spacing = format!("{}", line).len() + 3;
-            let spacing = "\n".to_owned() + &" ".repeat(spacing);
-            // Will not remove trailing CR or LF.
-            let line_string = pos.line_of();
-            let line_remained_index = line_string
-                .char_indices()
-                .nth(col.saturating_sub(1))
-                .unwrap_or((0, '\0'))
-                .0;
-            let line_remained = &line_string[line_remained_index..];
-            let line_message = Cow::Owned(format!(
-                "Remained part of current line: {:?}.",
-                line_remained
-            ));
-            let attempts_logs = attempts.iter().map(|(upper_rule, (positives, negatives))| {
-                collect_attempts(upper_rule, positives, negatives)
-            });
-            let message = once(line_message)
-                .chain(attempts_logs)
-                .collect::<Vec<_>>()
-                .join(spacing.as_str());
-            return Error::new_from_pos(ErrorVariant::CustomError { message }, pos);
-        }
-
-        if let Some(special) = self.special.first() {
-            return Error::new_from_pos(ErrorVariant::from(special), pos);
-        }
-
-        Error::new_from_pos(
-            ErrorVariant::ParsingError {
-                positives: vec![],
-                negatives: vec![],
-            },
-            pos,
-        )
+        Error::new_from_pos(ErrorVariant::CustomError { message }, pos)
     }
 }
 
