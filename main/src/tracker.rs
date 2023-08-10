@@ -209,17 +209,17 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             match (positives.is_empty(), negatives.is_empty()) {
                 (true, true) => Cow::Borrowed("Unknown error (no rule tracked)."),
                 (false, true) => Cow::Owned(format!(
-                    "Expected {}, by {:?}",
+                    "Expected {}, by {:?}.",
                     collect_rules(positives),
                     upper_rule,
                 )),
                 (true, false) => Cow::Owned(format!(
-                    "Unexpected {}, by {:?}",
+                    "Unexpected {}, by {:?}.",
                     collect_rules(negatives),
                     upper_rule,
                 )),
                 (false, false) => Cow::Owned(format!(
-                    "Unexpected {}, expected {}, by {:?}",
+                    "Unexpected {}, expected {}, by {:?}.",
                     collect_rules(negatives),
                     collect_rules(positives),
                     upper_rule,
@@ -310,8 +310,8 @@ mod tests {
 1 | abc
   | ^---
   |
-  = Remained part of current line: "abc"
-    Unexpected [Main], by Program"#
+  = Remained part of current line: "bc\n".
+    Unexpected [Main], by Program."#
         );
         Ok(())
     }
@@ -344,8 +344,8 @@ mod tests {
 1 | abc
   | ^---
   |
-  = Remained part of current line: "abc"
-    Expected [SOI], by Program"#
+  = Remained part of current line: "bc\n".
+    Expected [SOI], by Program."#
         );
         Ok(())
     }
