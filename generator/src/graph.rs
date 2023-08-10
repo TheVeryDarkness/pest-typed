@@ -480,14 +480,14 @@ fn create<'g>(
         },
         Emission::Silent => quote! {
             impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #id<'i> {
-                type Iter = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::Iter;
-                type IntoIter = <#type_name as #pest_typed::iterators::Pairs<'i, 'n, #root::Rule>>::IntoIter;
+                type Iter = #vec_mod::IntoIter<&'n dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>>;
+                type IntoIter = #vec_mod::IntoIter<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>>;
 
                 fn iter(&'n self) -> Self::Iter {
-                    self.content.iter()
+                    self.content.iter().collect::<#vec<_>>().into_iter()
                 }
                 fn into_iter(self) -> Self::IntoIter {
-                    self.content.into_iter()
+                    self.content.into_iter().collect::<#vec<_>>().into_iter()
                 }
             }
         },
