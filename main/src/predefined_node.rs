@@ -668,18 +668,16 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> D
 
 /// Repeatably match `T` at least `MIN` times.
 #[derive(Clone, PartialEq)]
-pub struct RepMin<
+pub struct RepMinMax<
     'i,
     R: RuleType,
     T: TypedNode<'i, R>,
     IGNORED: NeverFailedTypedNode<'i, R>,
     const MIN: usize,
+    const MAX: usize,
 > {
-    /// Matched expressions.
-    pub content: Vec<T>,
-    /// Skipped expressions.
-    /// Always has the same length with content.
-    pub skipped: Vec<IGNORED>,
+    /// Skipped and Matched expressions.
+    pub content: Vec<(IGNORED, T)>,
     _phantom: PhantomData<(&'i R, &'i IGNORED)>,
 }
 impl<
@@ -688,7 +686,8 @@ impl<
         T: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
         const MIN: usize,
-    > TypedNode<'i, R> for RepMin<'i, R, T, IGNORED, MIN>
+        const MAX: usize,
+    > TypedNode<'i, R> for RepMinMax<'i, R, T, IGNORED, MIN, MAX>
 {
     #[inline]
     fn try_parse_with<const ATOMIC: bool>(
@@ -696,45 +695,34 @@ impl<
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let mut vec_skipped = Vec::<IGNORED>::new();
-        let mut vec = Vec::<T>::new();
+        let mut vec = Vec::<(IGNORED, T)>::new();
 
         {
-            let mut i: usize = 0;
-            loop {
-                let skipped = if i != 0 {
-                    let (next, ignored) = IGNORED::parse_with::<ATOMIC>(input, stack);
-                    input = next;
-                    ignored
-                } else {
-                    IGNORED::default()
-                };
-                let res = restore_on_err(stack, |stack| {
-                    T::try_parse_with::<ATOMIC>(input, stack, tracker)
-                });
-                let res = match res {
-                    Ok((next, elem)) => {
-                        input = next;
-                        elem
-                    }
-                    Err(_err) => {
-                        if i < MIN {
-                            return Err(());
-                        }
-                        break;
-                    }
-                };
+            for i in 0..MAX {
+                let (next, ignored) = IGNORED::parse_with::<ATOMIC>(input, stack);
+                input = next;
 
-                vec.push(res);
-                vec_skipped.push(skipped);
-                i += 1;
+                match restore_on_err(stack, |stack| {
+                    T::try_parse_with::<ATOMIC>(input, stack, tracker)
+                }) {
+                    Ok((next, matched)) => {
+                        input = next;
+                        vec.push((ignored, matched));
+                    }
+                    Err(err) => {
+                        if i < MIN {
+                            return Err(err);
+                        } else {
+                            break;
+                        }
+                    }
+                }
             }
         }
         Ok((
             input,
             Self {
                 content: vec,
-                skipped: vec_skipped,
                 _phantom: PhantomData,
             },
         ))
@@ -746,35 +734,11 @@ impl<
         T: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
         const MIN: usize,
-    > Deref for RepMin<'i, R, T, IGNORED, MIN>
-{
-    type Target = Vec<T>;
-    fn deref(&self) -> &Self::Target {
-        &self.content
-    }
-}
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-        const MIN: usize,
-    > DerefMut for RepMin<'i, R, T, IGNORED, MIN>
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
-    }
-}
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-        const MIN: usize,
-    > Debug for RepMin<'i, R, T, IGNORED, MIN>
+        const MAX: usize,
+    > Debug for RepMinMax<'i, R, T, IGNORED, MIN, MAX>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RepMin")
+        f.debug_struct("RepMinMax")
             .field("content", &self.content)
             .finish()
     }
@@ -785,15 +749,30 @@ impl<
         T: TypedNode<'i, R>,
         IGNORED: NeverFailedTypedNode<'i, R>,
         const MIN: usize,
-    > BoundWrapper for RepMin<'i, R, T, IGNORED, MIN>
+        const MAX: usize,
+    > RepMinMax<'i, R, T, IGNORED, MIN, MAX>
+{
+    /// Returns an iterator over all skipped and matched items.
+    pub fn iter<'n>(&'n self) -> alloc::slice::Iter<'n, (IGNORED, T)> {
+        self.content.iter()
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+        const MIN: usize,
+        const MAX: usize,
+    > BoundWrapper for RepMinMax<'i, R, T, IGNORED, MIN, MAX>
 {
     const MIN: usize = MIN;
-    const MAX: usize = usize::MAX;
+    const MAX: usize = MAX;
 }
 /// Repeat arbitrary times.
-pub type Rep<'i, R, T, IGNORED> = RepMin<'i, R, T, IGNORED, 0>;
+pub type Rep<'i, R, T, IGNORED> = RepMinMax<'i, R, T, IGNORED, 0, { usize::MAX }>;
 /// Repeat at least one times.
-pub type RepOnce<'i, R, T, IGNORED> = RepMin<'i, R, T, IGNORED, 1>;
+pub type RepOnce<'i, R, T, IGNORED> = RepMinMax<'i, R, T, IGNORED, 1, { usize::MAX }>;
 
 /// Drop the top of the stack.
 /// Fail if there is no span in the stack.
@@ -1688,21 +1667,11 @@ mod tests {
         super::Rule<'i, Rule, REP<'i>, rule_wrappers::RepFoo, rule_wrappers::EOI, Ignore<'i>>;
     #[test]
     fn repetition() {
-        let rep = R::parse("foofoofoo").unwrap();
-        assert_eq!(
-            format!("{:?}", rep),
-            "Rule { rule: RepFoo, content: RepMin { content: [Str, Str, Str] } }"
-        );
-        let rep = R::parse("foo foo foo").unwrap();
-        assert_eq!(
-            format!("{:?}", rep),
-            "Rule { rule: RepFoo, content: RepMin { content: [Str, Str, Str] } }"
-        );
-        let rep = R::parse("foo foo\tfoo").unwrap();
-        assert_eq!(
-            format!("{:?}", rep),
-            "Rule { rule: RepFoo, content: RepMin { content: [Str, Str, Str] } }"
-        );
+        let rep1 = R::parse("foofoofoo").unwrap();
+        let rep2 = R::parse("foo foo foo").unwrap();
+        assert_eq!(format!("{:?}", rep1), format!("{:?}", rep2),);
+        let rep3 = R::parse("foo foo\tfoo").unwrap();
+        assert_eq!(format!("{:?}", rep1), format!("{:?}", rep3),);
         assert_eq!(REP::MIN, 0);
     }
 }

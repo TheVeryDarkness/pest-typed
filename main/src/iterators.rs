@@ -13,7 +13,7 @@ use crate::{
     choices::Choice2,
     predefined_node::{
         AlwaysFail, AtomicRule, Box, CharRange, Insens, Negative, NonAtomicRule, PeekSlice1,
-        PeekSlice2, Positive, Push, RepMin, Rule, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK,
+        PeekSlice2, Positive, Push, RepMinMax, Rule, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK,
         PEEK_ALL, POP, POP_ALL, SOI,
     },
     typed_node::RuleStruct,
@@ -270,30 +270,29 @@ impl<
         T: TypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
         I: NeverFailedTypedNode<'i, R> + Pairs<'i, 'n, R>,
         const MIN: usize,
-    > Pairs<'i, 'n, R> for RepMin<'i, R, T, I, MIN>
+        const MAX: usize,
+    > Pairs<'i, 'n, R> for RepMinMax<'i, R, T, I, MIN, MAX>
 {
-    type Iter = Chain<
-        FlatMap<core::slice::Iter<'n, I>, I::Iter, fn(&'n I) -> I::Iter>,
-        FlatMap<core::slice::Iter<'n, T>, T::Iter, fn(&'n T) -> T::Iter>,
+    type Iter = FlatMap<
+        core::slice::Iter<'n, (I, T)>,
+        Chain<I::Iter, T::Iter>,
+        fn(&'n (I, T)) -> Chain<I::Iter, T::Iter>,
     >;
-    type IntoIter = Chain<
-        FlatMap<vec::IntoIter<I>, I::IntoIter, fn(I) -> I::IntoIter>,
-        FlatMap<vec::IntoIter<T>, T::IntoIter, fn(T) -> T::IntoIter>,
+    type IntoIter = FlatMap<
+        vec::IntoIter<(I, T)>,
+        Chain<I::IntoIter, T::IntoIter>,
+        fn((I, T)) -> Chain<I::IntoIter, T::IntoIter>,
     >;
 
     fn iter(&'n self) -> Self::Iter {
-        let s: FlatMap<core::slice::Iter<'n, I>, I::Iter, fn(&'n I) -> I::Iter> =
-            self.skipped.iter().flat_map(Pairs::iter);
-        let i: FlatMap<core::slice::Iter<'n, T>, T::Iter, fn(&'n T) -> T::Iter> =
-            self.content.iter().flat_map(Pairs::iter);
-        s.chain(i)
+        self.content
+            .iter()
+            .flat_map(|(i, e)| i.iter().chain(e.iter()))
     }
     fn into_iter(self) -> Self::IntoIter {
-        let s: FlatMap<vec::IntoIter<I>, I::IntoIter, fn(I) -> I::IntoIter> =
-            self.skipped.into_iter().flat_map(Pairs::into_iter);
-        let i: FlatMap<vec::IntoIter<T>, T::IntoIter, fn(T) -> T::IntoIter> =
-            self.content.into_iter().flat_map(Pairs::into_iter);
-        s.chain(i)
+        self.content
+            .into_iter()
+            .flat_map(|(i, e)| i.into_iter().chain(e.into_iter()))
     }
 }
 

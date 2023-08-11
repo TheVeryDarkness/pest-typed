@@ -90,7 +90,7 @@ enum Edge {
     // Type wrapped by Option.
     ChoiceI(usize),
     Optional,
-    // Type wrapped by Option.
+    // Type wrapped by Vec.
     Contents,
 }
 #[derive(Clone)]
@@ -111,14 +111,14 @@ enum Node {
     SequenceI(usize, Box<Node>),
     // Type wrapped by Option.
     /// - Type: `#opt::<#inner>`
-    /// - Path: `._#index().and_then(|e|Some(e #inner)) #flat`
+    /// - Path: `._#index().and_then(|res| Some(#inner)) #flat`
     ChoiceI(usize, bool, Box<Node>),
     /// - Type: `#option::<#inner>`
-    /// - Path: `.as_ref().and_then(|e|Some(e #inner)) #flat`
+    /// - Path: `.as_ref().and_then(|res| Some(#inner)) #flat`
     Optional(bool, Box<Node>),
     // Type wrapped by Vec.
     /// - Type: `#vec::<#inner>`
-    /// - Path: `.content.iter().map(|e|e #inner).collect::<#vec<_>>()`
+    /// - Path: `.content.iter().map(|res| {let res = res.1; #inner}).collect::<#vec<_>>()`
     Contents(Box<Node>),
     // Type wrapped by tuple.
     /// - Type: `(#(#inner),*)`
@@ -231,7 +231,7 @@ impl Node {
             Node::Contents(inner) => {
                 let (pa, ty) = inner.expand(root);
                 (
-                    quote! {{let res = res.content.iter().map(|res| #pa).collect::<#vec<_>>(); res}},
+                    quote! {{let res = res.content.iter().map(|res| { let res = &res.1; #pa }).collect::<#vec<_>>(); res}},
                     quote! {#vec::<#ty>},
                 )
             }
@@ -443,7 +443,11 @@ fn create<'g>(
         } else {
             quote! {}
         };
-        quote! {#content #span}
+        quote! {
+            #content
+            #span
+            _phantom: ::core::marker::PhantomData<&'i ::core::primitive::char>,
+        }
     };
     let deref = if emit_content {
         quote! {
@@ -531,10 +535,11 @@ fn create<'g>(
             },
         }
     };
+    let phantom = quote! { _phantom: ::core::marker::PhantomData };
     let parse_impl = match emission {
         Emission::Silent => quote! {
             let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
-            Ok((input, Self { content }))
+            Ok((input, Self { content, #phantom, }))
         },
         Emission::Span => quote! {
             let start = input;
@@ -543,7 +548,7 @@ fn create<'g>(
                 |tracker| {
                     let (input, _) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
                     let span = start.span(&input);
-                    Ok((input, Self { span }))
+                    Ok((input, Self { span, #phantom, }))
                 }
             )
         },
@@ -554,7 +559,7 @@ fn create<'g>(
                 |tracker| {
                     let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
                     let span = start.span(&input);
-                    Ok((input, Self { content, span }))
+                    Ok((input, Self { content, span, #phantom, }))
                 }
             )
         },
