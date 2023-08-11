@@ -1,7 +1,7 @@
 [package]
 name = "pest_typed"
 description = "A statically typed version of pest."
-version = "0.6.0"
+version = "0.6.1"
 edition = "2021"
 documentation = "https://docs.rs/pest_typed"
 homepage = "https://github.com/theverydarkness/pest-typed"
@@ -15,4 +15,3 @@ std = ["pest/std"]
 
 [dependencies]
 pest = { version = "2.7.2" }
-thiserror = { version = "1.0.37", optional = true }
