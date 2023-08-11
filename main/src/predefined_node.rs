@@ -752,9 +752,13 @@ impl<
         const MAX: usize,
     > RepMinMax<'i, R, T, IGNORED, MIN, MAX>
 {
-    /// Returns an iterator over all skipped and matched items.
-    pub fn iter<'n>(&'n self) -> alloc::slice::Iter<'n, (IGNORED, T)> {
-        self.content.iter()
+    /// Returns an iterator over all matched expressions.
+    pub fn iter<'n>(&'n self) -> alloc::vec::IntoIter<&'n T> {
+        self.content
+            .iter()
+            .map(|(_, e)| e)
+            .collect::<Vec<_>>()
+            .into_iter()
     }
 }
 impl<
