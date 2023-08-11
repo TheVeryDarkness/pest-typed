@@ -388,6 +388,8 @@ struct RuleConfig<'g> {
     pub rule_id: Ident,
     pub rule_name: &'g str,
     pub rule_doc: Option<&'g str>,
+    pub defined: &'g BTreeSet<&'g str>,
+    pub builtins_without_lifetime: &'g BTreeSet<&'g str>,
 }
 impl<'g> RuleConfig<'g> {}
 
@@ -654,11 +656,11 @@ fn create<'g>(
     }
 }
 
-fn rule<'a, 'g>(
+fn rule<'g, 'f>(
     rule_config: &RuleConfig<'g>,
     type_name: &TokenStream,
     doc: &String,
-    accessers: &Accesser<'a>,
+    accessers: &Accesser<'g>,
     emission: Emission,
 ) -> TokenStream {
     let root = quote! {super};
@@ -984,6 +986,13 @@ fn generate_graph_node<'g>(
             } else {
                 Accesser::new()
             };
+            let type_name = if !rule_config.defined.contains(id.as_str())
+                && rule_config.builtins_without_lifetime.contains(id.as_str())
+            {
+                quote! {#root::#generics::Box::<'i, #root::#pairs::#inner>}
+            } else {
+                quote! {#root::#generics::Box::<'i, #root::#pairs::#inner::<'i>>}
+            };
             process_single_alias(
                 map,
                 expr,
@@ -1203,7 +1212,13 @@ fn generate_graph_node<'g>(
     }
 }
 
-fn generate_graph(rules: &[OptimizedRule], config: Config, doc: &DocComment) -> Output {
+fn generate_graph<'g: 'f, 'f>(
+    rules: &'g [OptimizedRule],
+    defined: &'f BTreeSet<&'g str>,
+    builtins_without_lifetime: &'f BTreeSet<&'g str>,
+    config: Config,
+    doc: &DocComment,
+) -> Output {
     let mut res = Output::new();
     for rule in rules.iter() {
         let rule_name = rule.name.as_str();
@@ -1220,6 +1235,8 @@ fn generate_graph(rules: &[OptimizedRule], config: Config, doc: &DocComment) -> 
             rule_id: ident(rule_name),
             rule_name,
             rule_doc,
+            defined,
+            builtins_without_lifetime,
         };
         generate_graph_node(
             &rule.expr,
@@ -1272,7 +1289,22 @@ pub(crate) fn generate_typed_pair_from_rule(
     config: Config,
 ) -> TokenStream {
     let pest_typed = pest_typed();
-    let mut graph = generate_graph(rules, config, doc);
+
+    let defined_rules: BTreeSet<&str> = rules.iter().map(|rule| rule.name.as_str()).collect();
+    let referenced_rules = collect_used_rules(rules);
+    let (builtin, mut builtins_without_lifetime) = generate_builtin(&defined_rules);
+    let mut graph = generate_graph(
+        rules,
+        &defined_rules,
+        &builtins_without_lifetime,
+        config,
+        doc,
+    );
+    let unicode_rule = generate_unicode(
+        &defined_rules,
+        &referenced_rules,
+        &mut builtins_without_lifetime,
+    );
     let as_wrapper = |name: &Ident| {
         quote! {
             #[allow(non_camel_case_types)]
@@ -1289,16 +1321,12 @@ pub(crate) fn generate_typed_pair_from_rule(
         as_wrapper(&name)
     });
     let eoi = as_wrapper(&ident("EOI"));
-    let defined_rules: BTreeSet<&str> = rules.iter().map(|rule| rule.name.as_str()).collect();
-    let builtin = generate_builtin(&defined_rules);
     graph.insert(quote! {
         use #pest_typed::NeverFailedTypedNode as _;
         #builtin
     });
     let mods = graph.collect();
     let unicode = unicode_mod();
-    let referenced_rules = collect_used_rules(rules);
-    let unicode_rule = generate_unicode(&defined_rules, &referenced_rules);
     let generics = {
         let root = quote! {super};
         let pairs = pairs();
@@ -1420,7 +1448,11 @@ pub(crate) fn generate_typed_pair_from_rule(
     res
 }
 
-fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) -> TokenStream {
+fn generate_unicode(
+    rule_names: &BTreeSet<&str>,
+    referenced: &BTreeSet<&str>,
+    without_lifetime: &mut BTreeSet<&'static str>,
+) -> TokenStream {
     let mut results = vec![];
     let pest_typed = pest_typed();
     let pest_unicode = pest_unicode();
@@ -1441,15 +1473,15 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
         let doc = format!("Auto generated. Unicode property {}.", property);
 
         if !rule_names.contains(property) && referenced.contains(property) {
+            without_lifetime.insert(property);
             results.push(quote! {
                 #[allow(non_camel_case_types)]
                 #[doc = #doc]
                 #[derive(Clone, PartialEq)]
-                pub struct #property_ident<'i> {
+                pub struct #property_ident {
                     pub content: #char,
-                    _phantom: ::core::marker::PhantomData<&'i #char>
                 }
-                impl<'i> ::core::convert::From<#char> for #property_ident<'i> {
+                impl ::core::convert::From<#char> for #property_ident {
                     fn from(content: #char) -> Self {
                         Self {
                             content,
@@ -1457,7 +1489,7 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
                         }
                     }
                 }
-                impl<'i> #pest_typed::TypedNode<'i, super::Rule> for #property_ident<'i> {
+                impl<'i> #pest_typed::TypedNode<'i, super::Rule> for #property_ident {
                     #[inline]
                     fn try_parse_with<const ATOMIC: #bool>(
                         mut input: #position<'i>,
@@ -1474,14 +1506,14 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
                         }
                     }
                 }
-                impl<'i> ::core::fmt::Debug for #property_ident<'i> {
+                impl ::core::fmt::Debug for #property_ident {
                     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                         f.debug_struct(#property)
                             .field("content", &self.content)
                             .finish()
                     }
                 }
-                impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #property_ident<'i> {
+                impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #property_ident {
                     type Iter = ::core::iter::Empty<&'n dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>>;
                     type IntoIter = ::core::iter::Empty<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>>;
 
@@ -1500,7 +1532,7 @@ fn generate_unicode(rule_names: &BTreeSet<&str>, referenced: &BTreeSet<&str>) ->
     }
 }
 
-fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
+fn generate_builtin(rule_names: &BTreeSet<&str>) -> (TokenStream, BTreeSet<&'static str>) {
     let pest_typed = pest_typed();
     let unicode = unicode_mod();
     let rule_wrappers = rule_wrappers();
@@ -1509,7 +1541,20 @@ fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
         use ::core::ops::Deref as _;
         use super::#unicode::*;
     }];
+    let mut builtins_without_lifetime = BTreeSet::new();
     macro_rules! insert_builtin {
+        ($name:expr, $def:path) => {
+            if !rule_names.contains($name) {
+                let id = ident($name);
+                builtins_without_lifetime.insert($name);
+                results.push(quote! {
+                    #[allow(non_camel_case_types)]
+                    pub type #id = #pest_typed::predefined_node::$def;
+                });
+            }
+        };
+    }
+    macro_rules! insert_builtin_with_lifetime {
         ($name:expr, $def:path) => {
             if !rule_names.contains($name) {
                 let id = ident($name);
@@ -1523,37 +1568,33 @@ fn generate_builtin(rule_names: &BTreeSet<&str>) -> TokenStream {
 
     results.push(quote! {
         #[allow(non_camel_case_types)]
-        pub type EOI<'i> = #pest_typed::predefined_node::AtomicRule::<'i, super::Rule, #pest_typed::predefined_node::EOI::<'i>, super::#rule_wrappers::EOI, super::#rule_wrappers::EOI>;
+        pub type EOI<'i> = #pest_typed::predefined_node::AtomicRule::<'i, super::Rule, #pest_typed::predefined_node::EOI, super::#rule_wrappers::EOI, super::#rule_wrappers::EOI>;
     });
 
-    insert_builtin!("ANY", ANY::<'i>);
-    insert_builtin!("SOI", SOI::<'i>);
-    insert_builtin!("PEEK", PEEK::<'i>);
-    insert_builtin!("PEEK_ALL", PEEK_ALL::<'i>);
-    insert_builtin!("POP", POP::<'i>);
-    insert_builtin!("POP_ALL", POP_ALL::<'i>);
-    insert_builtin!("DROP", DROP::<'i>);
-    insert_builtin!("ASCII_DIGIT", ASCII_DIGIT::<'i, super::Rule>);
-    insert_builtin!(
-        "ASCII_NONZERO_DIGIT",
-        ASCII_NONZERO_DIGIT::<'i, super::Rule>
-    );
-    insert_builtin!("ASCII_BIN_DIGIT", ASCII_BIN_DIGIT::<'i, super::Rule>);
-    insert_builtin!("ASCII_OCT_DIGIT", ASCII_OCT_DIGIT::<'i, super::Rule>);
-    insert_builtin!("ASCII_HEX_DIGIT", ASCII_HEX_DIGIT::<'i, super::Rule>);
-    insert_builtin!("ASCII_ALPHA_LOWER", ASCII_ALPHA_LOWER::<'i, super::Rule>);
-    insert_builtin!("ASCII_ALPHA_UPPER", ASCII_ALPHA_UPPER::<'i, super::Rule>);
-    insert_builtin!("ASCII_ALPHA", ASCII_ALPHA::<'i, super::Rule>);
-    insert_builtin!("ASCII_ALPHANUMERIC", ASCII_ALPHANUMERIC::<'i, super::Rule>);
-    insert_builtin!("ASCII", ASCII::<'i, super::Rule>);
-    insert_builtin!("NEWLINE", NEWLINE::<'i>);
+    insert_builtin!("ANY", ANY);
+    insert_builtin!("SOI", SOI);
+    insert_builtin_with_lifetime!("PEEK", PEEK::<'i>);
+    insert_builtin_with_lifetime!("PEEK_ALL", PEEK_ALL::<'i>);
+    insert_builtin_with_lifetime!("POP", POP::<'i>);
+    insert_builtin_with_lifetime!("POP_ALL", POP_ALL::<'i>);
+    insert_builtin!("DROP", DROP);
 
-    insert_builtin!("WHITESPACE", AlwaysFail::<'i>);
-    insert_builtin!("COMMENT", AlwaysFail::<'i>);
+    insert_builtin!("ASCII_DIGIT", ASCII_DIGIT);
+    insert_builtin!("ASCII_NONZERO_DIGIT", ASCII_NONZERO_DIGIT);
+    insert_builtin!("ASCII_BIN_DIGIT", ASCII_BIN_DIGIT);
+    insert_builtin!("ASCII_OCT_DIGIT", ASCII_OCT_DIGIT);
+    insert_builtin!("ASCII_HEX_DIGIT", ASCII_HEX_DIGIT);
+    insert_builtin!("ASCII_ALPHA_LOWER", ASCII_ALPHA_LOWER);
+    insert_builtin!("ASCII_ALPHA_UPPER", ASCII_ALPHA_UPPER);
+    insert_builtin!("ASCII_ALPHA", ASCII_ALPHA);
+    insert_builtin!("ASCII_ALPHANUMERIC", ASCII_ALPHANUMERIC);
+    insert_builtin!("ASCII", ASCII);
+    insert_builtin!("NEWLINE", NEWLINE);
 
-    quote! {
-        #(#results)*
-    }
+    insert_builtin_with_lifetime!("WHITESPACE", AlwaysFail);
+    insert_builtin_with_lifetime!("COMMENT", AlwaysFail);
+
+    (quote! { #(#results)*}, builtins_without_lifetime)
 }
 
 #[cfg(test)]
