@@ -119,7 +119,7 @@ mod tests {
         assert_ne!(rep1, rep3);
         let format = |rep: &R<'_>| -> String {
             rep.iter()
-                .map(|(_, e)| e.get_content())
+                .map(|e| e.get_content())
                 .collect::<Vec<_>>()
                 .concat()
         };
