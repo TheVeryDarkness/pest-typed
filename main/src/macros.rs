@@ -12,11 +12,11 @@
 ///
 /// Used by [`crate::seq`].
 macro_rules! chains {
-    ($pest_typed:ident, $t:ident, $T0:ident, ) => {
-        $T0::$t
+    ($pest_typed:ident, $trait:ty, $t:ident, $T0:ty, ) => {
+        <$T0 as $trait>::$t
     };
-    ($pest_typed:ident, $t:ident, $T0:ident, $($T:ident, )+) => {
-        core::iter::Chain<$T0::$t, $pest_typed::chains!($pest_typed, $t, $($T,)*)>
+    ($pest_typed:ident, $trait:ty, $t:ident, $T0:ty, $($T:ty, )+) => {
+        core::iter::Chain<<$T0 as $trait>::$t, $pest_typed::chains!($pest_typed, $trait, $t, $($T,)*)>
     };
 }
 

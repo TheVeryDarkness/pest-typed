@@ -11,9 +11,8 @@
 //! The generator may use this for convenience.
 //! Normally you don't need to reference this module by yourself.
 
-use crate::wrapper::BoundWrapper;
-
 use super::{error::Error, parser_state::constrain_idxs, position::Position, stack::Stack};
+use crate::wrapper::BoundWrapper;
 use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut};
 use core::{fmt, fmt::Debug, marker::PhantomData};
@@ -575,15 +574,36 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
     }
 }
 
-/// Skip comments (by rule `COMMENT`) or white spaces (by rule `WHITESPACE`) if there is any.
-/// Never fail.
+/// Skip single whitespace or comment.
 #[derive(Clone, PartialEq)]
-pub struct Ign<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> {
-    _phantom: PhantomData<(&'i R, &'i COMMENT, &'i WHITESPACE)>,
+pub enum SkippedUnit<COMMENT: Clone + PartialEq, WHITESPACE: Clone + PartialEq> {
+    /// Comment.
+    Comment(COMMENT),
+    /// White space.
+    WhiteSpace(WHITESPACE),
 }
 
-impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>>
-    NeverFailedTypedNode<'i, R> for Ign<'i, R, COMMENT, WHITESPACE>
+/// Skip comments (by rule `COMMENT`) or white spaces (by rule `WHITESPACE`) if there is any.
+///
+/// Never fail.
+#[derive(Clone, PartialEq)]
+pub struct Skipped<'i, R: RuleType, WHITESPACE: TypedNode<'i, R>, COMMENT: TypedNode<'i, R>> {
+    /// Skipped comments and white spaces.
+    pub content: Vec<Choice2<'i, R, WHITESPACE, COMMENT>>,
+    _phantom: PhantomData<(&'i R, &'i COMMENT, &'i WHITESPACE)>,
+}
+impl<'i, R: RuleType, WHITESPACE: TypedNode<'i, R>, COMMENT: TypedNode<'i, R>> Default
+    for Skipped<'i, R, WHITESPACE, COMMENT>
+{
+    fn default() -> Self {
+        Self {
+            content: Vec::new(),
+            _phantom: PhantomData,
+        }
+    }
+}
+impl<'i, R: RuleType, WHITESPACE: TypedNode<'i, R>, COMMENT: TypedNode<'i, R>>
+    NeverFailedTypedNode<'i, R> for Skipped<'i, R, WHITESPACE, COMMENT>
 {
     #[inline]
     fn parse_with<const ATOMIC: bool>(
@@ -591,26 +611,24 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>>
         stack: &mut Stack<Span<'i>>,
     ) -> (Position<'i>, Self) {
         if ATOMIC {
-            return (
-                input,
-                Self {
-                    _phantom: PhantomData,
-                },
-            );
+            return (input, Self::default());
         }
         let mut flag = true;
+        let mut vec = Vec::new();
         let mut tracker = Tracker::new(input);
         while flag {
             flag = false;
-            while let Ok((remained, _)) =
+            while let Ok((remained, ws)) =
                 WHITESPACE::try_parse_with::<true>(input, stack, &mut tracker)
             {
+                vec.push(Choice2::_0(ws, PhantomData));
                 input = remained;
                 flag = true;
             }
-            while let Ok((remained, _)) =
+            while let Ok((remained, c)) =
                 COMMENT::try_parse_with::<true>(input, stack, &mut tracker)
             {
+                vec.push(Choice2::_1(c, PhantomData));
                 input = remained;
                 flag = true;
             }
@@ -618,13 +636,14 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>>
         (
             input,
             Self {
+                content: vec,
                 _phantom: PhantomData,
             },
         )
     }
 }
 impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> TypedNode<'i, R>
-    for Ign<'i, R, COMMENT, WHITESPACE>
+    for Skipped<'i, R, COMMENT, WHITESPACE>
 {
     #[inline]
     fn try_parse_with<const ATOMIC: bool>(
@@ -636,10 +655,14 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> T
     }
 }
 impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> Debug
-    for Ign<'i, R, COMMENT, WHITESPACE>
+    for Skipped<'i, R, COMMENT, WHITESPACE>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Ign").finish()
+        let mut debugger = f.debug_tuple("Skipped");
+        for unit in self.content.iter() {
+            debugger.field(unit);
+        }
+        debugger.finish()
     }
 }
 
@@ -652,8 +675,11 @@ pub struct RepMin<
     IGNORED: NeverFailedTypedNode<'i, R>,
     const MIN: usize,
 > {
-    /// Matched nodes.
+    /// Matched expressions.
     pub content: Vec<T>,
+    /// Skipped expressions.
+    /// Always has the same length with content.
+    pub skipped: Vec<IGNORED>,
     _phantom: PhantomData<(&'i R, &'i IGNORED)>,
 }
 impl<
@@ -670,22 +696,26 @@ impl<
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
+        let mut vec_skipped = Vec::<IGNORED>::new();
         let mut vec = Vec::<T>::new();
 
         {
             let mut i: usize = 0;
             loop {
-                if i != 0 {
-                    let (next, _) = IGNORED::parse_with::<ATOMIC>(input, stack);
+                let skipped = if i != 0 {
+                    let (next, ignored) = IGNORED::parse_with::<ATOMIC>(input, stack);
                     input = next;
-                }
+                    ignored
+                } else {
+                    IGNORED::default()
+                };
                 let res = restore_on_err(stack, |stack| {
                     T::try_parse_with::<ATOMIC>(input, stack, tracker)
                 });
-                match res {
+                let res = match res {
                     Ok((next, elem)) => {
                         input = next;
-                        vec.push(elem);
+                        elem
                     }
                     Err(_err) => {
                         if i < MIN {
@@ -693,7 +723,10 @@ impl<
                         }
                         break;
                     }
-                }
+                };
+
+                vec.push(res);
+                vec_skipped.push(skipped);
                 i += 1;
             }
         }
@@ -701,6 +734,7 @@ impl<
             input,
             Self {
                 content: vec,
+                skipped: vec_skipped,
                 _phantom: PhantomData,
             },
         ))
@@ -911,8 +945,15 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
 pub struct AlwaysFail<'i> {
     _phantom: PhantomData<&'i ()>,
 }
+impl<'i> Default for AlwaysFail<'i> {
+    fn default() -> Self {
+        Self {
+            _phantom: PhantomData,
+        }
+    }
+}
 /// A trait that only `AlwaysFail` implements.
-pub trait AlwaysFailed: Debug + Clone + PartialEq {}
+pub trait AlwaysFailed: Debug + Default + Clone + PartialEq {}
 impl<'i> AlwaysFailed for AlwaysFail<'i> {}
 impl<'i, R: RuleType, T: AlwaysFailed> TypedNode<'i, R> for T {
     #[inline]
@@ -1633,7 +1674,7 @@ mod tests {
             r#"AtomicRule { rule: COMMENT, content: Range { content: '\t' } }"#
         );
     }
-    type Ignore<'i> = Ign<'i, Rule, COMMENT<'i>, WHITESPACE<'i>>;
+    type Ignore<'i> = Skipped<'i, Rule, COMMENT<'i>, WHITESPACE<'i>>;
     #[test]
     fn ignore() {
         super::Rule::<Rule, Ignore<'_>, rule_wrappers::RepFoo, rule_wrappers::EOI, Ignore<'_>>::parse(

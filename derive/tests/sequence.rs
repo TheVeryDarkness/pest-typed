@@ -32,7 +32,7 @@ macro_rules! test {
     ($name:ident, $input:literal, $($fields:tt)*) => {
         mod $name {
             use super::{pairs, Rule};
-            use pest_typed::{error::Error, ParsableTypedNode, TypeWrapper};
+            use pest_typed::{error::Error, ParsableTypedNode, ConstantStorage};
 
             #[test]
             fn matched() -> Result<(), Error<Rule>> {
@@ -40,7 +40,7 @@ macro_rules! test {
                 assert_eq!(res, res.clone());
                 assert_eq!(res.content, res.content.clone());
                 let ( $($fields, )* ) = res.as_ref();
-                assert_eq!(res.content, <pairs::$name as TypeWrapper>::Inner::from(( $($fields.clone(), )* )));
+                assert_eq!([$($fields.get_constant(), )*].concat(), $input);
                 Ok(())
             }
             #[test]
@@ -78,18 +78,10 @@ fn as_ref() {
     assert_eq!(c.get_content(), "c");
     assert_eq!(d.get_content(), "d");
 
-    assert_eq!(
-        generics::Seq_4::from((a.clone(), b.clone(), c.clone(), d.clone())),
-        s4.content
-    );
     assert_eq!(&s4.deref().clone(), s4.deref());
     assert_eq!(s4.deref(), &s4.content);
     assert_eq!(
-        s4.deref().deref(),
-        &(a.clone(), b.clone(), c.clone(), d.clone())
-    );
-    assert_eq!(
-        format!("{:?}", s4.deref()),
-        format!("Seq({:?}, {:?}, {:?}, {:?})", a, b, c, d)
+        format!("{:?}", s4.as_ref()),
+        format!("({:?}, {:?}, {:?}, {:?})", a, b, c, d)
     );
 }

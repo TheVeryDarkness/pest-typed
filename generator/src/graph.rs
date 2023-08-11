@@ -68,7 +68,7 @@ fn pairs() -> TokenStream {
 fn ignore(root: &TokenStream) -> TokenStream {
     let generics = generics();
     quote! {
-        #root::#generics::Ignored::<'i>
+        #root::#generics::Skipped::<'i>
     }
 }
 
@@ -107,8 +107,8 @@ enum Node {
     /// - Path: `.content`
     Content(Box<Node>),
     /// - Type: `#inner`
-    /// - Path: `.content.#index`
-    ContentI(usize, Box<Node>),
+    /// - Path: `.content.#index.1`
+    SequenceI(usize, Box<Node>),
     // Type wrapped by Option.
     /// - Type: `#opt::<#inner>`
     /// - Path: `._#index().and_then(|e|Some(e #inner)) #flat`
@@ -139,7 +139,7 @@ impl Node {
             Node::Rule(_) => false,
             #[cfg(feature = "grammar-extras")]
             Node::Tag(_) => false,
-            Node::Content(inner) | Node::ContentI(_, inner) => inner.flattenable(),
+            Node::Content(inner) | Node::SequenceI(_, inner) => inner.flattenable(),
             Node::ChoiceI(_, false, _) | Node::Optional(false, _) => true,
             Node::ChoiceI(_, true, inner) | Node::Optional(true, inner) => inner.flattenable(),
             Node::Contents(_) | Node::Tuple(_) => false,
@@ -148,7 +148,7 @@ impl Node {
     pub fn wrap(self, edge: Edge) -> Self {
         match edge {
             Edge::Content => Self::Content(Box::new(self)),
-            Edge::ContentI(i) => Self::ContentI(i, Box::new(self)),
+            Edge::ContentI(i) => Self::SequenceI(i, Box::new(self)),
             Edge::ChoiceI(i) => Self::ChoiceI(i, self.flattenable(), Box::new(self)),
             Edge::Optional => Self::Optional(self.flattenable(), Box::new(self)),
             Edge::Contents => Self::Contents(Box::new(self)),
@@ -206,10 +206,10 @@ impl Node {
                 let (pa, ty) = inner.expand(root);
                 (quote! {{let res = &res.content; #pa}}, quote! {#ty})
             }
-            Node::ContentI(i, inner) => {
+            Node::SequenceI(i, inner) => {
                 let (pa, ty) = inner.expand(root);
                 let i = Index::from(*i);
-                (quote! {{let res = &res.content.#i; #pa}}, quote! {#ty})
+                (quote! {{let res = &res.content.#i.1; #pa}}, quote! {#ty})
             }
             Node::Optional(flatten, inner) => {
                 let (pa, ty) = inner.expand(root);
@@ -1339,7 +1339,7 @@ pub(crate) fn generate_typed_pair_from_rule(
                     })
                 }
                 let ign = if seq {
-                    quote! {Ignored<'i>,}
+                    quote! {Skipped<'i>,}
                 } else {
                     quote! {}
                 };
@@ -1376,11 +1376,11 @@ pub(crate) fn generate_typed_pair_from_rule(
             mod generics {
                 use #pest_typed as pest_typed;
                 use #pest_typed::{NeverFailedTypedNode, predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
-                pub type Ignored<'i> = predefined_node::Ign::<
+                pub type Skipped<'i> = predefined_node::Skipped::<
                     'i,
                     #root::Rule,
-                    #root::#pairs::COMMENT::<'i>,
                     #root::#pairs::WHITESPACE::<'i>,
+                    #root::#pairs::COMMENT::<'i>,
                 >;
                 pub type Str<'i, Wrapper: StringWrapper> = predefined_node::Str::<'i, #root::Rule, Wrapper>;
                 pub type Insens<'i, Wrapper: StringWrapper> = predefined_node::Insens::<'i, #root::Rule, Wrapper>;
@@ -1394,8 +1394,8 @@ pub(crate) fn generate_typed_pair_from_rule(
                 pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<'i, #root::Rule, T>;
                 #(#seq)*
                 #(#chs)*
-                pub type Rep<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Rep<'i, #root::Rule, T, Ignored<'i>>;
-                pub type RepOnce<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::RepOnce<'i, #root::Rule, T, Ignored<'i>>;
+                pub type Rep<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Rep<'i, #root::Rule, T, Skipped<'i>>;
+                pub type RepOnce<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::RepOnce<'i, #root::Rule, T, Skipped<'i>>;
             }
         }
     };

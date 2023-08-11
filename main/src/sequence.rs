@@ -24,8 +24,8 @@ macro_rules! seq {
             $($T: $pest_typed::TypedNode<'i, R>, )*
             IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
         > {
-            #[doc = "Matched expressions."]
-            pub content: ( $T0, $($T, )* ),
+            #[doc = "Matched and skipped expressions."]
+            pub content: ( (IGNORED, $T0), $((IGNORED, $T), )* ),
             _phantom: ::core::marker::PhantomData<(&'i R, &'i IGNORED, &'i $T0, $(&'i $T, )*)>,
         }
         impl<
@@ -34,9 +34,9 @@ macro_rules! seq {
                 $T0: $pest_typed::TypedNode<'i, R>,
                 $($T: $pest_typed::TypedNode<'i, R>, )*
                 IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-            > ::core::convert::From<($T0, $($T, )*)> for $name<'i, R, $T0, $($T),*, IGNORED>
+            > ::core::convert::From<( (IGNORED, $T0), $((IGNORED, $T), )* )> for $name<'i, R, $T0, $($T),*, IGNORED>
             {
-                fn from(content: ($T0, $($T, )*)) -> Self {
+                fn from(content: ( (IGNORED, $T0), $((IGNORED, $T), )* )) -> Self {
                     Self { content, _phantom: ::core::marker::PhantomData }
                 }
             }
@@ -59,15 +59,15 @@ macro_rules! seq {
                     {
                         let (next, content) = T0::try_parse_with::<ATOMIC>(input, stack, tracker)?;
                         input = next;
-                        content
+                        (IGNORED::default(), content)
                     },
                     $(
                         {
-                            let (next, _) = IGNORED::parse_with::<ATOMIC>(input, stack);
+                            let (next, skipped) = IGNORED::parse_with::<ATOMIC>(input, stack);
                             input = next;
                             let (next, content) = $T::try_parse_with::<ATOMIC>(input, stack, tracker)?;
                             input = next;
-                            content
+                            (skipped, content)
                         },
                     )*
                 );
@@ -81,11 +81,11 @@ macro_rules! seq {
                 R: $pest_typed::RuleType + 'n,
                 $T0: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>,
                 $($T: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>),*,
-                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
+                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>,
             > $pest_typed::iterators::Pairs<'i, 'n, R> for $name<'i, R, $T0, $($T),*, IGNORED>
         {
-            type Iter = $pest_typed::chains!($pest_typed, Iter, $T0, $($T, )*);
-            type IntoIter = $pest_typed::chains!($pest_typed, IntoIter, $T0, $($T, )*);
+            type Iter = $pest_typed::chains!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, Iter, (IGNORED, $T0), $((IGNORED, $T), )*);
+            type IntoIter = $pest_typed::chains!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, IntoIter, (IGNORED, $T0), $((IGNORED, $T), )*);
 
             fn iter(&'n self) -> Self::Iter {
                 $pest_typed::chain!($pest_typed, self, iter, $t0, $($t, )*)
@@ -102,7 +102,7 @@ macro_rules! seq {
                 IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
             > ::core::ops::Deref for $name<'i, R, T0, $($T, )* IGNORED>
         {
-            type Target = ( T0, $($T, )* );
+            type Target = ( (IGNORED, T0), $((IGNORED, $T), )* );
             fn deref(&self) -> &Self::Target {
                 &self.content
             }
@@ -144,7 +144,7 @@ macro_rules! seq {
         {
             /// Convert the reference of a sequence into a tuple of references of elements.
             pub fn as_ref(&self) -> ( &$T0, $(&$T, )* ) {
-                ( &self.content.$t0, $(&self.content.$t, )* )
+                ( &self.content.$t0.1, $(&self.content.$t.1, )* )
             }
         }
         impl<
@@ -156,7 +156,7 @@ macro_rules! seq {
             > ::core::convert::From<$name<'i, R, T0, $($T, )* IGNORED>> for ( T0, $($T, )* )
         {
             fn from(value: $name<'i, R, T0, $($T, )* IGNORED>) -> Self {
-                value.content
+                ( value.content.$t0.1, $(value.content.$t.1, )* )
             }
         }
         impl<

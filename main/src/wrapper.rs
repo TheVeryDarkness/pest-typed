@@ -16,6 +16,11 @@ pub trait Storage<T> {
     /// Get contained string.
     fn get_content(&self) -> T;
 }
+/// An object containing a constant.
+pub trait ConstantStorage<T> {
+    /// Get contained string with `self`.
+    fn get_constant(&self) -> T;
+}
 
 /// A wrapper for string as a generics argument.
 pub trait StringWrapper: Clone + PartialEq {
@@ -24,6 +29,11 @@ pub trait StringWrapper: Clone + PartialEq {
 }
 impl<T: StringWrapper> Storage<&'static str> for T {
     fn get_content(&self) -> &'static str {
+        Self::CONTENT
+    }
+}
+impl<T: StringWrapper> ConstantStorage<&'static str> for T {
+    fn get_constant(&self) -> &'static str {
         Self::CONTENT
     }
 }
