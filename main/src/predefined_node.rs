@@ -679,15 +679,15 @@ impl<
                     let (next, _) = IGNORED::parse_with::<ATOMIC>(input, stack);
                     input = next;
                 }
-                stack.snapshot();
-                match T::try_parse_with::<ATOMIC>(input, stack, tracker) {
+                let res = restore_on_err(stack, |stack| {
+                    T::try_parse_with::<ATOMIC>(input, stack, tracker)
+                });
+                match res {
                     Ok((next, elem)) => {
-                        stack.clear_snapshot();
                         input = next;
                         vec.push(elem);
                     }
                     Err(_err) => {
-                        stack.restore();
                         if i < MIN {
                             return Err(());
                         }
@@ -1531,6 +1531,20 @@ pub fn match_char_by(position: &mut Position<'_>, pred: impl FnOnce(char) -> boo
         }
         matched
     });
+    res
+}
+
+/// Restore on error.
+pub fn restore_on_err<'i, T, E>(
+    stack: &mut Stack<Span<'i>>,
+    f: impl FnOnce(&mut Stack<Span<'i>>) -> Result<T, E>,
+) -> Result<T, E> {
+    stack.snapshot();
+    let res = f(stack);
+    match res {
+        Ok(_) => stack.clear_snapshot(),
+        Err(_) => stack.restore(),
+    }
     res
 }
 

@@ -12,7 +12,7 @@ use core::fmt::Debug;
 pub use alloc::rc::Rc;
 use pest::RuleType;
 
-use crate::RuleWrapper;
+use crate::{predefined_node::restore_on_err, RuleWrapper};
 
 use super::{error::Error, position::Position, span::Span, stack::Stack, tracker::Tracker};
 
@@ -76,8 +76,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Option<T> {
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        stack.snapshot();
-        match T::try_parse_with::<ATOMIC>(input, stack, tracker) {
+        let res = restore_on_err(stack, |stack| {
+            T::try_parse_with::<ATOMIC>(input, stack, tracker)
+        });
+        match res {
             Ok((input, inner)) => {
                 stack.clear_snapshot();
                 Ok((input, Self::from(Some(inner))))

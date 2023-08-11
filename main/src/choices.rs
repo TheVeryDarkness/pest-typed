@@ -141,19 +141,15 @@ macro_rules! choices {
                 stack: &mut $pest_typed::Stack<$pest_typed::Span<'i>>,
                 tracker: &mut $pest_typed::tracker::Tracker<'i, R>,
             ) -> ::core::result::Result<($pest_typed::Position<'i>, Self), ()> {
-                stack.snapshot();
-                if let Ok((input, res)) = $V0::try_parse_with::<ATOMIC>(input, stack, tracker) {
-                    stack.clear_snapshot();
+                let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V0::try_parse_with::<ATOMIC>(input, stack, tracker));
+                if let Ok((input, res)) = res {
                     return Ok((input, Self::$v0(res, ::core::marker::PhantomData)));
                 }
-                stack.restore();
                 $(
-                    stack.snapshot();
-                    if let Ok((input, res)) = $V::try_parse_with::<ATOMIC>(input, stack, tracker) {
-                        stack.clear_snapshot();
+                    let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V::try_parse_with::<ATOMIC>(input, stack, tracker));
+                    if let Ok((input, res)) = res {
                         return Ok((input, Self::$v(res, ::core::marker::PhantomData)));
                     }
-                    stack.restore();
                 )*
                 Err(())
             }
