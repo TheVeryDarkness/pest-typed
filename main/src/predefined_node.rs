@@ -679,12 +679,15 @@ impl<
                     let (next, _) = IGNORED::parse_with::<ATOMIC>(input, stack);
                     input = next;
                 }
+                stack.snapshot();
                 match T::try_parse_with::<ATOMIC>(input, stack, tracker) {
                     Ok((next, elem)) => {
+                        stack.clear_snapshot();
                         input = next;
                         vec.push(elem);
                     }
                     Err(_err) => {
+                        stack.restore();
                         if i < MIN {
                             return Err(());
                         }
@@ -898,57 +901,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Box<'i, R, T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.content.fmt(f)
-    }
-}
-
-/// Restore stack state on error.
-#[derive(Clone, PartialEq)]
-pub struct Restorable<'i, R: RuleType, T: TypedNode<'i, R>> {
-    /// Matched content.
-    pub content: T,
-    _phantom: PhantomData<&'i R>,
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> From<T> for Restorable<'i, R, T> {
-    fn from(content: T) -> Self {
-        Self {
-            content,
-            _phantom: PhantomData,
-        }
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Restorable<'i, R, T> {
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        &self.content
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Restorable<'i, R, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Restorable<'i, R, T> {
-    fn try_parse_with<const ATOMIC: bool>(
-        input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        stack.snapshot();
-        match T::try_parse_with::<ATOMIC>(input, stack, tracker) {
-            Ok((input, res)) => {
-                stack.clear_snapshot();
-                Ok((input, Self::from(res)))
-            }
-            Err(err) => {
-                stack.restore();
-                Err(err)
-            }
-        }
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Restorable<'i, R, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.content.fmt(f)
     }

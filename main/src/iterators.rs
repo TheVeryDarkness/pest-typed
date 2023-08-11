@@ -12,7 +12,7 @@
 use crate::{
     predefined_node::{
         AtomicRule, Box, CharRange, Insens, Negative, NonAtomicRule, PeekSlice1, PeekSlice2,
-        Positive, Push, RepMin, Restorable, Rule, Skip, Str, ANY, DROP, NEWLINE, PEEK, PEEK_ALL,
+        Positive, Push, RepMin, Rule, Skip, Str, ANY, DROP, NEWLINE, PEEK, PEEK_ALL,
         POP, POP_ALL, SOI,
     },
     typed_node::RuleStruct,
@@ -196,7 +196,6 @@ impl_empty!(CharRange<'i, R, MIN, MAX>, const MIN: char, const MAX: char);
 impl_forward_inner!(Box);
 impl_forward_inner!(Positive);
 impl_empty!(Negative<'i, R, T>, T: TypedNode<'i, R>);
-impl_forward_inner!(Restorable);
 
 impl<'i: 'n, 'n, R: RuleType + 'n, T: TypedNode<'i, R> + Pairs<'i, 'n, R>> Pairs<'i, 'n, R>
     for Option<T>

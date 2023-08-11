@@ -1023,22 +1023,8 @@ fn generate_graph_node<'g>(
                 explicit,
             )
         }
-        OptimizedExpr::RestoreOnErr(expr) => {
-            let (inner, accessers) =
-                generate_graph_node(expr, rule_config, map, false, emission, config, root);
-            let accessers = accessers.content();
-            process_single_alias(
-                map,
-                expr,
-                rule_config,
-                quote! {
-                    #root::#generics::Restorable::<'i, #inner>
-                },
-                accessers,
-                root,
-                emission,
-                explicit,
-            )
+        OptimizedExpr::RestoreOnErr(inner) => {
+            generate_graph_node(inner, rule_config, map, false, emission, config, root)
         }
         OptimizedExpr::Seq(_, _) => {
             let vec = walk!(expr, Seq);
@@ -1406,7 +1392,6 @@ pub(crate) fn generate_typed_pair_from_rule(
                 pub type Box<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Box<'i, #root::Rule, T>;
                 pub type Positive<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Positive<'i, #root::Rule, T>;
                 pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<'i, #root::Rule, T>;
-                pub type Restorable<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Restorable<'i, #root::Rule, T>;
                 #(#seq)*
                 #(#chs)*
                 pub type Rep<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Rep<'i, #root::Rule, T, Ignored<'i>>;
