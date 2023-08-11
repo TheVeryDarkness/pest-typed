@@ -74,12 +74,12 @@ mod tests {
         let whitespace = WHITESPACE::parse(" ").unwrap();
         assert_eq!(
             format!("{:?}", whitespace),
-            r#"AtomicRule { rule: WHITESPACE, content: Range { content: ' ' } }"#
+            r#"AtomicRule { rule: WHITESPACE, content: CharRange { content: ' ' } }"#
         );
         let comment = COMMENT::parse("\t").unwrap();
         assert_eq!(
             format!("{:?}", comment),
-            r#"AtomicRule { rule: COMMENT, content: Range { content: '\t' } }"#
+            r#"AtomicRule { rule: COMMENT, content: CharRange { content: '\t' } }"#
         );
     }
     type Ignore<'i> = Skipped<COMMENT<'i>, WHITESPACE<'i>>;
