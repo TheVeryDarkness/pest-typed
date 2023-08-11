@@ -35,7 +35,8 @@ mod wrapper;
 pub use pest::RuleType;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, RuleStruct, TypedNode};
 pub use wrapper::{
-    ConstantStorage, RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper,
+    BoundWrapper, ConstantStorage, RuleWrapper, Storage, StringArrayWrapper, StringWrapper,
+    TypeWrapper,
 };
 pub mod choices;
 mod macros;

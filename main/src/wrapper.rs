@@ -65,6 +65,17 @@ pub trait TypeWrapper: Clone + PartialEq {
 
 /// Bound for the length of vector.
 pub trait BoundWrapper: Clone + PartialEq {
+    /// Min length of a vector.
     const MIN: usize;
+    /// Max length of a vector.
     const MAX: usize;
+
+    /// Get min length.
+    fn get_min_len(&self) -> usize {
+        Self::MIN
+    }
+    /// Get max length.
+    fn get_max_len(&self) -> usize {
+        Self::MAX
+    }
 }
