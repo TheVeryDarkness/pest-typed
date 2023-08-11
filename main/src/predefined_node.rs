@@ -575,53 +575,6 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
     }
 }
 
-/// Optionally match `T`.
-#[derive(Clone, PartialEq)]
-pub struct Opt<'i, R: RuleType, T: TypedNode<'i, R>> {
-    /// Matched content.
-    pub content: Option<T>,
-    _phantom: PhantomData<&'i R>,
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> From<Option<T>> for Opt<'i, R, T> {
-    fn from(content: Option<T>) -> Self {
-        Self {
-            content,
-            _phantom: PhantomData,
-        }
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Opt<'i, R, T> {
-    #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
-        input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        match T::try_parse_with::<ATOMIC>(input, stack, tracker) {
-            Ok((input, inner)) => Ok((input, Self::from(Some(inner)))),
-            Err(_) => Ok((input, Self::from(None))),
-        }
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Opt<'i, R, T> {
-    type Target = Option<T>;
-    fn deref(&self) -> &Self::Target {
-        &self.content
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Opt<'i, R, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.content
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Opt<'i, R, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Opt")
-            .field("content", &self.content)
-            .finish()
-    }
-}
-
 /// Skip comments (by rule `COMMENT`) or white spaces (by rule `WHITESPACE`) if there is any.
 /// Never fail.
 #[derive(Clone, PartialEq)]

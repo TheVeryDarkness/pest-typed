@@ -67,3 +67,18 @@ pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
     /// The span of a matched expression by a non-silent rule.
     fn span(&self) -> Span<'i>;
 }
+
+/// Optionally match `T`.
+impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Option<T> {
+    #[inline]
+    fn try_parse_with<const ATOMIC: bool>(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Result<(Position<'i>, Self), ()> {
+        match T::try_parse_with::<ATOMIC>(input, stack, tracker) {
+            Ok((input, inner)) => Ok((input, Self::from(Some(inner)))),
+            Err(_) => Ok((input, Self::from(None))),
+        }
+    }
+}

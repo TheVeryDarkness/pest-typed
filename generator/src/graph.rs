@@ -89,7 +89,7 @@ enum Edge {
     ContentI(usize),
     // Type wrapped by Option.
     ChoiceI(usize),
-    OptionalContent,
+    Optional,
     // Type wrapped by Option.
     Contents,
 }
@@ -113,9 +113,9 @@ enum Node {
     /// - Type: `#opt::<#inner>`
     /// - Path: `._#index().and_then(|e|Some(e #inner)) #flat`
     ChoiceI(usize, bool, Box<Node>),
-    /// - Type: `#opt::<#inner>`
-    /// - Path: `.content.as_ref().and_then(|e|Some(e #inner)) #flat`
-    OptionalContent(bool, Box<Node>),
+    /// - Type: `#option::<#inner>`
+    /// - Path: `.as_ref().and_then(|e|Some(e #inner)) #flat`
+    Optional(bool, Box<Node>),
     // Type wrapped by Vec.
     /// - Type: `#vec::<#inner>`
     /// - Path: `.content.iter().map(|e|e #inner).collect::<#vec<_>>()`
@@ -140,10 +140,8 @@ impl Node {
             #[cfg(feature = "grammar-extras")]
             Node::Tag(_) => false,
             Node::Content(inner) | Node::ContentI(_, inner) => inner.flattenable(),
-            Node::ChoiceI(_, false, _) | Node::OptionalContent(false, _) => true,
-            Node::ChoiceI(_, true, inner) | Node::OptionalContent(true, inner) => {
-                inner.flattenable()
-            }
+            Node::ChoiceI(_, false, _) | Node::Optional(false, _) => true,
+            Node::ChoiceI(_, true, inner) | Node::Optional(true, inner) => inner.flattenable(),
             Node::Contents(_) | Node::Tuple(_) => false,
         }
     }
@@ -152,7 +150,7 @@ impl Node {
             Edge::Content => Self::Content(Box::new(self)),
             Edge::ContentI(i) => Self::ContentI(i, Box::new(self)),
             Edge::ChoiceI(i) => Self::ChoiceI(i, self.flattenable(), Box::new(self)),
-            Edge::OptionalContent => Self::OptionalContent(self.flattenable(), Box::new(self)),
+            Edge::Optional => Self::Optional(self.flattenable(), Box::new(self)),
             Edge::Contents => Self::Contents(Box::new(self)),
         }
     }
@@ -213,11 +211,11 @@ impl Node {
                 let i = Index::from(*i);
                 (quote! {{let res = &res.content.#i; #pa}}, quote! {#ty})
             }
-            Node::OptionalContent(flatten, inner) => {
+            Node::Optional(flatten, inner) => {
                 let (pa, ty) = inner.expand(root);
                 let flat = flat(flatten);
                 (
-                    quote! {{let res = res.content.as_ref().and_then(|res| Some(#pa)) #flat; res}},
+                    quote! {{let res = res.as_ref().and_then(|res| Some(#pa)) #flat; res}},
                     opt(flatten, ty),
                 )
             }
@@ -276,8 +274,8 @@ impl<'g> Accesser<'g> {
     pub fn contents(self) -> Self {
         self.prepend(Edge::Contents)
     }
-    pub fn optional_content(self) -> Self {
-        self.prepend(Edge::OptionalContent)
+    pub fn optional(self) -> Self {
+        self.prepend(Edge::Optional)
     }
     pub fn choice(self, i: usize) -> Self {
         self.prepend(Edge::ChoiceI(i))
@@ -484,10 +482,12 @@ fn create<'g>(
                 type IntoIter = #vec_mod::IntoIter<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>>;
 
                 fn iter(&'n self) -> Self::Iter {
-                    self.content.iter().collect::<#vec<_>>().into_iter()
+                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::iter(&self.content);
+                    i.collect::<#vec<_>>().into_iter()
                 }
                 fn into_iter(self) -> Self::IntoIter {
-                    self.content.into_iter().collect::<#vec<_>>().into_iter()
+                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::into_iter(self.content);
+                    i.collect::<#vec<_>>().into_iter()
                 }
             }
         },
@@ -497,10 +497,12 @@ fn create<'g>(
         Emission::InnerToken => quote! {
             impl<'i: 'n, 'n> #pest_typed::iterators::Pair<'i, 'n, #root::Rule> for #id<'i> {
                 fn inner(&'n self) -> #vec_mod::IntoIter<&'n (dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>)> {
-                    self.content.iter().collect::<#vec::<_>>().into_iter()
+                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::iter(&self.content);
+                    i.collect::<#vec::<_>>().into_iter()
                 }
                 fn into_inner(self) -> #vec_mod::IntoIter<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>> {
-                    self.content.into_iter().collect::<#vec::<_>>().into_iter()
+                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::into_iter(self.content);
+                    i.collect::<#vec::<_>>().into_iter()
                 }
             }
         },
@@ -1097,12 +1099,13 @@ fn generate_graph_node<'g>(
         OptimizedExpr::Opt(inner) => {
             let (inner_name, accessers) =
                 generate_graph_node(inner, rule_config, map, false, emission, config, root);
-            let accessers = accessers.optional_content();
+            let accessers = accessers.optional();
+            let option = option_type();
             process_single_alias(
                 map,
                 expr,
                 rule_config,
-                quote! {#root::#generics::Opt::<'i, #inner_name>},
+                quote! {#option::<#inner_name>},
                 accessers,
                 root,
                 emission,
@@ -1406,7 +1409,6 @@ pub(crate) fn generate_typed_pair_from_rule(
                 pub type Restorable<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Restorable<'i, #root::Rule, T>;
                 #(#seq)*
                 #(#chs)*
-                pub type Opt<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Opt<'i, #root::Rule, T>;
                 pub type Rep<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Rep<'i, #root::Rule, T, Ignored<'i>>;
                 pub type RepOnce<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::RepOnce<'i, #root::Rule, T, Ignored<'i>>;
             }

@@ -11,7 +11,7 @@
 
 use crate::{
     predefined_node::{
-        AtomicRule, Box, CharRange, Insens, Negative, NonAtomicRule, Opt, PeekSlice1, PeekSlice2,
+        AtomicRule, Box, CharRange, Insens, Negative, NonAtomicRule, PeekSlice1, PeekSlice2,
         Positive, Push, RepMin, Restorable, Rule, Skip, Str, ANY, DROP, NEWLINE, PEEK, PEEK_ALL,
         POP, POP_ALL, SOI,
     },
@@ -199,19 +199,19 @@ impl_empty!(Negative<'i, R, T>, T: TypedNode<'i, R>);
 impl_forward_inner!(Restorable);
 
 impl<'i: 'n, 'n, R: RuleType + 'n, T: TypedNode<'i, R> + Pairs<'i, 'n, R>> Pairs<'i, 'n, R>
-    for Opt<'i, R, T>
+    for Option<T>
 {
     type Iter = Maybe<&'n (dyn Pair<'i, 'n, R>), T::Iter>;
     type IntoIter = Maybe<boxed::Box<dyn Pair<'i, 'n, R> + 'n>, T::IntoIter>;
 
     fn iter(&'n self) -> Self::Iter {
-        match &self.content {
+        match &self {
             Some(inner) => Maybe(Some(inner.iter())),
             None => Maybe(None),
         }
     }
     fn into_iter(self) -> Self::IntoIter {
-        match self.content {
+        match self {
             Some(inner) => Maybe(Some(inner.into_iter())),
             None => Maybe(None),
         }
