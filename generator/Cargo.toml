@@ -1,7 +1,7 @@
 [package]
 name = "pest_typed_generator"
 description = "Pest-typed's code generator."
-version = "0.4.5"
+version = "0.5.0"
 edition = "2021"
 documentation = "https://docs.rs/pest_typed_generator"
 homepage = "https://github.com/theverydarkness/pest-typed"
@@ -20,5 +20,5 @@ quote = { version = "^1.0.31" }
 syn = { version = "^2.0.26" }
 
 [dev-dependencies]
-pest_typed = { path = "../main", version = "0.4.5", default-features = false }
+pest_typed = { path = "../main", version = "0.5.0", default-features = false }
 lazy_static = { version = "1.4.0" }
