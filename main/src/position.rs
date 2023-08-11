@@ -22,7 +22,7 @@ use super::span;
 /// A cursor position in a `&str` which provides useful methods to manually parse that string.
 #[derive(Clone, Copy)]
 pub struct Position<'i> {
-    input: &'i str,
+    pub(crate) input: &'i str,
     /// # Safety:
     ///
     /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
@@ -278,6 +278,7 @@ impl<'i> Position<'i> {
     /// Goes back `n` `char`s from the `Position` and returns `true` if the skip was possible or `false`
     /// otherwise. If the return value is `false`, `pos` will not be updated.
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn skip_back(&mut self, n: usize) -> bool {
         let skipped = {
             let mut len = 0;
@@ -379,6 +380,7 @@ impl<'i> Position<'i> {
     /// was made. If no match was made, returns `false`.
     /// `pos` will not be updated in either case.
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn match_char(&self, c: char) -> bool {
         matches!(self.input[self.pos..].chars().next(), Some(cc) if c == cc)
     }
@@ -386,6 +388,7 @@ impl<'i> Position<'i> {
     /// Matches the char at the `Position` against a filter function and returns `true` if a match
     /// was made. If no match was made, returns `false` and `pos` will not be updated.
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn match_char_by<F>(&mut self, f: F) -> bool
     where
         F: FnOnce(char) -> bool,

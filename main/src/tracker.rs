@@ -9,11 +9,11 @@
 
 //! Tracker for parsing failures.
 
-use super::{
+use crate::{
     error::{Error, ErrorVariant},
     position::Position,
+    RuleType, RuleWrapper,
 };
-use crate::RuleWrapper;
 use alloc::{
     borrow::ToOwned,
     collections::BTreeMap,
@@ -23,7 +23,6 @@ use alloc::{
     vec::Vec,
 };
 use core::cmp::Ordering;
-use pest::RuleType;
 
 enum SpecialError {
     /// Peek slice out of bound.
@@ -44,20 +43,6 @@ impl ToString for SpecialError {
             SpecialError::RepeatTooManyTimes => "Repeated too many times.".to_owned(),
             SpecialError::EmptyStack => "Nothing to pop or drop.".to_owned(),
         }
-    }
-}
-
-impl<R: RuleType> From<&SpecialError> for ErrorVariant<R> {
-    fn from(special: &SpecialError) -> Self {
-        ErrorVariant::CustomError {
-            message: special.to_string(),
-        }
-    }
-}
-
-impl<R: RuleType> From<SpecialError> for ErrorVariant<R> {
-    fn from(special: SpecialError) -> Self {
-        ErrorVariant::from(&special)
     }
 }
 
@@ -164,8 +149,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         self.record(rule, pos, succeeded);
         res
     }
-    /// Collect attempts to [`Error<R>`].
-    pub fn collect(self) -> Error<R> {
+    fn collect_to_message(self) -> String {
         let pos = self.position;
         // "{} | "
         // "{} = "
@@ -229,29 +213,25 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         for attempt in self.attempts {
             write_message(attempt);
         }
-
-        /// Reserved for future usage.
-        #[allow(dead_code)]
-        fn collect_rule_stack<R: RuleType>(vec: &[R]) -> String {
-            let max_len: usize = 3;
-            if vec.len() > max_len {
-                let v = vec.iter().rev().take(max_len);
-                let chain = v
-                    .map(|r| format!("{:?} <- ", r))
-                    .collect::<Vec<_>>()
-                    .concat();
-                format!("{} ...", chain)
-            } else {
-                let chain = vec
-                    .iter()
-                    .rev()
-                    .map(|r| format!("{:?}", r))
-                    .collect::<Vec<_>>()
-                    .join(" <- ");
-                chain
+        message
+    }
+    /// Collect attempts to [`Error<R>`]
+    pub fn collect(self) -> Error<R> {
+        let pos = self.position;
+        match pest::Position::new(pos.input, pos.pos()).ok_or_else(|| {
+            Error::new_from_pos(
+                ErrorVariant::CustomError {
+                    message: format!("Internal error (invalid character index)."),
+                },
+                pest::Position::from_start(pos.input),
+            )
+        }) {
+            Ok(pos) => {
+                let message = self.collect_to_message();
+                Error::new_from_pos(ErrorVariant::CustomError { message }, pos)
             }
+            Err(err) => err,
         }
-        Error::new_from_pos(ErrorVariant::CustomError { message }, pos)
     }
 }
 

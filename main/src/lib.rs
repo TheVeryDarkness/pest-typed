@@ -46,13 +46,12 @@ pub mod sequence;
 pub use alloc::boxed::Box;
 
 // Below modules are copied from pest.
-pub mod error;
 mod parser_state;
 mod position;
 mod span;
 mod stack;
 
-use error::Error;
+pub use pest::error;
 pub use position::Position;
 pub use span::{merge_spans, Span};
 pub use stack::Stack;
@@ -64,5 +63,5 @@ pub use pest::unicode;
 pub trait TypedParser<R: RuleType> {
     /// Parses a `&str` into a tree starting from T.
     #[allow(clippy::perf)]
-    fn parse<'i, T: ParsableTypedNode<'i, R>>(input: &'i str) -> Result<T, Error<R>>;
+    fn parse<'i, T: ParsableTypedNode<'i, R>>(input: &'i str) -> Result<T, error::Error<R>>;
 }

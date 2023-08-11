@@ -7,14 +7,12 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use crate::{
+    error::Error, position::Position, predefined_node::restore_on_err, span::Span, stack::Stack,
+    tracker::Tracker, RuleWrapper,
+};
 use core::fmt::Debug;
-
-pub use alloc::rc::Rc;
 use pest::RuleType;
-
-use crate::{predefined_node::restore_on_err, RuleWrapper};
-
-use super::{error::Error, position::Position, span::Span, stack::Stack, tracker::Tracker};
 
 /// Node of concrete syntax tree that never fails.
 pub trait NeverFailedTypedNode<'i, R: RuleType>
