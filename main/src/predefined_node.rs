@@ -1573,6 +1573,7 @@ mod tests {
     use super::super::Storage;
     use super::*;
     use alloc::format;
+    use alloc::string::String;
 
     macro_rules! make_rules {
         ($($ids:ident,)*) => {
@@ -1669,9 +1670,17 @@ mod tests {
     fn repetition() {
         let rep1 = R::parse("foofoofoo").unwrap();
         let rep2 = R::parse("foo foo foo").unwrap();
-        assert_eq!(format!("{:?}", rep1), format!("{:?}", rep2),);
         let rep3 = R::parse("foo foo\tfoo").unwrap();
-        assert_eq!(format!("{:?}", rep1), format!("{:?}", rep3),);
+        assert_ne!(rep1, rep2);
+        assert_ne!(rep1, rep3);
+        let format = |rep: &R<'_>| -> String {
+            rep.iter()
+                .map(|(_, e)| e.get_content())
+                .collect::<Vec<_>>()
+                .concat()
+        };
+        assert_eq!(format(&rep1), format(&rep2));
+        assert_eq!(format(&rep1), format(&rep3));
         assert_eq!(REP::MIN, 0);
     }
 }
