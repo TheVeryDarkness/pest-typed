@@ -187,13 +187,13 @@ macro_rules! impl_forward_inner {
     };
 }
 
-impl_empty!(Str<'i, R, T>, T: StringWrapper);
-impl_empty!(Insens<'i, R, T>, T: StringWrapper);
+impl_empty!(Str<T>, T: StringWrapper);
+impl_empty!(Insens<'i, T>, T: StringWrapper);
 impl_empty!(PeekSlice2<'i, R, START, END>, const START: i32, const END: i32);
 impl_empty!(PeekSlice1<'i, R, START>, const START: i32);
 impl_forward_inner!(Push);
-impl_empty!(Skip<'i, R, Strings>, Strings: StringArrayWrapper);
-impl_empty!(CharRange<'i, R, MIN, MAX>, const MIN: char, const MAX: char);
+impl_empty!(Skip<'i, Strings>, Strings: StringArrayWrapper);
+impl_empty!(CharRange<MIN, MAX>, const MIN: char, const MAX: char);
 impl_forward_inner!(Box);
 impl_forward_inner!(Positive);
 impl_empty!(Negative<'i, R, T>, T: TypedNode<'i, R>);
@@ -235,24 +235,24 @@ impl<'i: 'n, 'n, R: RuleType + 'n, T: TypedNode<'i, R> + Pairs<'i, 'n, R>> Pairs
 impl<
         'i: 'n,
         'n,
-        R: RuleType,
-        WHITESPACE: TypedNode<'i, R> + Pairs<'i, 'n, R>,
-        COMMENT: TypedNode<'i, R> + Pairs<'i, 'n, R>,
-    > Pairs<'i, 'n, R> for Skipped<'i, R, WHITESPACE, COMMENT>
+        R: RuleType + 'i,
+        WHITESPACE: TypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
+        COMMENT: TypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
+    > Pairs<'i, 'n, R> for Skipped<WHITESPACE, COMMENT>
 {
     type Iter = FlatMap<
-        core::slice::Iter<'n, Choice2<'i, R, WHITESPACE, COMMENT>>,
-        <Choice2<'i, R, WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::Iter,
+        core::slice::Iter<'n, Choice2<WHITESPACE, COMMENT>>,
+        <Choice2<WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::Iter,
         fn(
-            &'n Choice2<'i, R, WHITESPACE, COMMENT>,
-        ) -> <Choice2<'i, R, WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::Iter,
+            &'n Choice2<WHITESPACE, COMMENT>,
+        ) -> <Choice2<WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::Iter,
     >;
     type IntoIter = FlatMap<
-        alloc::vec::IntoIter<Choice2<'i, R, WHITESPACE, COMMENT>>,
-        <Choice2<'i, R, WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::IntoIter,
+        alloc::vec::IntoIter<Choice2<WHITESPACE, COMMENT>>,
+        <Choice2<WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::IntoIter,
         fn(
-            Choice2<'i, R, WHITESPACE, COMMENT>,
-        ) -> <Choice2<'i, R, WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::IntoIter,
+            Choice2<WHITESPACE, COMMENT>,
+        ) -> <Choice2<WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::IntoIter,
     >;
 
     fn iter(&'n self) -> Self::Iter {
@@ -268,10 +268,10 @@ impl<
         'n,
         R: RuleType + 'n,
         T: TypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
-        I: NeverFailedTypedNode<'i, R> + Pairs<'i, 'n, R>,
+        I: NeverFailedTypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
         const MIN: usize,
         const MAX: usize,
-    > Pairs<'i, 'n, R> for RepMinMax<'i, R, T, I, MIN, MAX>
+    > Pairs<'i, 'n, R> for RepMinMax<T, I, MIN, MAX>
 {
     type Iter = FlatMap<
         core::slice::Iter<'n, (I, T)>,
@@ -296,7 +296,22 @@ impl<
     }
 }
 
-macro_rules! impl_easiest {
+macro_rules! impl_without_lifetime {
+    ($id: ident) => {
+        impl<'i: 'n, 'n, R: RuleType + 'n> Pairs<'i, 'n, R> for $id {
+            type Iter = Empty<&'n (dyn Pair<'i, 'n, R>)>;
+            type IntoIter = Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
+
+            fn iter(&'n self) -> Self::Iter {
+                empty()
+            }
+            fn into_iter(self) -> Self::IntoIter {
+                empty()
+            }
+        }
+    };
+}
+macro_rules! impl_with_lifetime {
     ($id: ident) => {
         impl<'i: 'n, 'n, R: RuleType + 'n> Pairs<'i, 'n, R> for $id<'i> {
             type Iter = Empty<&'n (dyn Pair<'i, 'n, R>)>;
@@ -312,17 +327,16 @@ macro_rules! impl_easiest {
     };
 }
 
-impl_easiest!(ANY);
+impl_without_lifetime!(ANY);
+impl_without_lifetime!(SOI);
+impl_without_lifetime!(NEWLINE);
+impl_with_lifetime!(PEEK);
+impl_with_lifetime!(PEEK_ALL);
+impl_with_lifetime!(POP);
+impl_with_lifetime!(POP_ALL);
+impl_without_lifetime!(DROP);
 
-impl_easiest!(SOI);
-impl_easiest!(NEWLINE);
-impl_easiest!(PEEK);
-impl_easiest!(PEEK_ALL);
-impl_easiest!(POP);
-impl_easiest!(POP_ALL);
-impl_easiest!(DROP);
-
-impl_easiest!(AlwaysFail);
+impl_with_lifetime!(AlwaysFail);
 
 macro_rules! impl_self {
     ($node:ty, $($tt:tt)*) => {

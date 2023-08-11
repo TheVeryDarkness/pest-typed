@@ -21,25 +21,20 @@ pub trait NextChoice {
 macro_rules! choices_helper {
     ($pest_typed:ident, $name:ident, ($_V0:ident, $_v0:tt, $( $_V:ident, $_v:tt, )* ), $V0:ident, $v0:tt, $V1:ident, $v1:tt, $( $V:ident, $v:tt, )* ) => {
         /// Choices.
-        /// - `'i`: The lifetime of input string.
-        /// - `'n`: The lifetime of the root node.
         /// - `Ret`: Return value type.
-        /// - `R`: Rule type.
         /// - `...`: Choices branches.
-        pub struct $v0<'i, 'n, Ret, R: $pest_typed::RuleType, $_V0: $pest_typed::TypedNode<'i, R>, $($_V: $pest_typed::TypedNode<'i, R>, )*> {
-            pub(super) result: ::core::result::Result<Ret, &'n super::$name<'i, R, $_V0, $($_V, )*>>,
+        pub struct $v0<'n, Ret, $_V0, $($_V, )*> {
+            pub(super) result: ::core::result::Result<Ret, &'n super::$name<$_V0, $($_V, )*>>,
         }
 
-        impl<'i: 'n, 'n, Ret, R: $pest_typed::RuleType, $_V0: $pest_typed::TypedNode<'i, R>, $($_V: $pest_typed::TypedNode<'i, R>, )*>
-            $pest_typed::choices::NextChoice for $v0<'i, 'n, Ret, R, $_V0, $($_V, )* > {
-            type Next = $v1<'i, 'n, Ret, R, $_V0, $($_V, )* >;
+        impl<'n, Ret, $_V0, $($_V, )*> $pest_typed::choices::NextChoice for $v0<'n, Ret, $_V0, $($_V, )* > {
+            type Next = $v1<'n, Ret, $_V0, $($_V, )* >;
         }
-        impl<'i: 'n, 'n, Ret, R: $pest_typed::RuleType, $_V0: $pest_typed::TypedNode<'i, R>, $($_V: $pest_typed::TypedNode<'i, R>, )*>
-            $v0<'i, 'n, Ret, R, $_V0, $($_V, )* >
+        impl<'n, Ret, $_V0, $($_V, )*> $v0<'n, Ret, $_V0, $($_V, )* >
         {
             pub fn else_if(self, f: impl FnOnce(&$V0) -> Ret) -> <Self as $pest_typed::choices::NextChoice>::Next {
                 match self.result {
-                    Err(super::$name::$v0(matched, _)) => {
+                    Err(super::$name::$v0(matched)) => {
                         let result: Ret = f(matched);
                         $v1 { result: Ok(result) }
                     }
@@ -51,15 +46,13 @@ macro_rules! choices_helper {
         $crate::choices_helper!($pest_typed, $name, ($_V0, $_v0, $( $_V, $_v, )* ), $V1, $v1, $( $V, $v, )* );
     };
     ($pest_typed:ident, $name:ident, ($_V0:ident, $_v0:tt, $( $_V:ident, $_v:tt, )* ), $V0:ident, $v0:tt, ) => {
-        pub struct $v0<'i, 'n, Ret, R: $pest_typed::RuleType, $_V0: $pest_typed::TypedNode<'i, R>, $($_V: $pest_typed::TypedNode<'i, R>, )*> {
-            pub(super) result: ::core::result::Result<Ret, &'n super::$name<'i, R, $_V0, $($_V, )*>>,
+        pub struct $v0<'n, Ret, $_V0, $($_V, )*> {
+            pub(super) result: ::core::result::Result<Ret, &'n super::$name<$_V0, $($_V, )*>>,
         }
-        impl<'i: 'n, 'n, Ret, R: $pest_typed::RuleType, $_V0: $pest_typed::TypedNode<'i, R>, $($_V: $pest_typed::TypedNode<'i, R>, )*>
-            $v0<'i, 'n, Ret, R, $_V0, $($_V, )* >
-        {
+        impl<'n, Ret, $_V0, $($_V, )*> $v0<'n, Ret, $_V0, $($_V, )* > {
             pub fn else_then(self, f: impl FnOnce(&'n $V0) -> Ret) -> Ret {
                 match self.result {
-                    Err(super::$name::$v0(matched, _)) => f(matched),
+                    Err(super::$name::$v0(matched)) => f(matched),
                     Err(_) => ::core::unreachable!(),
                     Ok(ret) => ret,
                 }
@@ -74,8 +67,10 @@ macro_rules! choices_helper {
 macro_rules! choices_iter {
     ($name:ident, $pest_typed:ident, $iter_type:ident, $iter_func:ident, $item:ty, $V0:ident, $v0:tt, $( $V:ident, $v:tt, )* ) => {
         pub enum $iter_type<'i, 'n, R: $pest_typed::RuleType, $V0: $pest_typed::iterators::Pairs<'i, 'n, R>, $($V: $pest_typed::iterators::Pairs<'i, 'n, R>, )* > {
-            $v0($V0::$iter_type, ::core::marker::PhantomData<(&'i R, &'n R)>),
-            $($v($V::$iter_type, ::core::marker::PhantomData<(&'i R, &'n R)>), )*
+            $v0($V0::$iter_type),
+            $(
+                $v($V::$iter_type),
+            )*
         }
         impl<'i: 'n, 'n, R: $pest_typed::RuleType + 'n, $V0: $pest_typed::iterators::Pairs<'i, 'n, R>, $($V: $pest_typed::iterators::Pairs<'i, 'n, R>, )* >
             ::core::iter::Iterator for $iter_type<'i, 'n, R, $V0, $($V, )*>
@@ -83,8 +78,8 @@ macro_rules! choices_iter {
             type Item = $item;
             fn next(&mut self) -> Option<<Self as ::core::iter::Iterator>::Item> {
                 match self {
-                    Self::$v0($v0, _) => $v0.next(),
-                    $(Self::$v($v, _) => $v.next(), )*
+                    Self::$v0($v0) => $v0.next(),
+                    $(Self::$v($v) => $v.next(), )*
                 }
             }
         }
@@ -99,23 +94,23 @@ macro_rules! choices {
     ($name:ident, $pest_typed:ident, $helper:ident, $iter:ident, $V0:ident, $v0:tt, $( $V:ident, $v:tt, )* ) => {
         /// Match either of two expressions.
         #[derive(Clone, PartialEq)]
-        pub enum $name<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* > {
+        pub enum $name<$V0, $($V, )* > {
             #[doc = ::core::stringify!(Variant $v0 for choice $V0.)]
-            $v0($V0, ::core::marker::PhantomData<&'i R>),
+            $v0($V0),
             $(
                 #[doc = ::core::stringify!(Variant $v for choice $V.)]
-                $v($V, ::core::marker::PhantomData<&'i R>),
+                $v($V),
             )*
         }
-        impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* > $name<'i, R, $V0, $($V, )* > {
+        impl<$V0, $($V, )* > $name<$V0, $($V, )* > {
             /// Invoke if is not None and is the first case.
-            pub fn if_then<'n, Ret>(&'n self, f: impl FnOnce(&$V0) -> Ret) -> <$helper::$v0<'i, 'n, Ret, R, $V0, $($V, )* > as $crate::choices::NextChoice>::Next {
+            pub fn if_then<'n, Ret>(&'n self, f: impl FnOnce(&$V0) -> Ret) -> <$helper::$v0<'n, Ret, $V0, $($V, )* > as $crate::choices::NextChoice>::Next {
                 let helper = $helper::$v0 { result: Err(self) };
                 helper.else_if(f)
             }
             /// Access inner node if matched.
             pub fn $v0(&self) -> ::core::option::Option<&$V0> {
-                if let Self::$v0(res, _) = self {
+                if let Self::$v0(res) = self {
                     ::core::option::Option::Some(res)
                 } else {
                     ::core::option::Option::None
@@ -124,7 +119,7 @@ macro_rules! choices {
             $(
                 /// Access inner node if matched.
                 pub fn $v(&self) -> ::core::option::Option<&$V> {
-                    if let Self::$v(res, _) = self {
+                    if let Self::$v(res) = self {
                         ::core::option::Option::Some(res)
                     } else {
                         ::core::option::Option::None
@@ -133,7 +128,7 @@ macro_rules! choices {
             )*
         }
         impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* > $pest_typed::TypedNode<'i, R>
-            for $name<'i, R, $V0, $($V, )* >
+            for $name<$V0, $($V, )* >
         {
             #[inline]
             fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
@@ -143,12 +138,12 @@ macro_rules! choices {
             ) -> ::core::result::Result<($pest_typed::Position<'i>, Self), ()> {
                 let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V0::try_parse_with::<ATOMIC>(input, stack, tracker));
                 if let Ok((input, res)) = res {
-                    return Ok((input, Self::$v0(res, ::core::marker::PhantomData)));
+                    return Ok((input, Self::$v0(res)));
                 }
                 $(
                     let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V::try_parse_with::<ATOMIC>(input, stack, tracker));
                     if let Ok((input, res)) = res {
-                        return Ok((input, Self::$v(res, ::core::marker::PhantomData)));
+                        return Ok((input, Self::$v(res)));
                     }
                 )*
                 Err(())
@@ -157,35 +152,37 @@ macro_rules! choices {
         impl<
             'i: 'n,
             'n,
-            R: $pest_typed::RuleType,
+            R: $pest_typed::RuleType + 'i,
             $V0: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>,
             $($V: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>, )*
-        > $pest_typed::iterators::Pairs<'i, 'n, R> for $name<'i, R, $V0, $($V, )* >
+        > $pest_typed::iterators::Pairs<'i, 'n, R> for $name<$V0, $($V, )* >
         {
             type Iter = $iter::Iter<'i, 'n, R, $V0, $($V, )*>;
             type IntoIter = $iter::IntoIter<'i, 'n, R, $V0, $($V, )*>;
 
             fn iter(&'n self) -> Self::Iter {
                 match self {
-                    Self::$v0($v0, _) => Self::Iter::$v0($v0.iter(), ::core::marker::PhantomData),
-                    $(Self::$v($v, _) => Self::Iter::$v($v.iter(), ::core::marker::PhantomData), )*
+                    Self::$v0($v0) => Self::Iter::$v0($v0.iter()),
+                    $(
+                        Self::$v($v) => Self::Iter::$v($v.iter()),
+                    )*
                 }
             }
             fn into_iter(self) -> Self::IntoIter {
                 match self {
-                    Self::$v0($v0, _) => Self::IntoIter::$v0($v0.into_iter(), ::core::marker::PhantomData),
-                    $(Self::$v($v, _) => Self::IntoIter::$v($v.into_iter(), ::core::marker::PhantomData), )*
+                    Self::$v0($v0) => Self::IntoIter::$v0($v0.into_iter()),
+                    $(Self::$v($v) => Self::IntoIter::$v($v.into_iter()), )*
                 }
             }
         }
-        impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* >
-            ::core::fmt::Debug for $name<'i, R, $V0, $($V, )* >
+        impl<$V0: ::core::fmt::Debug, $($V: ::core::fmt::Debug, )* >
+            ::core::fmt::Debug for $name<$V0, $($V, )* >
         {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 match self {
-                    Self::$v0($v0, _) => f.debug_struct(::core::stringify!($name)).field(&::core::stringify!($v0), &$v0).finish(),
+                    Self::$v0($v0) => f.debug_struct(::core::stringify!($name)).field(&::core::stringify!($v0), &$v0).finish(),
                     $(
-                        Self::$v($v, _) => f.debug_struct(::core::stringify!($name)).field(&::core::stringify!($v), &$v).finish(),
+                        Self::$v($v) => f.debug_struct(::core::stringify!($name)).field(&::core::stringify!($v), &$v).finish(),
                     )*
                 }
             }

@@ -17,16 +17,16 @@ macro_rules! seq {
     ($name:ident, $pest_typed:ident, $T0:ident, $t0:tt, $( $T:ident, $t:tt, )* ) => {
         #[doc = "Match a sequence of several expressions."]
         #[derive(Clone)]
-        pub struct $name<
-            'i,
-            R: $pest_typed::RuleType,
-            $T0: $pest_typed::TypedNode<'i, R>,
-            $($T: $pest_typed::TypedNode<'i, R>, )*
-            IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-        > {
+        pub struct $name<$T0, $($T),*, IGNORED, > {
             #[doc = "Matched and skipped expressions."]
             pub content: ( (IGNORED, $T0), $((IGNORED, $T), )* ),
-            _phantom: ::core::marker::PhantomData<(&'i R, &'i IGNORED, &'i $T0, $(&'i $T, )*)>,
+        }
+        impl<$T0, $($T, )* IGNORED> ::core::convert::From<( (IGNORED, $T0), $((IGNORED, $T), )* )>
+            for $name<$T0, $($T),*, IGNORED>
+        {
+            fn from(content: ( (IGNORED, $T0), $((IGNORED, $T), )* )) -> Self {
+                Self { content }
+            }
         }
         impl<
                 'i,
@@ -34,19 +34,7 @@ macro_rules! seq {
                 $T0: $pest_typed::TypedNode<'i, R>,
                 $($T: $pest_typed::TypedNode<'i, R>, )*
                 IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-            > ::core::convert::From<( (IGNORED, $T0), $((IGNORED, $T), )* )> for $name<'i, R, $T0, $($T),*, IGNORED>
-            {
-                fn from(content: ( (IGNORED, $T0), $((IGNORED, $T), )* )) -> Self {
-                    Self { content, _phantom: ::core::marker::PhantomData }
-                }
-            }
-        impl<
-                'i,
-                R: $pest_typed::RuleType,
-                $T0: $pest_typed::TypedNode<'i, R>,
-                $($T: $pest_typed::TypedNode<'i, R>, )*
-                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-            > $pest_typed::TypedNode<'i, R> for $name<'i, R, $T0, $($T),*, IGNORED>
+            > $pest_typed::TypedNode<'i, R> for $name<$T0, $($T),*, IGNORED>
         {
             #[inline]
             fn try_parse_with<const ATOMIC: bool>(
@@ -82,7 +70,7 @@ macro_rules! seq {
                 $T0: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>,
                 $($T: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>),*,
                 IGNORED: $pest_typed::NeverFailedTypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>,
-            > $pest_typed::iterators::Pairs<'i, 'n, R> for $name<'i, R, $T0, $($T),*, IGNORED>
+            > $pest_typed::iterators::Pairs<'i, 'n, R> for $name<$T0, $($T),*, IGNORED>
         {
             type Iter = $pest_typed::chains!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, Iter, (IGNORED, $T0), $((IGNORED, $T), )*);
             type IntoIter = $pest_typed::chains!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, IntoIter, (IGNORED, $T0), $((IGNORED, $T), )*);
@@ -94,38 +82,19 @@ macro_rules! seq {
                 $pest_typed::chain!($pest_typed, self, into_iter, $t0, $($t, )*)
             }
         }
-        impl<
-                'i,
-                R: $pest_typed::RuleType,
-                $T0: $pest_typed::TypedNode<'i, R>,
-                $($T: $pest_typed::TypedNode<'i, R>, )*
-                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-            > ::core::ops::Deref for $name<'i, R, T0, $($T, )* IGNORED>
-        {
+        impl<$T0, $($T),*, IGNORED> ::core::ops::Deref for $name<T0, $($T),*, IGNORED> {
             type Target = ( (IGNORED, T0), $((IGNORED, $T), )* );
             fn deref(&self) -> &Self::Target {
                 &self.content
             }
         }
-        impl<
-                'i,
-                R: $pest_typed::RuleType,
-                $T0: $pest_typed::TypedNode<'i, R>,
-                $($T: $pest_typed::TypedNode<'i, R>, )*
-                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-            > ::core::ops::DerefMut for $name<'i, R, T0, $($T, )* IGNORED>
-        {
+        impl<$T0, $($T),*, IGNORED> ::core::ops::DerefMut for $name<T0, $($T),*, IGNORED> {
             fn deref_mut(&mut self) -> &mut Self::Target {
                 &mut self.content
             }
         }
-        impl<
-                'i,
-                R: $pest_typed::RuleType,
-                $T0: $pest_typed::TypedNode<'i, R>,
-                $($T: $pest_typed::TypedNode<'i, R>, )*
-                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-            > ::core::cmp::PartialEq for $name<'i, R, T0, $($T, )* IGNORED>
+        impl<$T0: ::core::cmp::PartialEq, $($T: ::core::cmp::PartialEq),*, IGNORED: ::core::cmp::PartialEq>
+            ::core::cmp::PartialEq for $name<T0, $($T),*, IGNORED>
         {
             fn eq(&self, other: &Self) -> ::core::primitive::bool {
                 self.content.$t0 == other.content.$t0
@@ -134,38 +103,22 @@ macro_rules! seq {
                 )*
             }
         }
-        impl<
-                'i,
-                R: $pest_typed::RuleType,
-                $T0: $pest_typed::TypedNode<'i, R>,
-                $($T: $pest_typed::TypedNode<'i, R>, )*
-                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-            > $name<'i, R, T0, $($T, )* IGNORED>
+        impl<$T0, $($T),*, IGNORED> $name<T0, $($T),*, IGNORED>
         {
             /// Convert the reference of a sequence into a tuple of references of elements.
             pub fn as_ref(&self) -> ( &$T0, $(&$T, )* ) {
                 ( &self.content.$t0.1, $(&self.content.$t.1, )* )
             }
         }
-        impl<
-                'i,
-                R: $pest_typed::RuleType,
-                $T0: $pest_typed::TypedNode<'i, R>,
-                $($T: $pest_typed::TypedNode<'i, R>, )*
-                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-            > ::core::convert::From<$name<'i, R, T0, $($T, )* IGNORED>> for ( T0, $($T, )* )
+        impl<$T0, $($T),*, IGNORED> ::core::convert::From<$name<T0, $($T),*, IGNORED>>
+            for ( T0, $($T, )* )
         {
-            fn from(value: $name<'i, R, T0, $($T, )* IGNORED>) -> Self {
+            fn from(value: $name<T0, $($T),*, IGNORED>) -> Self {
                 ( value.content.$t0.1, $(value.content.$t.1, )* )
             }
         }
-        impl<
-                'i,
-                R: $pest_typed::RuleType,
-                $T0: $pest_typed::TypedNode<'i, R>,
-                $($T: $pest_typed::TypedNode<'i, R>, )*
-                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-            > ::core::fmt::Debug for $name<'i, R, T0, $($T),*, IGNORED>
+        impl<$T0: ::core::fmt::Debug, $($T: ::core::fmt::Debug),*, IGNORED: ::core::fmt::Debug>
+            ::core::fmt::Debug for $name<T0, $($T),*, IGNORED>
         {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 f.debug_tuple("Seq")

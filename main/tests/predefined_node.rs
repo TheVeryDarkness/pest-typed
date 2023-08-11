@@ -56,28 +56,12 @@ mod tests {
         type Rule = Rule;
     }
 
-    type WHITESPACE<'i> = AtomicRule<
-        'i,
-        Rule,
-        CharRange<'i, Rule, ' ', ' '>,
-        rule_wrappers::WHITESPACE,
-        rule_wrappers::EOI,
-    >;
-    type COMMENT<'i> = AtomicRule<
-        'i,
-        Rule,
-        CharRange<'i, Rule, '\t', '\t'>,
-        rule_wrappers::COMMENT,
-        rule_wrappers::EOI,
-    >;
-    type StrFoo<'i> = super::Rule<
-        'i,
-        Rule,
-        Str<'i, Rule, Foo>,
-        rule_wrappers::Foo,
-        rule_wrappers::EOI,
-        Ignore<'i>,
-    >;
+    type WHITESPACE<'i> =
+        AtomicRule<'i, Rule, CharRange<' ', ' '>, rule_wrappers::WHITESPACE, rule_wrappers::EOI>;
+    type COMMENT<'i> =
+        AtomicRule<'i, Rule, CharRange<'\t', '\t'>, rule_wrappers::COMMENT, rule_wrappers::EOI>;
+    type StrFoo<'i> =
+        super::Rule<'i, Rule, Str<Foo>, rule_wrappers::Foo, rule_wrappers::EOI, Ignore<'i>>;
     #[test]
     fn string() {
         assert_eq!(<StrFoo<'_> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
@@ -98,7 +82,7 @@ mod tests {
             r#"AtomicRule { rule: COMMENT, content: Range { content: '\t' } }"#
         );
     }
-    type Ignore<'i> = Skipped<'i, Rule, COMMENT<'i>, WHITESPACE<'i>>;
+    type Ignore<'i> = Skipped<COMMENT<'i>, WHITESPACE<'i>>;
     #[test]
     fn ignore() {
         super::Rule::<Rule, Ignore<'_>, rule_wrappers::RepFoo, rule_wrappers::EOI, Ignore<'_>>::parse(
@@ -107,7 +91,7 @@ mod tests {
         .unwrap();
     }
 
-    type REP<'i> = Rep<'i, Rule, Str<'i, Rule, Foo>, Ignore<'i>>;
+    type REP<'i> = Rep<Str<Foo>, Ignore<'i>>;
     type R<'i> =
         super::Rule<'i, Rule, REP<'i>, rule_wrappers::RepFoo, rule_wrappers::EOI, Ignore<'i>>;
     #[test]

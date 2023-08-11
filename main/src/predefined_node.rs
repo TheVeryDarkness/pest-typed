@@ -32,20 +32,20 @@ use super::{
 ///
 /// See [`Insens`] for case-insensitive matching.
 #[derive(Clone, PartialEq)]
-pub struct Str<'i, R: RuleType, T: StringWrapper> {
-    _phantom: PhantomData<(&'i R, &'i T)>,
+pub struct Str<T: StringWrapper + 'static> {
+    _phantom: PhantomData<&'static T>,
 }
-impl<'i, R: RuleType, T: StringWrapper> StringWrapper for Str<'i, R, T> {
+impl<T: StringWrapper> StringWrapper for Str<T> {
     const CONTENT: &'static str = T::CONTENT;
 }
-impl<'i, R: RuleType, T: StringWrapper> From<()> for Str<'i, R, T> {
+impl<T: StringWrapper> From<()> for Str<T> {
     fn from(_value: ()) -> Self {
         Self {
             _phantom: PhantomData,
         }
     }
 }
-impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<'i, R, T> {
+impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<T> {
     fn try_parse_with<const _A: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
@@ -58,7 +58,7 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<'i, R, T> {
         }
     }
 }
-impl<'i, R: RuleType, T: StringWrapper> Debug for Str<'i, R, T> {
+impl<T: StringWrapper> Debug for Str<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Str").finish()
     }
@@ -73,15 +73,15 @@ impl<'i, R: RuleType, T: StringWrapper> Debug for Str<'i, R, T> {
 ///
 /// See [`Str`] for case-sensitive matching.
 #[derive(Clone, PartialEq)]
-pub struct Insens<'i, R: RuleType, T: StringWrapper> {
+pub struct Insens<'i, T: StringWrapper> {
     /// Matched content.
     pub content: &'i str,
-    _phantom: PhantomData<(&'i R, &'i T)>,
+    _phantom: PhantomData<&'i T>,
 }
-impl<'i, R: RuleType, T: StringWrapper> StringWrapper for Insens<'i, R, T> {
+impl<'i, T: StringWrapper> StringWrapper for Insens<'i, T> {
     const CONTENT: &'static str = T::CONTENT;
 }
-impl<'i, R: RuleType, T: StringWrapper> From<&'i str> for Insens<'i, R, T> {
+impl<'i, T: StringWrapper> From<&'i str> for Insens<'i, T> {
     fn from(content: &'i str) -> Self {
         Self {
             content,
@@ -89,7 +89,7 @@ impl<'i, R: RuleType, T: StringWrapper> From<&'i str> for Insens<'i, R, T> {
         }
     }
 }
-impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
+impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, T> {
     fn try_parse_with<const _A: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
@@ -104,7 +104,7 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, R, T> {
         }
     }
 }
-impl<'i, R: RuleType, T: StringWrapper> Debug for Insens<'i, R, T> {
+impl<'i, T: StringWrapper> Debug for Insens<'i, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Insens").finish()
     }
@@ -151,12 +151,12 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Silent<'i, R, T> {
 
 /// Skips until one of the given `strings`
 #[derive(Clone, PartialEq)]
-pub struct Skip<'i, R: RuleType, Strings: StringArrayWrapper> {
+pub struct Skip<'i, Strings: StringArrayWrapper> {
     /// Skipped span.
     pub span: Span<'i>,
-    _phantom: PhantomData<(&'i R, &'i Strings)>,
+    _phantom: PhantomData<&'i Strings>,
 }
-impl<'i, R: RuleType, Strings: StringArrayWrapper> From<Span<'i>> for Skip<'i, R, Strings> {
+impl<'i, Strings: StringArrayWrapper> From<Span<'i>> for Skip<'i, Strings> {
     fn from(span: Span<'i>) -> Self {
         Self {
             span,
@@ -164,7 +164,7 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> From<Span<'i>> for Skip<'i, R
         }
     }
 }
-impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i, R, Strings> {
+impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i, Strings> {
     fn try_parse_with<const _A: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
@@ -186,7 +186,7 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i,
         }
     }
 }
-impl<'i, R: RuleType, Strings: StringArrayWrapper> Debug for Skip<'i, R, Strings> {
+impl<'i, Strings: StringArrayWrapper> Debug for Skip<'i, Strings> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Skip").finish()
     }
@@ -194,53 +194,40 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> Debug for Skip<'i, R, Strings
 
 /// Skip `n` characters if there are.
 #[derive(Clone, PartialEq)]
-pub struct SkipChar<'i, R: RuleType, const N: usize> {
-    _phantom: PhantomData<&'i R>,
+pub struct SkipChar<'i, const N: usize> {
+    /// Skipped span.
+    pub span: Span<'i>,
 }
-impl<'i, R: RuleType, const N: usize> From<()> for SkipChar<'i, R, N> {
-    fn from(_: ()) -> Self {
-        Self {
-            _phantom: PhantomData,
-        }
-    }
-}
-impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, R, N> {
+impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, N> {
     fn try_parse_with<const ATOMIC: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
+        let start = input;
         match input.skip(N) {
-            true => Ok((input, Self::from(()))),
+            true => {
+                let span = start.span(&input);
+                Ok((input, Self { span }))
+            }
             false => Err(()),
         }
     }
 }
-impl<'i, R: RuleType, const N: usize> Debug for SkipChar<'i, R, N> {
+impl<'i, const N: usize> Debug for SkipChar<'i, N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Range").finish()
+        f.debug_struct("SkipChar").finish()
     }
 }
 
 /// Match a character in the range `[MIN, MAX]`.
 /// Inclusively both below and above.
 #[derive(Clone, PartialEq)]
-pub struct CharRange<'i, R: RuleType, const MIN: char, const MAX: char> {
+pub struct CharRange<const MIN: char, const MAX: char> {
     /// Matched character.
     pub content: char,
-    _phantom: PhantomData<&'i R>,
 }
-impl<'i, R: RuleType, const MIN: char, const MAX: char> From<char> for CharRange<'i, R, MIN, MAX> {
-    fn from(content: char) -> Self {
-        Self {
-            content,
-            _phantom: PhantomData,
-        }
-    }
-}
-impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
-    for CharRange<'i, R, MIN, MAX>
-{
+impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R> for CharRange<MIN, MAX> {
     fn try_parse_with<const _A: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
@@ -251,16 +238,15 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R>
             true => {
                 let span = start.span(&input);
                 let content = span.as_str().chars().next().unwrap();
-                Ok((input, Self::from(content)))
+                Ok((input, Self { content }))
             }
             false => Err(()),
         }
     }
 }
-
-impl<'i, R: RuleType, const MIN: char, const MAX: char> Debug for CharRange<'i, R, MIN, MAX> {
+impl<const MIN: char, const MAX: char> Debug for CharRange<MIN, MAX> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Range")
+        f.debug_struct("CharRange")
             .field("content", &self.content)
             .finish()
     }
@@ -405,40 +391,32 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Negative<'i, R, N> {
 
 /// Match any character.
 #[derive(Debug, Clone, PartialEq)]
-pub struct ANY<'i> {
-    /// Pair span.
-    pub span: Span<'i>,
+pub struct ANY {
     /// Matched character.
     pub content: char,
 }
-impl<'i, R: RuleType> TypedNode<'i, R> for ANY<'i> {
+impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
     #[inline]
     fn try_parse_with<const _A: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let original_input = input;
         let mut c: char = ' ';
         match input.match_char_by(|ch| {
             c = ch;
             true
         }) {
-            true => {
-                let span = original_input.span(&input);
-                Ok((input, Self { span, content: c }))
-            }
+            true => Ok((input, Self { content: c })),
             false => Err(()),
         }
     }
 }
 
 /// Match the start of input.
-#[derive(Clone, PartialEq)]
-pub struct SOI<'i> {
-    _phantom: PhantomData<&'i str>,
-}
-impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct SOI;
+impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
     #[inline]
     fn try_parse_with<const _A: bool>(
         input: Position<'i>,
@@ -446,31 +424,19 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI<'i> {
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         if input.at_start() {
-            Ok((
-                input,
-                Self {
-                    _phantom: PhantomData,
-                },
-            ))
+            Ok((input, Self))
         } else {
             Err(())
         }
-    }
-}
-impl<'i> Debug for SOI<'i> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SOI").finish()
     }
 }
 
 /// Match the end of input.
 ///
 /// [`EOI`] will record its rule if not matched.
-#[derive(Clone, PartialEq)]
-pub struct EOI<'i> {
-    _phantom: PhantomData<&'i str>,
-}
-impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct EOI;
+impl<'i, R: RuleType> TypedNode<'i, R> for EOI {
     #[inline]
     fn try_parse_with<const _A: bool>(
         input: Position<'i>,
@@ -478,44 +444,48 @@ impl<'i, R: RuleType> TypedNode<'i, R> for EOI<'i> {
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         if input.at_end() {
-            Ok((
-                input,
-                Self {
-                    _phantom: PhantomData,
-                },
-            ))
+            Ok((input, Self))
         } else {
             Err(())
         }
     }
 }
-impl<'i> Debug for EOI<'i> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("EOI").finish()
-    }
+
+/// Type of eol.
+#[derive(Debug, Clone, PartialEq)]
+pub enum NewLineType {
+    /// `\r\n`
+    CRLF,
+    /// `\n`
+    LF,
+    /// `\r`
+    CR,
 }
 
 /// Match a new line character.
 /// A built-in rule. Equivalent to `"\r\n" | "\n" | "\r"`.
 #[derive(Debug, Clone, PartialEq)]
-pub struct NEWLINE<'i> {
-    /// Pair span.
-    pub span: Span<'i>,
+pub struct NEWLINE {
+    /// Type of matched character.
+    pub content: NewLineType,
 }
-impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE<'i> {
+impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE {
     #[inline]
     fn try_parse_with<const _A: bool>(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let start = input;
-        if input.match_string("\r\n") || input.match_string("\n") || input.match_string("\r") {
-            let span = start.span(&input);
-            Ok((input, Self { span }))
+        let (input, t) = if input.match_string("\r\n") {
+            (input, NewLineType::CRLF)
+        } else if input.match_string("\n") {
+            (input, NewLineType::LF)
+        } else if input.match_string("\r") {
+            (input, NewLineType::CR)
         } else {
-            Err(())
-        }
+            return Err(());
+        };
+        Ok((input, Self { content: t }))
     }
 }
 
@@ -586,24 +556,20 @@ pub enum SkippedUnit<COMMENT: Clone + PartialEq, WHITESPACE: Clone + PartialEq> 
 /// Skip comments (by rule `COMMENT`) or white spaces (by rule `WHITESPACE`) if there is any.
 ///
 /// Never fail.
-#[derive(Clone, PartialEq)]
-pub struct Skipped<'i, R: RuleType, WHITESPACE: TypedNode<'i, R>, COMMENT: TypedNode<'i, R>> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct Skipped<WHITESPACE, COMMENT> {
     /// Skipped comments and white spaces.
-    pub content: Vec<Choice2<'i, R, WHITESPACE, COMMENT>>,
-    _phantom: PhantomData<(&'i R, &'i COMMENT, &'i WHITESPACE)>,
+    pub content: Vec<Choice2<WHITESPACE, COMMENT>>,
 }
-impl<'i, R: RuleType, WHITESPACE: TypedNode<'i, R>, COMMENT: TypedNode<'i, R>> Default
-    for Skipped<'i, R, WHITESPACE, COMMENT>
-{
+impl<WHITESPACE, COMMENT> Default for Skipped<WHITESPACE, COMMENT> {
     fn default() -> Self {
         Self {
             content: Vec::new(),
-            _phantom: PhantomData,
         }
     }
 }
 impl<'i, R: RuleType, WHITESPACE: TypedNode<'i, R>, COMMENT: TypedNode<'i, R>>
-    NeverFailedTypedNode<'i, R> for Skipped<'i, R, WHITESPACE, COMMENT>
+    NeverFailedTypedNode<'i, R> for Skipped<WHITESPACE, COMMENT>
 {
     #[inline]
     fn parse_with<const ATOMIC: bool>(
@@ -621,29 +587,23 @@ impl<'i, R: RuleType, WHITESPACE: TypedNode<'i, R>, COMMENT: TypedNode<'i, R>>
             while let Ok((remained, ws)) =
                 WHITESPACE::try_parse_with::<true>(input, stack, &mut tracker)
             {
-                vec.push(Choice2::_0(ws, PhantomData));
+                vec.push(Choice2::_0(ws));
                 input = remained;
                 flag = true;
             }
             while let Ok((remained, c)) =
                 COMMENT::try_parse_with::<true>(input, stack, &mut tracker)
             {
-                vec.push(Choice2::_1(c, PhantomData));
+                vec.push(Choice2::_1(c));
                 input = remained;
                 flag = true;
             }
         }
-        (
-            input,
-            Self {
-                content: vec,
-                _phantom: PhantomData,
-            },
-        )
+        (input, Self { content: vec })
     }
 }
 impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> TypedNode<'i, R>
-    for Skipped<'i, R, COMMENT, WHITESPACE>
+    for Skipped<COMMENT, WHITESPACE>
 {
     #[inline]
     fn try_parse_with<const ATOMIC: bool>(
@@ -654,31 +614,12 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> T
         Ok(Self::parse_with::<ATOMIC>(input, stack))
     }
 }
-impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> Debug
-    for Skipped<'i, R, COMMENT, WHITESPACE>
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut debugger = f.debug_tuple("Skipped");
-        for unit in self.content.iter() {
-            debugger.field(unit);
-        }
-        debugger.finish()
-    }
-}
 
 /// Repeatably match `T` at least `MIN` times.
-#[derive(Clone, PartialEq)]
-pub struct RepMinMax<
-    'i,
-    R: RuleType,
-    T: TypedNode<'i, R>,
-    IGNORED: NeverFailedTypedNode<'i, R>,
-    const MIN: usize,
-    const MAX: usize,
-> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct RepMinMax<T, IGNORED, const MIN: usize, const MAX: usize> {
     /// Skipped and Matched expressions.
     pub content: Vec<(IGNORED, T)>,
-    _phantom: PhantomData<(&'i R, &'i IGNORED)>,
 }
 impl<
         'i,
@@ -687,7 +628,7 @@ impl<
         IGNORED: NeverFailedTypedNode<'i, R>,
         const MIN: usize,
         const MAX: usize,
-    > TypedNode<'i, R> for RepMinMax<'i, R, T, IGNORED, MIN, MAX>
+    > TypedNode<'i, R> for RepMinMax<T, IGNORED, MIN, MAX>
 {
     #[inline]
     fn try_parse_with<const ATOMIC: bool>(
@@ -719,72 +660,37 @@ impl<
                 }
             }
         }
-        Ok((
-            input,
-            Self {
-                content: vec,
-                _phantom: PhantomData,
-            },
-        ))
+        Ok((input, Self { content: vec }))
     }
 }
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-        const MIN: usize,
-        const MAX: usize,
-    > Debug for RepMinMax<'i, R, T, IGNORED, MIN, MAX>
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RepMinMax")
-            .field("content", &self.content)
-            .finish()
-    }
-}
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-        const MIN: usize,
-        const MAX: usize,
-    > RepMinMax<'i, R, T, IGNORED, MIN, MAX>
-{
+impl<T, IGNORED, const MIN: usize, const MAX: usize> RepMinMax<T, IGNORED, MIN, MAX> {
     /// Returns an iterator over all matched expressions.
-    pub fn iter<'n>(&'n self) -> alloc::vec::IntoIter<&'n T> {
-        self.content
-            .iter()
-            .map(|(_, e)| e)
-            .collect::<Vec<_>>()
-            .into_iter()
+    pub fn iter<'n>(
+        &'n self,
+    ) -> core::iter::Map<alloc::slice::Iter<'n, (IGNORED, T)>, fn(&'n (IGNORED, T)) -> &'n T> {
+        self.content.iter().map(|(_, e)| e)
+    }
+    /// Returns an iterator over all skipped or matched expressions.
+    pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, (IGNORED, T)> {
+        self.content.iter()
     }
 }
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-        const MIN: usize,
-        const MAX: usize,
-    > BoundWrapper for RepMinMax<'i, R, T, IGNORED, MIN, MAX>
+impl<T: Clone + PartialEq, IGNORED: Clone + PartialEq, const MIN: usize, const MAX: usize>
+    BoundWrapper for RepMinMax<T, IGNORED, MIN, MAX>
 {
     const MIN: usize = MIN;
     const MAX: usize = MAX;
 }
 /// Repeat arbitrary times.
-pub type Rep<'i, R, T, IGNORED> = RepMinMax<'i, R, T, IGNORED, 0, { usize::MAX }>;
+pub type Rep<T, IGNORED> = RepMinMax<T, IGNORED, 0, { usize::MAX }>;
 /// Repeat at least one times.
-pub type RepOnce<'i, R, T, IGNORED> = RepMinMax<'i, R, T, IGNORED, 1, { usize::MAX }>;
+pub type RepOnce<T, IGNORED> = RepMinMax<T, IGNORED, 1, { usize::MAX }>;
 
 /// Drop the top of the stack.
 /// Fail if there is no span in the stack.
-#[derive(Clone, PartialEq)]
-pub struct DROP<'i> {
-    _phantom: PhantomData<&'i str>,
-}
-impl<'i, R: RuleType> TypedNode<'i, R> for DROP<'i> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct DROP;
+impl<'i, R: RuleType> TypedNode<'i, R> for DROP {
     #[inline]
     fn try_parse_with<const _A: bool>(
         input: Position<'i>,
@@ -792,22 +698,12 @@ impl<'i, R: RuleType> TypedNode<'i, R> for DROP<'i> {
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         match stack.pop() {
-            Some(_) => Ok((
-                input,
-                Self {
-                    _phantom: PhantomData,
-                },
-            )),
+            Some(_) => Ok((input, Self)),
             None => {
                 tracker.empty_stack(input);
                 Err(())
             }
         }
-    }
-}
-impl<'i> Debug for DROP<'i> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DROP").finish()
     }
 }
 
@@ -925,14 +821,10 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
 
 /// Always fail.
 #[derive(Clone, PartialEq)]
-pub struct AlwaysFail<'i> {
-    _phantom: PhantomData<&'i ()>,
-}
+pub struct AlwaysFail<'i>(PhantomData<&'i char>);
 impl<'i> Default for AlwaysFail<'i> {
     fn default() -> Self {
-        Self {
-            _phantom: PhantomData,
-        }
+        Self(PhantomData)
     }
 }
 /// A trait that only `AlwaysFail` implements.
@@ -950,7 +842,7 @@ impl<'i, R: RuleType, T: AlwaysFailed> TypedNode<'i, R> for T {
 }
 impl<'i> Debug for AlwaysFail<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("AlwaysFail").finish()
+        f.debug_tuple("AlwaysFailed").finish()
     }
 }
 
@@ -1452,7 +1344,7 @@ fn parse<
         Err(_) => return Err(tracker.collect()),
     };
     let (input, _) = IGNORED::parse_with::<false>(input, &mut stack);
-    let (_, _) = match AtomicRule::<'i, R, EOI<'i>, _EOI, _EOI>::try_parse_with::<false>(
+    let (_, _) = match AtomicRule::<'i, R, EOI, _EOI, _EOI>::try_parse_with::<false>(
         input,
         &mut stack,
         &mut tracker,
@@ -1478,7 +1370,7 @@ fn parse_without_ignore<
         Ok((input, res)) => (input, res),
         Err(_) => return Err(tracker.collect()),
     };
-    let (_, _) = match AtomicRule::<'i, R, EOI<'i>, _EOI, _EOI>::try_parse_with::<false>(
+    let (_, _) = match AtomicRule::<'i, R, EOI, _EOI, _EOI>::try_parse_with::<false>(
         input,
         &mut stack,
         &mut tracker,
@@ -1503,45 +1395,44 @@ fn parse_partial<'i, R: RuleType, _Self: TypedNode<'i, R>>(
 
 /// ASCII Digit. `'0'..'9'`
 #[allow(non_camel_case_types)]
-pub type ASCII_DIGIT<'i, R> = CharRange<'i, R, '0', '9'>;
+pub type ASCII_DIGIT = CharRange<'0', '9'>;
 
 /// Non-zero ASCII Digit. `'1'..'9'`
 #[allow(non_camel_case_types)]
-pub type ASCII_NONZERO_DIGIT<'i, R> = CharRange<'i, R, '1', '9'>;
+pub type ASCII_NONZERO_DIGIT = CharRange<'1', '9'>;
 
 /// Binary ASCII Digit. `'0'..'1'`
 #[allow(non_camel_case_types)]
-pub type ASCII_BIN_DIGIT<'i, R> = CharRange<'i, R, '0', '1'>;
+pub type ASCII_BIN_DIGIT = CharRange<'0', '1'>;
 
 /// Octal ASCII Digit. `'0'..'7'`
 #[allow(non_camel_case_types)]
-pub type ASCII_OCT_DIGIT<'i, R> = CharRange<'i, R, '0', '7'>;
+pub type ASCII_OCT_DIGIT = CharRange<'0', '7'>;
 
 use crate::choices::{Choice2, Choice3};
 /// Hexadecimal ASCII Digit. `'0'..'9' | 'a'..'f' | 'A'..'F'`
 #[allow(non_camel_case_types)]
-pub type ASCII_HEX_DIGIT<'i, R> =
-    Choice3<'i, R, ASCII_DIGIT<'i, R>, CharRange<'i, R, 'a', 'f'>, CharRange<'i, R, 'A', 'F'>>;
+pub type ASCII_HEX_DIGIT = Choice3<ASCII_DIGIT, CharRange<'a', 'f'>, CharRange<'A', 'F'>>;
 
 /// Lower case ASCII alphabet.
 #[allow(non_camel_case_types)]
-pub type ASCII_ALPHA_LOWER<'i, R> = CharRange<'i, R, 'a', 'z'>;
+pub type ASCII_ALPHA_LOWER = CharRange<'a', 'z'>;
 
 /// Upper case ASCII alphabet.
 #[allow(non_camel_case_types)]
-pub type ASCII_ALPHA_UPPER<'i, R> = CharRange<'i, R, 'A', 'Z'>;
+pub type ASCII_ALPHA_UPPER = CharRange<'A', 'Z'>;
 
 /// ASCII alphabet.
 #[allow(non_camel_case_types)]
-pub type ASCII_ALPHA<'i, R> = Choice2<'i, R, ASCII_ALPHA_LOWER<'i, R>, ASCII_ALPHA_UPPER<'i, R>>;
+pub type ASCII_ALPHA = Choice2<ASCII_ALPHA_LOWER, ASCII_ALPHA_UPPER>;
 
 /// ASCII alphabet or digit.
 #[allow(non_camel_case_types)]
-pub type ASCII_ALPHANUMERIC<'i, R> = Choice2<'i, R, ASCII_ALPHA<'i, R>, ASCII_DIGIT<'i, R>>;
+pub type ASCII_ALPHANUMERIC = Choice2<ASCII_ALPHA, ASCII_DIGIT>;
 
 /// ASCII alphabet.
 #[allow(non_camel_case_types)]
-pub type ASCII<'i, R> = CharRange<'i, R, '\x00', '\x7f'>;
+pub type ASCII = CharRange<'\x00', '\x7f'>;
 
 /// Match char by a predicate.
 ///
