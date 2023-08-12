@@ -55,6 +55,11 @@ pub trait RuleWrapper<R: RuleType>: Clone + PartialEq {
     const RULE: R;
     /// The type of wrapped rule.
     type Rule;
+
+    /// Get wrapped rule.
+    fn get_rule(&self) -> R {
+        Self::RULE
+    }
 }
 
 /// Type wrapper.
