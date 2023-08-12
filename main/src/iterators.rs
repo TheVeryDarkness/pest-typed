@@ -12,8 +12,8 @@
 use crate::{
     choices::Choice2,
     predefined_node::{
-        AlwaysFail, AtomicRule, CharRange, Insens, Negative, NonAtomicRule, PeekSlice1,
-        PeekSlice2, Positive, Push, RepMinMax, Rule, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK,
+        AlwaysFail, AtomicRule, CharRange, Insens, Negative, NonAtomicRule, PeekSlice1, PeekSlice2,
+        Positive, Push, RepMin, RepMinMax, Rule, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK,
         PEEK_ALL, POP, POP_ALL, SOI,
     },
     typed_node::RuleStruct,
@@ -262,38 +262,44 @@ impl<
     }
 }
 
-impl<
-        'i: 'n,
-        'n,
-        R: RuleType + 'n,
-        T: TypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
-        I: NeverFailedTypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
-        const MIN: usize,
-        const MAX: usize,
-    > Pairs<'i, 'n, R> for RepMinMax<T, I, MIN, MAX>
-{
-    type Iter = FlatMap<
-        core::slice::Iter<'n, (I, T)>,
-        Chain<I::Iter, T::Iter>,
-        fn(&'n (I, T)) -> Chain<I::Iter, T::Iter>,
-    >;
-    type IntoIter = FlatMap<
-        vec::IntoIter<(I, T)>,
-        Chain<I::IntoIter, T::IntoIter>,
-        fn((I, T)) -> Chain<I::IntoIter, T::IntoIter>,
-    >;
+macro_rules! impl_with_vec {
+    ($name:ident, $(const $args:ident : $t:ty,)*) => {
+        impl<
+                'i: 'n,
+                'n,
+                R: RuleType + 'n,
+                T: TypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
+                I: NeverFailedTypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
+                $(const $args: $t, )*
+            > Pairs<'i, 'n, R> for $name<T, I, $($args, )*>
+        {
+            type Iter = FlatMap<
+                core::slice::Iter<'n, (I, T)>,
+                Chain<I::Iter, T::Iter>,
+                fn(&'n (I, T)) -> Chain<I::Iter, T::Iter>,
+            >;
+            type IntoIter = FlatMap<
+                vec::IntoIter<(I, T)>,
+                Chain<I::IntoIter, T::IntoIter>,
+                fn((I, T)) -> Chain<I::IntoIter, T::IntoIter>,
+            >;
 
-    fn iter(&'n self) -> Self::Iter {
-        self.content
-            .iter()
-            .flat_map(|(i, e)| i.iter().chain(e.iter()))
-    }
-    fn into_iter(self) -> Self::IntoIter {
-        self.content
-            .into_iter()
-            .flat_map(|(i, e)| i.into_iter().chain(e.into_iter()))
-    }
+            fn iter(&'n self) -> Self::Iter {
+                self.content
+                    .iter()
+                    .flat_map(|(i, e)| i.iter().chain(e.iter()))
+            }
+            fn into_iter(self) -> Self::IntoIter {
+                self.content
+                    .into_iter()
+                    .flat_map(|(i, e)| i.into_iter().chain(e.into_iter()))
+            }
+        }
+    };
 }
+
+impl_with_vec!(RepMinMax, const MIN: usize, const MAX: usize, );
+impl_with_vec!(RepMin, const MIN: usize,);
 
 macro_rules! impl_without_lifetime {
     ($id: ident) => {

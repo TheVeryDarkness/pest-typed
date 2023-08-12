@@ -617,6 +617,72 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> T
 
 /// Repeatably match `T` at least `MIN` times.
 #[derive(Clone, Debug, PartialEq)]
+pub struct RepMin<T, IGNORED, const MIN: usize> {
+    /// Skipped and Matched expressions.
+    pub content: Vec<(IGNORED, T)>,
+}
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        IGNORED: NeverFailedTypedNode<'i, R>,
+        const MIN: usize,
+    > TypedNode<'i, R> for RepMin<T, IGNORED, MIN>
+{
+    #[inline]
+    fn try_parse_with<const ATOMIC: bool>(
+        mut input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Result<(Position<'i>, Self), ()> {
+        let mut vec = Vec::<(IGNORED, T)>::new();
+
+        {
+            for i in 0.. {
+                let (next, ignored) = IGNORED::parse_with::<ATOMIC>(input, stack);
+                input = next;
+
+                match restore_on_err(stack, |stack| {
+                    T::try_parse_with::<ATOMIC>(input, stack, tracker)
+                }) {
+                    Ok((next, matched)) => {
+                        input = next;
+                        vec.push((ignored, matched));
+                    }
+                    Err(err) => {
+                        if i < MIN {
+                            return Err(err);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        Ok((input, Self { content: vec }))
+    }
+}
+impl<T, IGNORED, const MIN: usize> RepMin<T, IGNORED, MIN> {
+    /// Returns an iterator over all matched expressions.
+    pub fn iter<'n>(
+        &'n self,
+    ) -> core::iter::Map<alloc::slice::Iter<'n, (IGNORED, T)>, fn(&'n (IGNORED, T)) -> &'n T> {
+        self.content.iter().map(|(_, e)| e)
+    }
+    /// Returns an iterator over all skipped or matched expressions.
+    pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, (IGNORED, T)> {
+        self.content.iter()
+    }
+}
+impl<T: Clone + PartialEq, IGNORED: Clone + PartialEq, const MIN: usize> BoundWrapper
+    for RepMin<T, IGNORED, MIN>
+{
+    const MIN: usize = MIN;
+    const MAX: usize = usize::MAX;
+}
+
+/// Repeatably match `T` at least `MIN` times and at most `MAX` times.
+#[derive(Clone, Debug, PartialEq)]
 pub struct RepMinMax<T, IGNORED, const MIN: usize, const MAX: usize> {
     /// Skipped and Matched expressions.
     pub content: Vec<(IGNORED, T)>,
@@ -681,10 +747,11 @@ impl<T: Clone + PartialEq, IGNORED: Clone + PartialEq, const MIN: usize, const M
     const MIN: usize = MIN;
     const MAX: usize = MAX;
 }
+
 /// Repeat arbitrary times.
-pub type Rep<T, IGNORED> = RepMinMax<T, IGNORED, 0, { usize::MAX }>;
+pub type Rep<T, IGNORED> = RepMin<T, IGNORED, 0>;
 /// Repeat at least one times.
-pub type RepOnce<T, IGNORED> = RepMinMax<T, IGNORED, 1, { usize::MAX }>;
+pub type RepOnce<T, IGNORED> = RepMin<T, IGNORED, 1>;
 
 /// Drop the top of the stack.
 /// Fail if there is no span in the stack.
