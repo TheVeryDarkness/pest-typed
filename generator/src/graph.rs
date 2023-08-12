@@ -207,10 +207,7 @@ impl<'g> Node<'g> {
                     quote! {::<'i>}
                 };
                 let t = ident(t);
-                (
-                    quote! {res},
-                    quote! {&'s #root::pairs::#t #life},
-                )
+                (quote! {res}, quote! {&'s #root::pairs::#t #life})
             }
             #[cfg(feature = "grammar-extras")]
             Node::Tag(t) => {
@@ -1275,6 +1272,8 @@ fn collect_used_rule<'s>(rule: &'s OptimizedRule, res: &mut BTreeSet<&'s str>) {
 }
 fn collect_used_rules<'s>(rules: &'s [OptimizedRule]) -> BTreeSet<&'s str> {
     let mut res = BTreeSet::<&'s str>::new();
+    res.insert("COMMENT");
+    res.insert("WHITESPACE");
     for rule in rules {
         collect_used_rule(rule, &mut res);
     }
@@ -1292,7 +1291,8 @@ pub(crate) fn generate_typed_pair_from_rule(
 
     let referenced_rules = collect_used_rules(rules);
 
-    let (builtin, mut builtins_without_lifetime) = generate_builtin(&defined_rules);
+    let (builtin, mut builtins_without_lifetime) =
+        generate_builtin(&defined_rules, &referenced_rules);
 
     let unicode_rule = generate_unicode(
         &defined_rules,
@@ -1530,7 +1530,10 @@ fn generate_unicode(
     }
 }
 
-fn generate_builtin(rule_names: &BTreeSet<&str>) -> (TokenStream, BTreeSet<&'static str>) {
+fn generate_builtin(
+    defined: &BTreeSet<&str>,
+    referenced: &BTreeSet<&str>,
+) -> (TokenStream, BTreeSet<&'static str>) {
     let pest_typed = pest_typed();
     let unicode = unicode_mod();
     let rule_wrappers = rule_wrappers();
@@ -1542,7 +1545,7 @@ fn generate_builtin(rule_names: &BTreeSet<&str>) -> (TokenStream, BTreeSet<&'sta
     let mut builtins_without_lifetime = BTreeSet::new();
     macro_rules! insert_builtin {
         ($name:expr, $def:path) => {
-            if !rule_names.contains($name) {
+            if !defined.contains($name) && referenced.contains($name) {
                 let id = ident($name);
                 builtins_without_lifetime.insert($name);
                 results.push(quote! {
@@ -1554,7 +1557,7 @@ fn generate_builtin(rule_names: &BTreeSet<&str>) -> (TokenStream, BTreeSet<&'sta
     }
     macro_rules! insert_builtin_with_lifetime {
         ($name:expr, $def:path) => {
-            if !rule_names.contains($name) {
+            if !defined.contains($name) && referenced.contains($name) {
                 let id = ident($name);
                 results.push(quote! {
                     #[allow(non_camel_case_types)]
