@@ -12,7 +12,7 @@
 use crate::{
     choices::Choice2,
     predefined_node::{
-        AlwaysFail, AtomicRule, Box, CharRange, Insens, Negative, NonAtomicRule, PeekSlice1,
+        AlwaysFail, AtomicRule, CharRange, Insens, Negative, NonAtomicRule, PeekSlice1,
         PeekSlice2, Positive, Push, RepMinMax, Rule, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK,
         PEEK_ALL, POP, POP_ALL, SOI,
     },
@@ -194,7 +194,6 @@ impl_empty!(PeekSlice1<'i, R, START>, const START: i32);
 impl_forward_inner!(Push);
 impl_empty!(Skip<'i, Strings>, Strings: StringArrayWrapper);
 impl_empty!(CharRange<MIN, MAX>, const MIN: char, const MAX: char);
-impl_forward_inner!(Box);
 impl_forward_inner!(Positive);
 impl_empty!(Negative<'i, R, T>, T: TypedNode<'i, R>);
 

@@ -79,7 +79,6 @@ fn as_ref() {
     assert_eq!(d.get_content(), "d");
 
     assert_eq!(&s4.deref().clone(), s4.deref());
-    assert_eq!(s4.deref(), &s4.content);
     assert_eq!(
         format!("{:?}", s4.as_ref()),
         format!("({:?}, {:?}, {:?}, {:?})", a, b, c, d)

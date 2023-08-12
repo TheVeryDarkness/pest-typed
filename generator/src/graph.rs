@@ -208,7 +208,7 @@ impl<'g> Node<'g> {
                 };
                 let t = ident(t);
                 (
-                    quote! {{let res = res.content.deref(); res}},
+                    quote! {res},
                     quote! {&'s #root::pairs::#t #life},
                 )
             }
@@ -328,7 +328,7 @@ impl<'g> Accesser<'g> {
             let src = quote! {
                 #[allow(non_snake_case)]
                 pub fn #id<'s>(&'s self) -> #types {
-                    let res = &self.content;
+                    let res = self.content.as_ref();
                     #paths
                 }
             };
@@ -449,7 +449,7 @@ fn create<'g>(
         let content = if emit_content {
             quote! {
                 #[doc = "Matched content."]
-                pub content: #type_name,
+                pub content: #pest_typed::re_exported::Box<#type_name>,
             }
         } else {
             quote! {}
@@ -505,11 +505,11 @@ fn create<'g>(
                 type IntoIter = #vec_mod::IntoIter<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>>;
 
                 fn iter(&'n self) -> Self::Iter {
-                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::iter(&self.content);
+                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::iter(self.content.as_ref());
                     i.collect::<#vec<_>>().into_iter()
                 }
                 fn into_iter(self) -> Self::IntoIter {
-                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::into_iter(self.content);
+                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::into_iter(*self.content);
                     i.collect::<#vec<_>>().into_iter()
                 }
             }
@@ -520,11 +520,11 @@ fn create<'g>(
         Emission::InnerToken => quote! {
             impl<'i: 'n, 'n> #pest_typed::iterators::Pair<'i, 'n, #root::Rule> for #id<'i> {
                 fn inner(&'n self) -> #vec_mod::IntoIter<&'n (dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>)> {
-                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::iter(&self.content);
+                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::iter(self.content.as_ref());
                     i.collect::<#vec::<_>>().into_iter()
                 }
                 fn into_inner(self) -> #vec_mod::IntoIter<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>> {
-                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::into_iter(self.content);
+                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::into_iter(*self.content);
                     i.collect::<#vec::<_>>().into_iter()
                 }
             }
@@ -558,6 +558,7 @@ fn create<'g>(
     let parse_impl = match emission {
         Emission::Silent => quote! {
             let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
+            let content = #pest_typed::re_exported::Box::new(content);
             Ok((input, Self { content, #phantom, }))
         },
         Emission::Span => quote! {
@@ -577,6 +578,7 @@ fn create<'g>(
                 input,
                 |tracker| {
                     let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
+                    let content = #pest_typed::re_exported::Box::new(content);
                     let span = start.span(&input);
                     Ok((input, Self { content, span, #phantom, }))
                 }
@@ -1006,9 +1008,9 @@ fn generate_graph_node<'g>(
             let type_name = if !rule_config.defined.contains(id.as_str())
                 && rule_config.builtins_without_lifetime.contains(id.as_str())
             {
-                quote! {#root::#generics::Box::<'i, #root::#pairs::#inner>}
+                quote! {#root::#pairs::#inner}
             } else {
-                quote! {#root::#generics::Box::<'i, #root::#pairs::#inner::<'i>>}
+                quote! {#root::#pairs::#inner::<'i>}
             };
             process_single_alias(
                 map,
@@ -1420,7 +1422,6 @@ pub(crate) fn generate_typed_pair_from_rule(
                 pub type Push<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Push<'i, #root::Rule, T>;
                 pub type Skip<'i, Strings: StringArrayWrapper> = predefined_node::Skip::<'i, Strings>;
                 pub type CharRange<const START: #char, const END: #char> = predefined_node::CharRange::<START, END>;
-                pub type Box<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Box<'i, #root::Rule, T>;
                 pub type Positive<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Positive<'i, #root::Rule, T>;
                 pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<'i, #root::Rule, T>;
                 #(#seq)*

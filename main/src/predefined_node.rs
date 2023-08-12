@@ -770,55 +770,6 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
     }
 }
 
-/// Boxed node for `T`.
-#[derive(Clone, PartialEq)]
-pub struct Box<'i, R: RuleType, T: TypedNode<'i, R>> {
-    /// Boxed content.
-    pub content: ::alloc::boxed::Box<T>,
-    _phantom: PhantomData<&'i R>,
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> From<::alloc::boxed::Box<T>> for Box<'i, R, T> {
-    fn from(content: ::alloc::boxed::Box<T>) -> Self {
-        Self {
-            content,
-            _phantom: PhantomData,
-        }
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> From<T> for Box<'i, R, T> {
-    fn from(content: T) -> Self {
-        Self::from(::alloc::boxed::Box::new(content))
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Box<'i, R, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        self.content.as_ref()
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Box<'i, R, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.content.as_mut()
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Box<'i, R, T> {
-    #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
-        input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        let (input, res) = T::try_parse_with::<ATOMIC>(input, stack, tracker)?;
-        Ok((input, Self::from(res)))
-    }
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Box<'i, R, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.content.fmt(f)
-    }
-}
-
 /// Always fail.
 #[derive(Clone, PartialEq)]
 pub struct AlwaysFail<'i>(PhantomData<&'i char>);
