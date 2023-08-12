@@ -12,7 +12,7 @@ use pest_typed_derive::TypedParser;
 use std::iter::once;
 
 #[derive(TypedParser)]
-#[grammar = "tests/csv.pest"]
+#[grammar = "examples/csv.pest"]
 #[emit_rule_reference]
 struct CSV;
 

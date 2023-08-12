@@ -1613,7 +1613,7 @@ mod tests {
     fn inlined_used_rules() {
         let (_, rules) = parse_and_optimize(r#"x = { a ~ b } a = { "a" } b = { ^"b" }"#).unwrap();
         let used = collect_used_rules(&rules);
-        assert_eq!(used, BTreeSet::from(["a", "b"]));
+        assert_eq!(used, BTreeSet::from(["a", "b", "WHITESPACE", "COMMENT"]));
     }
     #[test]
     /// Check collected used rules in a complex grammar.

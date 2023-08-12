@@ -11,9 +11,6 @@
 //! and modified.
 //! Overried the macro [`parses_to`].
 
-#![cfg_attr(not(feature = "std"), no_std)]
-extern crate alloc;
-
 use pest_typed::ParsableTypedNode;
 use pest_typed_derive::TypedParser;
 

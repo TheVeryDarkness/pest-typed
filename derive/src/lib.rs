@@ -59,7 +59,7 @@
 //! Given the pest grammar being:
 //!
 //! ```pest
-#![doc = include_str!("../tests/grammar.pest")]
+#![doc = include_str!("../examples/csv.pest")]
 //! ```
 //!
 //! Here is a basic example on how to access and process referenced rules in a rule using Accesser API:

@@ -13,7 +13,7 @@ use pest_typed::{iterators::PairTree, ParsableTypedNode};
 use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
-#[grammar = "tests/csv.pest"]
+#[grammar = "examples/csv.pest"]
 struct CSV;
 
 fn main() -> Result<()> {

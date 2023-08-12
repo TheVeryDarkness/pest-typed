@@ -6,7 +6,7 @@ use pest_typed_derive::TypedParser;
 
 /// See https://datatracker.ietf.org/doc/html/rfc4180.html for CSV's format.
 #[derive(TypedParser)]
-#[grammar = "../tests/csv.pest"]
+#[grammar = "examples/csv.pest"]
 #[emit_rule_reference]
 struct Parser;
 
