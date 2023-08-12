@@ -1,10 +1,5 @@
-### Emitted Fields of Rule Structs
-
-A rule structs is a struct that corresponds to a rule.
-
-```rust
+use pest_typed::{ParsableTypedNode as _, Storage as _};
 use pest_typed_derive::TypedParser;
-use pest_typed::{ParsableTypedNode as _, Storage as _, TypedParser as _, error::Error};
 
 #[derive(TypedParser)]
 #[grammar_inline = r#"
@@ -35,4 +30,3 @@ fn main() -> Result<(), pest_typed::error::Error<Rule>> {
     parse("cd")?;
     Ok(())
 }
-```

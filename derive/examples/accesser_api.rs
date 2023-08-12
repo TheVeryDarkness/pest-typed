@@ -1,48 +1,30 @@
-// pest-typed. A statically typed version of pest.
-// Copyright (c) 2023 黄博奕
-//
-// Licensed under the Apache License, Version 2.0
-// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
-// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. All files in the project carrying such notice may not be copied,
-// modified, or distributed except according to those terms.
-
-use pest_typed::{error::Error, ParsableTypedNode};
+extern crate alloc;
+use alloc::vec::Vec;
+use core::{iter, result::Result};
+use pest_typed::{error::Error, ParsableTypedNode as _};
 use pest_typed_derive::TypedParser;
-use std::iter::once;
 
+/// See https://datatracker.ietf.org/doc/html/rfc4180.html for CSV's format.
 #[derive(TypedParser)]
-#[grammar = "tests/csv.pest"]
+#[grammar = "../tests/csv.pest"]
 #[emit_rule_reference]
-struct CSV;
+struct Parser;
 
 fn main() -> Result<(), Error<Rule>> {
-    let file = pairs::file::parse(
-        r#"1,2,3
-a,b,c
-A,B,C
-"#,
-    )?;
-    let (first, following) = file.row();
-    let rows = once(first).chain(following.into_iter());
-    let cells: Vec<_> = rows
-        .map(|row| {
-            let (first, following) = row.item();
-            let columns = once(first).chain(following.into_iter());
-            let columns = columns.map(|item: &pairs::item<'_>| {
-                item.if_then(|escaped| {
-                    let (_, content, _) = escaped.as_ref();
-                    content.span.as_str()
-                })
-                .else_then(|unescaped| unescaped.span.as_str())
-            });
-            let columns: Vec<_> = columns.collect();
-            columns
-        })
-        .collect();
-    assert_eq!(
-        format!("{:?}", cells),
-        r#"[["1", "2", "3"], ["a", "b", "c"], ["A", "B", "C"]]"#
-    );
+    let input = "name,age\nTom,10\nJerry,20";
+    let file = pairs::file::parse(input)?;
+    let (first_row, following_rows) = file.row();
+    let rows = iter::once(first_row).chain(following_rows.into_iter());
+    let columns = rows.map(|row| {
+        let (first_column, following_columns) = row.item();
+        let columns = iter::once(first_column).chain(following_columns.into_iter());
+        let line = columns
+            .map(|column| column.span.as_str())
+            .collect::<Vec<_>>()
+            .join(",");
+        line
+    });
+    let columns = columns.collect::<Vec<_>>().join("\n");
+    assert_eq!(columns, input);
     Ok(())
 }

@@ -1,12 +1,5 @@
-### Lifetime
-
-Structs have fields that are contains references borrowed from the input, so each of them has a lifetime argument `'i`.
-
-Sometimes, you may encounter a lifetime error. Do not panic, just consider them seriously.
-
-```rust
-use pest_typed_derive::TypedParser;
 use pest_typed::{error::Error, ParsableTypedNode as _};
+use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
 #[grammar_inline = r#"
@@ -34,4 +27,3 @@ fn main() -> Result<(), Error<Rule>> {
     println!("{}", res);
     Ok(())
 }
-```
