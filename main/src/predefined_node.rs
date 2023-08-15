@@ -222,7 +222,7 @@ impl<'i, const N: usize> Debug for SkipChar<'i, N> {
 
 /// Match a character in the range `[MIN, MAX]`.
 /// Inclusively both below and above.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CharRange<const MIN: char, const MAX: char> {
     /// Matched character.
     pub content: char,
@@ -242,13 +242,6 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R> for Cha
             }
             false => Err(()),
         }
-    }
-}
-impl<const MIN: char, const MAX: char> Debug for CharRange<MIN, MAX> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("CharRange")
-            .field("content", &self.content)
-            .finish()
     }
 }
 
@@ -390,7 +383,7 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Negative<'i, R, N> {
 }
 
 /// Match any character.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ANY {
     /// Matched character.
     pub content: char,
@@ -452,7 +445,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for EOI {
 }
 
 /// Type of eol.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum NewLineType {
     /// `\r\n`
     CRLF,
@@ -464,7 +457,7 @@ pub enum NewLineType {
 
 /// Match a new line character.
 /// A built-in rule. Equivalent to `"\r\n" | "\n" | "\r"`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct NEWLINE {
     /// Type of matched character.
     pub content: NewLineType,
@@ -492,7 +485,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE {
 /// Peek all spans in stack reversely.
 /// Will consume input.
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PEEK_ALL<'i> {
     /// Pair span.
     pub span: Span<'i>,
@@ -513,7 +506,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
 /// Peek top span in stack.
 /// Will consume input.
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PEEK<'i> {
     /// Pair span.
     pub span: Span<'i>,
@@ -813,7 +806,7 @@ impl<'i> Debug for POP<'i> {
 
 /// Match and pop all spans in the stack in top-to-bottom-order.
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct POP_ALL<'i> {
     /// Matched span.
     pub span: Span<'i>,
@@ -860,7 +853,7 @@ impl<'i, R: RuleType, T: AlwaysFailed> TypedNode<'i, R> for T {
 }
 impl<'i> Debug for AlwaysFail<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("AlwaysFailed").finish()
+        f.debug_tuple("AlwaysFail").finish()
     }
 }
 
