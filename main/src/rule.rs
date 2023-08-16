@@ -169,7 +169,7 @@ macro_rules! silent_rule {
         #[derive(Clone, Debug, PartialEq)]
         pub struct $name<'i> {
             /// Matched expression.
-            pub content: $inner,
+            pub content: ::pest_typed::re_exported::Box<$inner>,
         }
         impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
             fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
@@ -261,6 +261,61 @@ macro_rules! atomic_rule {
         #[allow(non_camel_case_types)]
         #[derive(Clone, Debug, PartialEq)]
         pub struct $name<'i> {
+            /// Matched span.
+            pub span: ::pest_typed::Span<'i>,
+        }
+        impl<'i> ::pest_typed::RuleWrapper<$Rule> for $name<'i> {
+            const RULE: $Rule = $rule;
+            type Rule = $Rule;
+        }
+        impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
+            #[inline]
+            fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
+                input: ::pest_typed::Position<'i>,
+                stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
+                tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
+                let start = input;
+                tracker.record_during(start, |tracker| {
+                    let (input, _) = <$inner>::try_parse_with::<true>(input, stack, tracker)?;
+                    let span = start.span(&input);
+                    let res = Self { span };
+                    ::core::result::Result::Ok((input, res))
+                })
+            }
+        }
+        impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i> {
+            fn parse(
+                input: &'i ::core::primitive::str,
+            ) -> ::core::result::Result<Self, ::pest_typed::error::Error<$Rule>> {
+                ::pest_typed::rule::parse_without_ignore::<$Rule, Self>(input, <$Rule>::EOI)
+            }
+            fn parse_partial(
+                input: &'i str,
+            ) -> ::core::result::Result<
+                (::pest_typed::Position<'i>, Self),
+                ::pest_typed::error::Error<$Rule>,
+            > {
+                ::pest_typed::rule::parse_partial::<$Rule, Self>(input)
+            }
+        }
+        // ::pest_typed::impl_deref_with_content!($name, $inner);
+        ::pest_typed::impl_pairs_with_self!($name, $Rule, $rule);
+        ::pest_typed::impl_pair_with_empty!($name, $Rule, $rule);
+    };
+}
+
+/// Start point of an atomic rule.
+///
+/// Force inner tokens to be atomic.
+///
+/// See [`crate::rule!`] and [`crate::non_atomic_rule!`].
+#[macro_export]
+macro_rules! compound_atomic_rule {
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty) => {
+        #[allow(non_camel_case_types)]
+        #[derive(Clone, Debug, PartialEq)]
+        pub struct $name<'i> {
             /// Matched content.
             pub content: ::pest_typed::re_exported::Box<$inner>,
             /// Matched span.
@@ -302,20 +357,22 @@ macro_rules! atomic_rule {
                 ::pest_typed::rule::parse_partial::<$Rule, Self>(input)
             }
         }
-        // ::pest_typed::impl_deref_with_content!($name, $inner);
+        ::pest_typed::impl_deref_with_content!($name, $inner);
         ::pest_typed::impl_pairs_with_self!($name, $Rule, $rule);
-        ::pest_typed::impl_pair_with_empty!($name, $Rule, $rule);
+        ::pest_typed::impl_pair_with_content!($name, $Rule, $rule, $inner);
     };
 }
 
 /// Start point of a non-atomic rule.
 ///
-/// Force inner tokens to be not atomic.
+/// Force inner tokens to be non-atomic.
+///
+/// Will use `WHITESPACE` and `COMMENT` by name automatically, so remember to define them.
 ///
 /// See [`crate::rule!`] and [`crate::atomic_rule!`].
 #[macro_export]
 macro_rules! non_atomic_rule {
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty) => {
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $skipped:ty) => {
         #[allow(non_camel_case_types)]
         #[derive(Clone, Debug, PartialEq)]
         pub struct $name<'i> {
@@ -351,7 +408,7 @@ macro_rules! non_atomic_rule {
             fn parse(
                 input: &'i ::core::primitive::str,
             ) -> ::core::result::Result<Self, ::pest_typed::error::Error<$Rule>> {
-                ::pest_typed::rule::parse::<$Rule, _EOI, Self, IGNORED>(input)
+                ::pest_typed::rule::parse::<$Rule, Self, $skipped>(input, $Rule::EOI)
             }
             fn parse_partial(
                 input: &'i ::core::primitive::str,

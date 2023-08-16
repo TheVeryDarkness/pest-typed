@@ -65,19 +65,22 @@ mod tests {
         assert_eq!(<StrFoo<'_> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
         let s = StrFoo::parse("foo").unwrap();
         assert_eq!(s.content.get_content(), "foo");
-        assert_eq!(format!("{:?}", s), r#"Rule { rule: Foo, content: Str }"#)
+        assert_eq!(
+            format!("{:?}", s),
+            "StrFoo { content: Str, span: Span { str: \"foo\", start: 0, end: 3 } }"
+        )
     }
     #[test]
     fn range() {
         let whitespace = WHITESPACE::parse(" ").unwrap();
         assert_eq!(
             format!("{:?}", whitespace),
-            r#"AtomicRule { rule: WHITESPACE, content: CharRange { content: ' ' } }"#
+            "WHITESPACE { span: Span { str: \" \", start: 0, end: 1 } }"
         );
         let comment = COMMENT::parse("\t").unwrap();
         assert_eq!(
             format!("{:?}", comment),
-            r#"AtomicRule { rule: COMMENT, content: CharRange { content: '\t' } }"#
+            "COMMENT { span: Span { str: \"\\t\", start: 0, end: 1 } }"
         );
     }
     type Ignore<'i> = Skipped<COMMENT<'i>, WHITESPACE<'i>>;
