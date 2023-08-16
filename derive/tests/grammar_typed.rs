@@ -9,63 +9,53 @@
 
 //! Copied from **pest/derive/tests/grammar.rs** (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
 //! and modified.
-//! Overried the macro [`parses_to`].
+//! Overrided the macro [`parses_to`].
 
-use pest_typed::ParsableTypedNode;
+use pest_typed::{
+    iterators::{Pair, Token},
+    ParsableTypedNode,
+};
 use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
 #[grammar = "tests/grammar.pest"]
 struct GrammarParser;
 
+macro_rules! tokens {
+    ([ $( $names:ident $calls:tt ),* $(,)* ]) => {{
+        vec![$( token!($names $calls) ),*]
+    }};
+}
+
+macro_rules! token {
+    ($rule:ident ( $start:literal, $end:literal )) => {{
+        Token::<Rule> {
+            rule: Rule::$rule,
+            start: $start,
+            end: $end,
+            children: Vec::new(),
+        }
+    }};
+    ($rule:ident ( $start:literal, $end:literal, [ $( $names:ident $tokens:tt ),* $(,)* ] )) => {{
+        Token {
+            rule: Rule::$rule,
+            start: $start,
+            end: $end,
+            children: tokens!([$($names $tokens),*]),
+        }
+    }};
+}
+
 macro_rules! parses_to {
     (
         parser: $parser:ident,
         input: $input:literal,
         rule: Rule:: $rule:ident,
-        tokens: []
+        tokens: [ $( $names:ident $tokens:tt ),* $(,)* ]
     ) => {
-        match pairs::$rule::parse_partial($input) {
-            Ok((input, _)) => {
-                assert_eq!(input.pos(), 0);
-            }
-            Err(_) => {
-                // Expected.
-                panic!();
-            }
-        }
-    };
-
-    (
-        parser: $parser:ident,
-        input: $input:literal,
-        rule: Rule:: $rule:ident,
-        tokens: [
-            $_rule:ident($start:literal, $end:literal)
-        ]
-    ) => {
-        match pairs::$rule::parse_partial($input) {
-            Ok((input, _)) => assert_eq!(input.pos(), $end),
-            Err(err) => {
-                panic!("\n{}\n", err);
-            }
-        }
-    };
-
-    (
-        parser: $parser:ident,
-        input: $input:literal,
-        rule: Rule:: $rule:ident,
-        tokens: [
-            $_rule:ident($start:literal,$end:literal,$inner:expr)
-        ]
-    ) => {
-        parses_to! {
-            parser: $parser,
-            input: $input,
-            rule: Rule:: $rule,
-            tokens: [$_rule($start,$end)]
-        }
+        let tokens = tokens!([$($names $tokens),*]);
+        let (_, res) = pairs::$rule::parse_partial($input).unwrap();
+        assert_eq!(vec![res.as_token_tree()], tokens);
     };
 }
 

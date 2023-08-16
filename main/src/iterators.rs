@@ -19,12 +19,25 @@ use crate::{
     typed_node::RuleStruct,
     NeverFailedTypedNode, RuleWrapper, Span, StringArrayWrapper, StringWrapper, TypedNode,
 };
-use alloc::{boxed, collections::VecDeque, vec, vec::Vec};
+use alloc::{boxed, collections::VecDeque, string::String, vec, vec::Vec};
 use core::{
     iter::{empty, once, Chain, Empty, FlatMap, Iterator},
     mem::swap,
 };
 use pest::RuleType;
+
+/// Token.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Token<R: RuleType> {
+    /// Rule.
+    pub rule: R,
+    /// Start position.
+    pub start: usize,
+    /// End position.
+    pub end: usize,
+    /// Children.
+    pub children: Vec<Self>,
+}
 
 /// Simulate [`pest::iterators::Pairs`].
 pub trait Pairs<'i: 'n, 'n, R: RuleType + 'n> {
@@ -42,8 +55,20 @@ pub trait Pairs<'i: 'n, 'n, R: RuleType + 'n> {
 pub trait Pair<'i: 'n, 'n, R: RuleType + 'n>: RuleStruct<'i, R> {
     /// Collect inner pairs' [`Pairs::Iter`] and make them into a [`vec::IntoIter`].
     fn inner(&'n self) -> vec::IntoIter<&'n (dyn Pair<'i, 'n, R>)>;
-    /// Collect inner pairs [`Pairs::IntoIter`] and make them into a [`vec::IntoIter`].
+    /// Collect inner pairs' [`Pairs::IntoIter`] and make them into a [`vec::IntoIter`].
     fn into_inner(self) -> vec::IntoIter<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
+    /// As tokens.
+    ///
+    /// Call [`Pair::inner`] recursively.
+    fn as_token_tree(&'n self) -> Token<R> {
+        let children = self.inner().map(|p| p.as_token_tree()).collect();
+        Token::<R> {
+            rule: self.rule(),
+            start: self.span().start(),
+            end: self.span().end(),
+            children,
+        }
+    }
 }
 
 fn iterate_level_order<'i: 'n, 'n, R: RuleType + 'n, E>(
@@ -146,6 +171,13 @@ pub trait PairTree<'i: 'n, 'n, R: RuleType + 'n>: Pair<'i, 'n, R> + Sized {
     fn write_tree_to(&'n self, buf: &mut impl core::fmt::Write) -> core::fmt::Result {
         write_tree_to(self, buf)
     }
+
+    /// Format as a tree.
+    fn format_as_tree(&'n self) -> Result<String, core::fmt::Error> {
+        let mut buf = String::new();
+        self.write_tree_to(&mut buf)?;
+        Ok(buf)
+    }
 }
 
 impl<'i: 'n, 'n, R: RuleType + 'n, T: RuleStruct<'i, R> + Pairs<'i, 'n, R> + Pair<'i, 'n, R>>
@@ -194,7 +226,7 @@ impl_empty!(PeekSlice1<START>, const START: i32);
 impl_forward_inner!(Push);
 impl_empty!(Skip<'i, Strings>, Strings: StringArrayWrapper);
 impl_empty!(CharRange<MIN, MAX>, const MIN: char, const MAX: char);
-impl_forward_inner!(Positive);
+impl_empty!(Positive<T>, T: TypedNode<'i, R>);
 impl_empty!(Negative<T>, T: TypedNode<'i, R>);
 
 impl<'i: 'n, 'n, R: RuleType + 'n, T1: Pairs<'i, 'n, R>, T2: Pairs<'i, 'n, R>> Pairs<'i, 'n, R>
