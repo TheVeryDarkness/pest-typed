@@ -40,6 +40,7 @@ mod macros;
 mod pratt;
 pub mod predefined_node;
 pub mod re_exported;
+pub mod rule;
 pub mod sequence;
 pub mod tracker;
 mod typed_node;

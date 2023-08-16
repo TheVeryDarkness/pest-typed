@@ -12,12 +12,11 @@
 use crate::{
     choices::Choice2,
     predefined_node::{
-        AlwaysFail, AtomicRule, CharRange, Insens, Negative, NonAtomicRule, PeekSlice1, PeekSlice2,
-        Positive, Push, RepMin, RepMinMax, Rule, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK,
-        PEEK_ALL, POP, POP_ALL, SOI,
+        AlwaysFail, CharRange, Insens, Negative, PeekSlice1, PeekSlice2, Positive, Push, RepMin,
+        RepMinMax, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK, PEEK_ALL, POP, POP_ALL, SOI,
     },
     typed_node::RuleStruct,
-    NeverFailedTypedNode, RuleWrapper, Span, StringArrayWrapper, StringWrapper, TypedNode,
+    NeverFailedTypedNode, StringArrayWrapper, StringWrapper, TypedNode,
 };
 use alloc::{boxed, collections::VecDeque, string::String, vec, vec::Vec};
 use core::{
@@ -374,54 +373,6 @@ impl_with_lifetime!(POP_ALL);
 impl_without_lifetime!(DROP);
 
 impl_with_lifetime!(AlwaysFail);
-
-macro_rules! impl_self {
-    ($node:ty, $($tt:tt)*) => {
-        impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> Pairs<'i, 'n, R> for $node {
-            type Iter = core::iter::Once<&'n dyn Pair<'i, 'n, R>>;
-            type IntoIter = core::iter::Once<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
-
-            fn iter(&'n self) -> Self::Iter {
-                once(self)
-            }
-            fn into_iter(self) -> Self::IntoIter {
-                once(boxed::Box::new(self))
-            }
-        }
-        impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> RuleStruct<'i, R> for $node {
-            fn span(&self) -> Span<'i> { self.span }
-        }
-        impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> Pair<'i, 'n, R> for $node {
-            fn inner(&'n self) -> alloc::vec::IntoIter<&'n (dyn Pair<'i, 'n, R> + 'n)> {
-                vec![].into_iter()
-            }
-            fn into_inner(self) -> alloc::vec::IntoIter<alloc::boxed::Box<(dyn Pair<'i, 'n, R> + 'n)>> {
-                vec![].into_iter()
-            }
-        }
-    };
-}
-
-impl_self!(
-    AtomicRule<'i, R, T, RULE, _EOI>,
-    T: TypedNode<'i, R> + 'n,
-    RULE: RuleWrapper<R>,
-    _EOI: RuleWrapper<R>
-);
-impl_self!(
-    Rule<'i, R, T, RULE, _EOI, IGNORED>,
-    T: TypedNode<'i, R> + 'n,
-    RULE: RuleWrapper<R>,
-    _EOI: RuleWrapper<R>,
-    IGNORED: NeverFailedTypedNode<'i, R>,
-);
-impl_self!(
-    NonAtomicRule<'i, R, T, RULE, _EOI, IGNORED>,
-    T: TypedNode<'i, R>,
-    RULE: RuleWrapper<R>,
-    _EOI: RuleWrapper<R>,
-    IGNORED: NeverFailedTypedNode<'i, R>,
-);
 
 /// An iterator that maybe contain another iterator.
 pub struct Maybe<Item, T: Iterator<Item = Item>>(Option<T>);

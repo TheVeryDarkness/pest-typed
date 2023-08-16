@@ -16,7 +16,8 @@ mod tests {
     use super::*;
     use alloc::string::String;
     use pest_typed::{
-        BoundWrapper, ParsableTypedNode, RuleWrapper, Storage, StringWrapper, TypeWrapper,
+        atomic_rule, non_atomic_rule, rule, silent_rule, BoundWrapper, ParsableTypedNode,
+        RuleWrapper, Storage, StringWrapper, TypeWrapper,
     };
 
     macro_rules! make_rules {
@@ -47,7 +48,7 @@ mod tests {
     }
 
     #[derive(Clone, PartialEq)]
-    struct Foo;
+    pub struct Foo;
     impl StringWrapper for Foo {
         const CONTENT: &'static str = "foo";
     }
@@ -56,12 +57,9 @@ mod tests {
         type Rule = Rule;
     }
 
-    type WHITESPACE<'i> =
-        AtomicRule<'i, Rule, CharRange<' ', ' '>, rule_wrappers::WHITESPACE, rule_wrappers::EOI>;
-    type COMMENT<'i> =
-        AtomicRule<'i, Rule, CharRange<'\t', '\t'>, rule_wrappers::COMMENT, rule_wrappers::EOI>;
-    type StrFoo<'i> =
-        super::Rule<'i, Rule, Str<Foo>, rule_wrappers::Foo, rule_wrappers::EOI, Ignore<'i>>;
+    atomic_rule!(WHITESPACE, Rule, Rule::WHITESPACE, CharRange<' ', ' '>);
+    atomic_rule!(COMMENT, Rule, Rule::COMMENT, CharRange<'\t', '\t'>);
+    rule!(StrFoo, Rule, Rule::Foo, Str<Foo>, Ignore<'i>);
     #[test]
     fn string() {
         assert_eq!(<StrFoo<'_> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
@@ -85,15 +83,12 @@ mod tests {
     type Ignore<'i> = Skipped<COMMENT<'i>, WHITESPACE<'i>>;
     #[test]
     fn ignore() {
-        super::Rule::<Rule, Ignore<'_>, rule_wrappers::RepFoo, rule_wrappers::EOI, Ignore<'_>>::parse(
-            " \t  ",
-        )
-        .unwrap();
+        rule!(tmp, Rule, Rule::RepFoo, Ignore<'i>, Ignore<'i>);
+        tmp::parse(" \t  ").unwrap();
     }
 
     type REP<'i> = Rep<Str<Foo>, Ignore<'i>>;
-    type R<'i> =
-        super::Rule<'i, Rule, REP<'i>, rule_wrappers::RepFoo, rule_wrappers::EOI, Ignore<'i>>;
+    rule!(R, Rule, Rule::RepFoo, REP<'i>, Ignore<'i>);
     #[test]
     fn repetition() {
         let rep1 = R::parse("foofoofoo").unwrap();

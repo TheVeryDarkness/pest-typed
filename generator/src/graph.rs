@@ -1536,7 +1536,6 @@ fn generate_builtin(
 ) -> (TokenStream, BTreeSet<&'static str>) {
     let pest_typed = pest_typed();
     let unicode = unicode_mod();
-    let rule_wrappers = rule_wrappers();
     let mut results = vec![quote! {
         use #pest_typed::TypedNode as _;
         use ::core::ops::Deref as _;
@@ -1568,8 +1567,7 @@ fn generate_builtin(
     }
 
     results.push(quote! {
-        #[allow(non_camel_case_types)]
-        pub type EOI<'i> = #pest_typed::predefined_node::AtomicRule::<'i, super::Rule, #pest_typed::predefined_node::EOI, super::#rule_wrappers::EOI, super::#rule_wrappers::EOI>;
+        #pest_typed::atomic_rule!(EOI, super::Rule, super::Rule::EOI, #pest_typed::predefined_node::EOI);
     });
 
     insert_builtin!("ANY", ANY);
