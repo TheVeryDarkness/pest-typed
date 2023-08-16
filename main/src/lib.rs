@@ -27,22 +27,23 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
-pub mod iterators;
-pub mod predefined_node;
-pub mod tracker;
-mod typed_node;
-mod wrapper;
 pub use pest::RuleType;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, RuleStruct, TypedNode};
 pub use wrapper::{
     BoundWrapper, ConstantStorage, RuleWrapper, Storage, StringArrayWrapper, StringWrapper,
     TypeWrapper,
 };
+
 pub mod choices;
+pub mod iterators;
 mod macros;
 mod pratt;
+pub mod predefined_node;
 pub mod re_exported;
 pub mod sequence;
+pub mod tracker;
+mod typed_node;
+mod wrapper;
 pub use alloc::boxed::Box;
 
 // Below modules are copied from pest.
