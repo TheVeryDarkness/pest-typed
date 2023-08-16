@@ -37,12 +37,6 @@ fn ident(s: &str) -> Ident {
     format_ident!("r#{}", s)
 }
 
-fn rule_wrappers() -> TokenStream {
-    quote! {
-        rule_wrappers
-    }
-}
-
 fn constant_wrappers() -> TokenStream {
     quote! {
         constant_wrappers
@@ -1308,22 +1302,6 @@ pub(crate) fn generate_typed_pair_from_rule(
         doc,
     );
 
-    let as_wrapper = |name: &Ident| {
-        quote! {
-            #[allow(non_camel_case_types)]
-            #[derive(Clone, PartialEq)]
-            pub struct #name;
-            impl #pest_typed::RuleWrapper<super::Rule> for #name {
-                const RULE: super::Rule = super::Rule::#name;
-                type Rule = super::Rule;
-            }
-        }
-    };
-    let rule_wrappers = rules.iter().map(|rule| {
-        let name = ident(rule.name.as_str());
-        as_wrapper(&name)
-    });
-    let eoi = as_wrapper(&ident("EOI"));
     graph.insert(quote! {
         use #pest_typed::NeverFailedTypedNode as _;
         #builtin
@@ -1432,11 +1410,6 @@ pub(crate) fn generate_typed_pair_from_rule(
         }
     };
     let res = quote! {
-        #[doc(hidden)]
-        mod rule_wrappers {
-            #(#rule_wrappers)*
-            #eoi
-        }
         #[doc(hidden)]
         mod #unicode {
             #unicode_rule
