@@ -289,32 +289,28 @@ fn peek_spans<'s, 'i: 's, R: RuleType>(
 }
 
 /// Positive predicate.
-#[derive(Clone, PartialEq)]
-pub struct Positive<'i, R: RuleType, N: TypedNode<'i, R>> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct Positive<N> {
     /// Mathed content.
     pub content: N,
-    _phantom: PhantomData<(&'i R, &'i N)>,
 }
-impl<'i, R: RuleType, N: TypedNode<'i, R>> From<N> for Positive<'i, R, N> {
+impl<N> From<N> for Positive<N> {
     fn from(content: N) -> Self {
-        Self {
-            content,
-            _phantom: PhantomData,
-        }
+        Self { content }
     }
 }
-impl<'i, R: RuleType, N: TypedNode<'i, R>> Deref for Positive<'i, R, N> {
+impl<N> Deref for Positive<N> {
     type Target = N;
     fn deref(&self) -> &Self::Target {
         &self.content
     }
 }
-impl<'i, R: RuleType, N: TypedNode<'i, R>> DerefMut for Positive<'i, R, N> {
+impl<N> DerefMut for Positive<N> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.content
     }
 }
-impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, N> {
+impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
     fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
@@ -335,27 +331,22 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<'i, R, 
         })
     }
 }
-impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Positive<'i, R, N> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Positive").finish()
-    }
-}
 
 /// Negative predicate.
 ///
 /// Will not contain anything.
 #[derive(Clone, PartialEq)]
-pub struct Negative<'i, R: RuleType, N: TypedNode<'i, R>> {
-    _phantom: PhantomData<(&'i R, &'i N)>,
+pub struct Negative<T> {
+    _phantom: PhantomData<T>,
 }
-impl<'i, R: RuleType, N: TypedNode<'i, R>> From<()> for Negative<'i, R, N> {
+impl<T> From<()> for Negative<T> {
     fn from(_value: ()) -> Self {
         Self {
             _phantom: PhantomData,
         }
     }
 }
-impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Negative<'i, R, N> {
+impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
     fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
@@ -363,7 +354,7 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Negative<'i, R, 
     ) -> Result<(Position<'i>, Self), ()> {
         tracker.negative_during(|tracker| {
             stack.snapshot();
-            match N::try_parse_with::<ATOMIC>(input, stack, tracker) {
+            match T::try_parse_with::<ATOMIC>(input, stack, tracker) {
                 Ok(_) => {
                     stack.restore();
                     Err(())
@@ -376,7 +367,7 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Negative<'i, R, 
         })
     }
 }
-impl<'i, R: RuleType, N: TypedNode<'i, R>> Debug for Negative<'i, R, N> {
+impl<T> Debug for Negative<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Negative").finish()
     }
@@ -1090,21 +1081,17 @@ impl<
 }
 
 /// Match an expression and push it.
-#[derive(Clone, PartialEq)]
-pub struct Push<'i, R: RuleType, T: TypedNode<'i, R>> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct Push<T> {
     /// Matched content.
     pub content: T,
-    _phantom: PhantomData<(&'i R, &'i T)>,
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> From<T> for Push<'i, R, T> {
+impl<T> From<T> for Push<T> {
     fn from(content: T) -> Self {
-        Self {
-            content,
-            _phantom: PhantomData,
-        }
+        Self { content }
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<'i, R, T> {
+impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<T> {
     #[inline]
     fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
@@ -1117,32 +1104,23 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<'i, R, T> {
         Ok((input, Self::from(content)))
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Deref for Push<'i, R, T> {
+impl<T> Deref for Push<T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.content
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> DerefMut for Push<'i, R, T> {
+impl<T> DerefMut for Push<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.content
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> Debug for Push<'i, R, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Push")
-            .field("content", &self.content)
-            .finish()
-    }
-}
 
 /// Match `[START:END]` in top-to-bottom order of the stack.
-#[derive(Clone, PartialEq)]
-pub struct PeekSlice2<'i, R: RuleType, const START: i32, const END: i32> {
-    _phantom: PhantomData<&'i R>,
-}
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeekSlice2<const START: i32, const END: i32>;
 impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
-    for PeekSlice2<'i, R, START, END>
+    for PeekSlice2<START, END>
 {
     #[inline]
     fn try_parse_with<const ATOMIC: bool>(
@@ -1152,26 +1130,14 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
     ) -> Result<(Position<'i>, Self), ()> {
         let spans = stack_slice(input, START, Some(END), stack, tracker)?;
         let (input, _) = peek_spans::<R>(input, spans, tracker)?;
-        Ok((
-            input,
-            Self {
-                _phantom: PhantomData,
-            },
-        ))
-    }
-}
-impl<'i, R: RuleType, const START: i32, const END: i32> Debug for PeekSlice2<'i, R, START, END> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("PeekSlice2").finish()
+        Ok((input, Self))
     }
 }
 
 /// Match `[START:END]` in top-to-bottom order of the stack.
-#[derive(Clone, PartialEq)]
-pub struct PeekSlice1<'i, R: RuleType, const START: i32> {
-    _phantom: PhantomData<&'i R>,
-}
-impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<'i, R, START> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeekSlice1<const START: i32>;
+impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<START> {
     #[inline]
     fn try_parse_with<const ATOMIC: bool>(
         input: Position<'i>,
@@ -1180,17 +1146,7 @@ impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<'i, R, S
     ) -> Result<(Position<'i>, Self), ()> {
         let spans = stack_slice(input, START, None, stack, tracker)?;
         let (input, _) = peek_spans::<R>(input, spans, tracker)?;
-        Ok((
-            input,
-            Self {
-                _phantom: PhantomData,
-            },
-        ))
-    }
-}
-impl<'i, R: RuleType, const START: i32> Debug for PeekSlice1<'i, R, START> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("PeekSlice1").finish()
+        Ok((input, Self))
     }
 }
 

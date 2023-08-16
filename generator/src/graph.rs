@@ -936,10 +936,10 @@ fn generate_graph_node<'g>(
             rule_config,
             match end {
                 Some(end) => quote! {
-                    #root::#generics::PeekSlice2::<'i, #start, #end>
+                    #root::#generics::PeekSlice2::<#start, #end>
                 },
                 None => quote! {
-                    #root::#generics::PeekSlice1::<'i, #start>
+                    #root::#generics::PeekSlice1::<#start>
                 },
             },
             Accesser::new(),
@@ -1417,13 +1417,13 @@ pub(crate) fn generate_typed_pair_from_rule(
                 >;
                 pub type Str<Wrapper: StringWrapper> = predefined_node::Str::<Wrapper>;
                 pub type Insens<'i, Wrapper: StringWrapper> = predefined_node::Insens::<'i, Wrapper>;
-                pub type PeekSlice2<'i, const START: #_i32, const END: #_i32> = predefined_node::PeekSlice2::<'i, #root::Rule, START, END>;
-                pub type PeekSlice1<'i, const START: #_i32> = predefined_node::PeekSlice1::<'i, #root::Rule, START>;
-                pub type Push<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Push<'i, #root::Rule, T>;
+                pub type PeekSlice2<const START: #_i32, const END: #_i32> = predefined_node::PeekSlice2::<START, END>;
+                pub type PeekSlice1<const START: #_i32> = predefined_node::PeekSlice1::<START>;
+                pub type Push<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Push<T>;
                 pub type Skip<'i, Strings: StringArrayWrapper> = predefined_node::Skip::<'i, Strings>;
                 pub type CharRange<const START: #char, const END: #char> = predefined_node::CharRange::<START, END>;
-                pub type Positive<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Positive<'i, #root::Rule, T>;
-                pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<'i, #root::Rule, T>;
+                pub type Positive<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Positive<T>;
+                pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<T>;
                 #(#seq)*
                 #(#chs)*
                 pub type Rep<'i, T> = predefined_node::Rep<T, Skipped<'i>>;

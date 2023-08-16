@@ -172,7 +172,7 @@ macro_rules! impl_empty {
 macro_rules! impl_forward_inner {
     ($node:ident) => {
         impl<'i: 'n, 'n, R: RuleType + 'n, T: TypedNode<'i, R> + Pairs<'i, 'n, R>> Pairs<'i, 'n, R>
-            for $node<'i, R, T>
+            for $node<T>
         {
             type Iter = T::Iter;
             type IntoIter = T::IntoIter;
@@ -189,13 +189,13 @@ macro_rules! impl_forward_inner {
 
 impl_empty!(Str<T>, T: StringWrapper);
 impl_empty!(Insens<'i, T>, T: StringWrapper);
-impl_empty!(PeekSlice2<'i, R, START, END>, const START: i32, const END: i32);
-impl_empty!(PeekSlice1<'i, R, START>, const START: i32);
+impl_empty!(PeekSlice2<START, END>, const START: i32, const END: i32);
+impl_empty!(PeekSlice1<START>, const START: i32);
 impl_forward_inner!(Push);
 impl_empty!(Skip<'i, Strings>, Strings: StringArrayWrapper);
 impl_empty!(CharRange<MIN, MAX>, const MIN: char, const MAX: char);
 impl_forward_inner!(Positive);
-impl_empty!(Negative<'i, R, T>, T: TypedNode<'i, R>);
+impl_empty!(Negative<T>, T: TypedNode<'i, R>);
 
 impl<'i: 'n, 'n, R: RuleType + 'n, T1: Pairs<'i, 'n, R>, T2: Pairs<'i, 'n, R>> Pairs<'i, 'n, R>
     for (T1, T2)
