@@ -289,9 +289,11 @@ fn peek_spans<'s, 'i: 's, R: RuleType>(
 }
 
 /// Positive predicate.
+///
+/// Peeked expressions will not occur in Pair/Pairs API.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Positive<N> {
-    /// Mathed content.
+    /// Peeked content.
     pub content: N,
 }
 impl<N> From<N> for Positive<N> {
