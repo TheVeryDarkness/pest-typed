@@ -12,7 +12,7 @@
 //! Overrided the macro [`parses_to`].
 
 use pest_typed::{
-    iterators::{Pair, PairTree, Token},
+    iterators::{Pair, Token},
     ParsableTypedNode,
 };
 use pest_typed_derive::TypedParser;

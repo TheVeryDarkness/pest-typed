@@ -34,8 +34,3 @@ pub fn option_type() -> TokenStream {
 pub fn vec_type() -> TokenStream {
     quote! { ::pest_typed::re_exported::Vec }
 }
-
-/// `vec` in corresponding context.
-pub fn vec_mod() -> TokenStream {
-    quote! { ::pest_typed::re_exported::vec }
-}

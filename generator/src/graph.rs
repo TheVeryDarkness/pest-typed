@@ -365,20 +365,6 @@ enum Emission {
     /// Normal rule.
     Both,
 }
-impl Emission {
-    pub fn emit_content(&self) -> bool {
-        match self {
-            Emission::Both | Emission::InnerExpression => true,
-            Emission::Span => false,
-        }
-    }
-    pub fn emit_span(&self) -> bool {
-        match self {
-            Emission::Both | Emission::Span => true,
-            Emission::InnerExpression => false,
-        }
-    }
-}
 impl ToTokens for Emission {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
