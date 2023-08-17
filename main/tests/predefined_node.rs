@@ -16,30 +16,12 @@ mod tests {
     use super::*;
     use alloc::string::String;
     use pest_typed::{
-        atomic_rule, compound_atomic_rule, non_atomic_rule, normal_rule, silent_rule, BoundWrapper,
-        ParsableTypedNode, RuleWrapper, Storage, StringWrapper, TypeWrapper,
+        atomic_rule, compound_atomic_rule, non_atomic_rule, normal_rule, rule_eoi, silent_rule,
+        BoundWrapper, ParsableTypedNode, RuleWrapper, Storage, StringWrapper, TypeWrapper,
     };
 
-    macro_rules! make_rules {
-        ($($ids:ident,)*) => {
-            #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-            enum Rule {
-                $($ids),*
-            }
-            mod rule_wrappers {
-                $(
-                    #[derive(Clone, PartialEq)]
-                    pub struct $ids {}
-                    impl super::RuleWrapper<super::Rule> for $ids {
-                        const RULE:super::Rule = super::Rule::$ids;
-                        type Rule = super::Rule;
-                    }
-                )*
-            }
-        };
-    }
-
-    make_rules! {
+    #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    enum Rule {
         Foo,
         RepFoo,
         WHITESPACE,
@@ -60,6 +42,7 @@ mod tests {
     atomic_rule!(WHITESPACE, Rule, Rule::WHITESPACE, CharRange::<' ', ' '>);
     compound_atomic_rule!(COMMENT, Rule, Rule::COMMENT, CharRange::<'\t', '\t'>);
     normal_rule!(StrFoo, Rule, Rule::Foo, Str::<Foo>, Ignore::<'i>);
+    rule_eoi!(EOI, Rule);
     #[test]
     fn string() {
         assert_eq!(<StrFoo<'_> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
