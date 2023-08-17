@@ -1,0 +1,996 @@
+#[doc(hidden)]
+mod unicode {}
+#[doc(hidden)]
+mod constant_wrappers {
+    #[doc = "A wrapper for `\"+\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_0();
+    impl ::pest_typed::StringWrapper for r#w_0 {
+        const CONTENT: &'static ::core::primitive::str = "+";
+    }
+    #[doc = "A wrapper for `\"(\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_1();
+    impl ::pest_typed::StringWrapper for r#w_1 {
+        const CONTENT: &'static ::core::primitive::str = "(";
+    }
+    #[doc = "A wrapper for `\")\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_2();
+    impl ::pest_typed::StringWrapper for r#w_2 {
+        const CONTENT: &'static ::core::primitive::str = ")";
+    }
+    #[doc = "A wrapper for `\"\\\"\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_3();
+    impl ::pest_typed::StringWrapper for r#w_3 {
+        const CONTENT: &'static ::core::primitive::str = "\"";
+    }
+    #[doc = "A wrapper for `\"\\\"\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_4();
+    impl ::pest_typed::StringWrapper for r#w_4 {
+        const CONTENT: &'static ::core::primitive::str = "\"";
+    }
+    #[doc = "A wrapper for `\"\\\"\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_5();
+    impl ::pest_typed::StringWrapper for r#w_5 {
+        const CONTENT: &'static ::core::primitive::str = "\"";
+    }
+    #[doc = "A wrapper for `\"b\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_6();
+    impl ::pest_typed::StringWrapper for r#w_6 {
+        const CONTENT: &'static ::core::primitive::str = "b";
+    }
+    #[doc = "A wrapper for `\"BB\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_7();
+    impl ::pest_typed::StringWrapper for r#w_7 {
+        const CONTENT: &'static ::core::primitive::str = "BB";
+    }
+    #[doc = "A wrapper for `\"b\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_8();
+    impl ::pest_typed::StringWrapper for r#w_8 {
+        const CONTENT: &'static ::core::primitive::str = "b";
+    }
+    #[doc = "A wrapper for `\"c\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_9();
+    impl ::pest_typed::StringWrapper for r#w_9 {
+        const CONTENT: &'static ::core::primitive::str = "c";
+    }
+    #[doc = "A wrapper for `\"r#\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_10();
+    impl ::pest_typed::StringWrapper for r#w_10 {
+        const CONTENT: &'static ::core::primitive::str = "r#";
+    }
+    #[doc = "A wrapper for `\"0x\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_11();
+    impl ::pest_typed::StringWrapper for r#w_11 {
+        const CONTENT: &'static ::core::primitive::str = "0x";
+    }
+    #[doc = "A wrapper for `\"1\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_12();
+    impl ::pest_typed::StringWrapper for r#w_12 {
+        const CONTENT: &'static ::core::primitive::str = "1";
+    }
+    #[doc = "A wrapper for `\".\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_13();
+    impl ::pest_typed::StringWrapper for r#w_13 {
+        const CONTENT: &'static ::core::primitive::str = ".";
+    }
+    #[doc = "A wrapper for `\"a\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_14();
+    impl ::pest_typed::StringWrapper for r#w_14 {
+        const CONTENT: &'static ::core::primitive::str = "a";
+    }
+    #[doc = "A wrapper for `\"b\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_15();
+    impl ::pest_typed::StringWrapper for r#w_15 {
+        const CONTENT: &'static ::core::primitive::str = "b";
+    }
+    #[doc = "A wrapper for `\"c\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_16();
+    impl ::pest_typed::StringWrapper for r#w_16 {
+        const CONTENT: &'static ::core::primitive::str = "c";
+    }
+    #[doc = "A wrapper for `\"b\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_17();
+    impl ::pest_typed::StringWrapper for r#w_17 {
+        const CONTENT: &'static ::core::primitive::str = "b";
+    }
+    #[doc = "A wrapper for `\"?\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, PartialEq)]
+    pub struct r#w_18();
+    impl ::pest_typed::StringWrapper for r#w_18 {
+        const CONTENT: &'static ::core::primitive::str = "?";
+    }
+}
+mod tags {
+    pub mod r#Tag {
+        #[doc = "Tag Second referenced by Tag."]
+        ::pest_typed::tag!(r#Second, super::super::Rule, super::super::generics::Seq_3::<'i, super::super::generics::Push::<'i, super::super::pairs::r#CompoundAtomic::<'i>>, super::super::generics::Positive::<'i, super::super::pairs::r#Silent::<'i>>, super::super::generics::Negative::<'i, super::super::pairs::r#Atomic::<'i>>>);
+        impl<'i> r#Second<'i> {
+            #[doc = "A helper function to access [`CompoundAtomic`]."]
+            #[allow(non_snake_case)]
+            pub fn r#CompoundAtomic<'s>(&'s self) -> &'s super::super::pairs::r#CompoundAtomic<'i> {
+                let res = &self.content;
+                {
+                    let res = &res.content.0 .1;
+                    {
+                        let res = &res.content;
+                        res
+                    }
+                }
+            }
+            #[doc = "A helper function to access [`Silent`]."]
+            #[allow(non_snake_case)]
+            pub fn r#Silent<'s>(&'s self) -> &'s super::super::pairs::r#Silent<'i> {
+                let res = &self.content;
+                {
+                    let res = &res.content.1 .1;
+                    {
+                        let res = &res.content;
+                        res
+                    }
+                }
+            }
+        }
+        #[doc = "Tag Third referenced by Tag."]
+        ::pest_typed::tag!(r#Third, super::super::Rule, super::super::generics::Rep::<'i, super::super::pairs::r#NonAtomic::<'i>>);
+        impl<'i> r#Third<'i> {
+            #[doc = "A helper function to access [`NonAtomic`]."]
+            #[allow(non_snake_case)]
+            pub fn r#NonAtomic<'s>(&'s self) -> ::pest_typed::re_exported::Vec<&'s super::super::pairs::r#NonAtomic<'i>> {
+                let res = &self.content;
+                {
+                    let res = res
+                        .content
+                        .iter()
+                        .map(|res| {
+                            let res = &res.1;
+                            res
+                        })
+                        .collect::<::pest_typed::re_exported::Vec<_>>();
+                    res
+                }
+            }
+        }
+    }
+}
+#[doc = "Definitions of statically typed nodes generated by pest-generator."]
+pub mod pairs {
+    #[doc = "Corresponds to expression: `(CharRange+ ~ \"+\" ~ CharRange+)`."]
+    #[doc = "Normal rule."]
+    #[doc = ""]
+    #[doc = "Regular rule."]
+    ::pest_typed::rule!(r#Regular, super::Rule, super::Rule::r#Regular, super::generics::Seq_3::<'i, super::generics::RepOnce::<'i, super::pairs::r#CharRange::<'i>>, super::generics::Str::<super::constant_wrappers::r#w_0>, super::generics::RepOnce::<'i, super::pairs::r#CharRange::<'i>>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Regular<'i> {
+        #[doc = "A helper function to access [`CharRange`]."]
+        #[allow(non_snake_case)]
+        pub fn r#CharRange<'s>(&'s self) -> (::pest_typed::re_exported::Vec<&'s super::pairs::r#CharRange<'i>>, ::pest_typed::re_exported::Vec<&'s super::pairs::r#CharRange<'i>>) {
+            let res = &self.content;
+            {
+                let res = (
+                    {
+                        let res = &res.content.0 .1;
+                        {
+                            let res = res
+                                .content
+                                .iter()
+                                .map(|res| {
+                                    let res = &res.1;
+                                    res
+                                })
+                                .collect::<::pest_typed::re_exported::Vec<_>>();
+                            res
+                        }
+                    },
+                    {
+                        let res = &res.content.2 .1;
+                        {
+                            let res = res
+                                .content
+                                .iter()
+                                .map(|res| {
+                                    let res = &res.1;
+                                    res
+                                })
+                                .collect::<::pest_typed::re_exported::Vec<_>>();
+                            res
+                        }
+                    },
+                );
+                res
+            }
+        }
+    }
+    #[doc = "Corresponds to expression: `('0'..'9')+`."]
+    #[doc = "Atomic rule."]
+    #[doc = ""]
+    #[doc = "Atomic rule."]
+    ::pest_typed::rule!(r#Atomic, super::Rule, super::Rule::r#Atomic, super::generics::RepOnce::<'i, super::generics::CharRange::<'0', '9'>>, super::generics::Skipped::<'i>, true, Span);
+    impl<'i> r#Atomic<'i> {}
+    #[doc = "Corresponds to expression: `(\"(\" | \")\")`."]
+    #[doc = "Normal rule."]
+    #[doc = ""]
+    #[doc = "Silent rule."]
+    ::pest_typed::rule!(r#Silent, super::Rule, super::Rule::r#Silent, super::generics::Choice_2::<super::generics::Str::<super::constant_wrappers::r#w_1>, super::generics::Str::<super::constant_wrappers::r#w_2>>, super::generics::Skipped::<'i>, ATOMIC, InnerExpression);
+    impl<'i> r#Silent<'i> {}
+    #[doc = "Corresponds to expression: `(\"\\\"\" ~ (!\"\\\"\" ~ ANY)* ~ \"\\\"\")`."]
+    #[doc = "Atomic rule."]
+    #[doc = ""]
+    #[doc = "Compound atomic rule."]
+    ::pest_typed::rule!(r#CompoundAtomic, super::Rule, super::Rule::r#CompoundAtomic, super::generics::Seq_3::<'i, super::generics::Str::<super::constant_wrappers::r#w_3>, super::generics::Rep::<'i, super::generics::Seq_2::<'i, super::generics::Negative::<'i, super::generics::Str::<super::constant_wrappers::r#w_4>>, super::pairs::r#ANY>>, super::generics::Str::<super::constant_wrappers::r#w_5>>, super::generics::Skipped::<'i>, true, Both);
+    impl<'i> r#CompoundAtomic<'i> {
+        #[doc = "A helper function to access [`ANY`]."]
+        #[allow(non_snake_case)]
+        pub fn r#ANY<'s>(&'s self) -> ::pest_typed::re_exported::Vec<&'s super::pairs::r#ANY> {
+            let res = &self.content;
+            {
+                let res = &res.content.1 .1;
+                {
+                    let res = res
+                        .content
+                        .iter()
+                        .map(|res| {
+                            let res = &res.1;
+                            {
+                                let res = &res.content.1 .1;
+                                res
+                            }
+                        })
+                        .collect::<::pest_typed::re_exported::Vec<_>>();
+                    res
+                }
+            }
+        }
+    }
+    #[doc = "Corresponds to expression: `(ANY ~ (#Second = (PUSH(CompoundAtomic) ~ &Silent ~ !Atomic))? ~ ((#Third = NonAtomic*) ~ Regular+)?)`."]
+    #[doc = "Normal rule."]
+    #[doc = ""]
+    #[doc = "Tagged rule."]
+    ::pest_typed::rule!(r#Tag, super::Rule, super::Rule::r#Tag, super::generics::Seq_3::<'i, super::pairs::r#ANY, ::pest_typed::re_exported::Option::<super::tags::r#Tag::r#Second::<'i>>, ::pest_typed::re_exported::Option::<super::generics::Seq_2::<'i, super::tags::r#Tag::r#Third::<'i>, super::generics::RepOnce::<'i, super::pairs::r#Regular::<'i>>>>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Tag<'i> {
+        #[doc = "A helper function to access [`ANY`]."]
+        #[allow(non_snake_case)]
+        pub fn r#ANY<'s>(&'s self) -> &'s super::pairs::r#ANY {
+            let res = &self.content;
+            {
+                let res = &res.content.0 .1;
+                res
+            }
+        }
+        #[doc = "A helper function to access [`Regular`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Regular<'s>(&'s self) -> ::pest_typed::re_exported::Option<::pest_typed::re_exported::Vec<&'s super::pairs::r#Regular<'i>>> {
+            let res = &self.content;
+            {
+                let res = &res.content.2 .1;
+                {
+                    let res = res.as_ref().and_then(|res| {
+                        Some({
+                            let res = &res.content.1 .1;
+                            {
+                                let res = res
+                                    .content
+                                    .iter()
+                                    .map(|res| {
+                                        let res = &res.1;
+                                        res
+                                    })
+                                    .collect::<::pest_typed::re_exported::Vec<_>>();
+                                res
+                            }
+                        })
+                    });
+                    res
+                }
+            }
+        }
+        #[doc = "A helper function to access [`Second`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Second<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::tags::r#Tag::r#Second<'i>> {
+            let res = &self.content;
+            {
+                let res = &res.content.1 .1;
+                {
+                    let res = res.as_ref().and_then(|res| Some(res));
+                    res
+                }
+            }
+        }
+        #[doc = "A helper function to access [`Third`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Third<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::tags::r#Tag::r#Third<'i>> {
+            let res = &self.content;
+            {
+                let res = &res.content.2 .1;
+                {
+                    let res = res.as_ref().and_then(|res| {
+                        Some({
+                            let res = &res.content.0 .1;
+                            res
+                        })
+                    });
+                    res
+                }
+            }
+        }
+    }
+    #[doc = "Corresponds to expression: `((CaseInsensitive? ~ CharRange+ ~ Tag*)? ~ (\"b\" | (\"BB\" ~ \"b\"?))? ~ ^\"c\"* ~ (!Seq ~ Any)+)`."]
+    #[doc = "Non-atomic rule."]
+    #[doc = ""]
+    #[doc = "Non-atomic rule."]
+    ::pest_typed::rule!(r#NonAtomic, super::Rule, super::Rule::r#NonAtomic, super::generics::Seq_4::<'i, ::pest_typed::re_exported::Option::<super::generics::Seq_3::<'i, ::pest_typed::re_exported::Option::<super::pairs::r#CaseInsensitive::<'i>>, super::generics::RepOnce::<'i, super::pairs::r#CharRange::<'i>>, super::generics::Rep::<'i, super::pairs::r#Tag::<'i>>>>, ::pest_typed::re_exported::Option::<super::generics::Choice_2::<super::generics::Str::<super::constant_wrappers::r#w_6>, super::generics::Seq_2::<'i, super::generics::Str::<super::constant_wrappers::r#w_7>, ::pest_typed::re_exported::Option::<super::generics::Str::<super::constant_wrappers::r#w_8>>>>>, super::generics::Rep::<'i, super::generics::Insens::<'i, super::constant_wrappers::r#w_9>>, super::generics::RepOnce::<'i, super::generics::Seq_2::<'i, super::generics::Negative::<'i, super::pairs::r#Seq::<'i>>, super::pairs::r#Any::<'i>>>>, super::generics::Skipped::<'i>, false, Both);
+    impl<'i> r#NonAtomic<'i> {
+        #[doc = "A helper function to access [`Any`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Any<'s>(&'s self) -> ::pest_typed::re_exported::Vec<&'s super::pairs::r#Any<'i>> {
+            let res = &self.content;
+            {
+                let res = &res.content.3 .1;
+                {
+                    let res = res
+                        .content
+                        .iter()
+                        .map(|res| {
+                            let res = &res.1;
+                            {
+                                let res = &res.content.1 .1;
+                                res
+                            }
+                        })
+                        .collect::<::pest_typed::re_exported::Vec<_>>();
+                    res
+                }
+            }
+        }
+        #[doc = "A helper function to access [`CaseInsensitive`]."]
+        #[allow(non_snake_case)]
+        pub fn r#CaseInsensitive<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::pairs::r#CaseInsensitive<'i>> {
+            let res = &self.content;
+            {
+                let res = &res.content.0 .1;
+                {
+                    let res = res
+                        .as_ref()
+                        .and_then(|res| {
+                            Some({
+                                let res = &res.content.0 .1;
+                                {
+                                    let res = res.as_ref().and_then(|res| Some(res));
+                                    res
+                                }
+                            })
+                        })
+                        .flatten();
+                    res
+                }
+            }
+        }
+        #[doc = "A helper function to access [`CharRange`]."]
+        #[allow(non_snake_case)]
+        pub fn r#CharRange<'s>(&'s self) -> ::pest_typed::re_exported::Option<::pest_typed::re_exported::Vec<&'s super::pairs::r#CharRange<'i>>> {
+            let res = &self.content;
+            {
+                let res = &res.content.0 .1;
+                {
+                    let res = res.as_ref().and_then(|res| {
+                        Some({
+                            let res = &res.content.1 .1;
+                            {
+                                let res = res
+                                    .content
+                                    .iter()
+                                    .map(|res| {
+                                        let res = &res.1;
+                                        res
+                                    })
+                                    .collect::<::pest_typed::re_exported::Vec<_>>();
+                                res
+                            }
+                        })
+                    });
+                    res
+                }
+            }
+        }
+        #[doc = "A helper function to access [`Tag`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Tag<'s>(&'s self) -> ::pest_typed::re_exported::Option<::pest_typed::re_exported::Vec<&'s super::pairs::r#Tag<'i>>> {
+            let res = &self.content;
+            {
+                let res = &res.content.0 .1;
+                {
+                    let res = res.as_ref().and_then(|res| {
+                        Some({
+                            let res = &res.content.2 .1;
+                            {
+                                let res = res
+                                    .content
+                                    .iter()
+                                    .map(|res| {
+                                        let res = &res.1;
+                                        res
+                                    })
+                                    .collect::<::pest_typed::re_exported::Vec<_>>();
+                                res
+                            }
+                        })
+                    });
+                    res
+                }
+            }
+        }
+    }
+    #[doc = "Corresponds to expression: `\"r#\"`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#ExactString, super::Rule, super::Rule::r#ExactString, super::generics::Str::<super::constant_wrappers::r#w_10>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#ExactString<'i> {}
+    #[doc = "Corresponds to expression: `^\"0x\"`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#CaseInsensitive, super::Rule, super::Rule::r#CaseInsensitive, super::generics::Insens::<'i, super::constant_wrappers::r#w_11>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#CaseInsensitive<'i> {}
+    #[doc = "Corresponds to expression: `('0'..'9')`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#CharRange, super::Rule, super::Rule::r#CharRange, super::generics::CharRange::<'0', '9'>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#CharRange<'i> {}
+    #[doc = "Corresponds to expression: `ANY`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#Any, super::Rule, super::Rule::r#Any, super::pairs::r#ANY, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Any<'i> {
+        #[doc = "A helper function to access [`ANY`]."]
+        #[allow(non_snake_case)]
+        pub fn r#ANY<'s>(&'s self) -> &'s super::pairs::r#ANY {
+            let res = &self.content;
+            res
+        }
+    }
+    #[doc = "Corresponds to expression: `(\"1\" ~ ('2'..'9') ~ \".\")`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#Seq, super::Rule, super::Rule::r#Seq, super::generics::Seq_3::<'i, super::generics::Str::<super::constant_wrappers::r#w_12>, super::generics::CharRange::<'2', '9'>, super::generics::Str::<super::constant_wrappers::r#w_13>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Seq<'i> {}
+    #[doc = "Corresponds to expression: `(\"a\" | (^\"b\"+ ~ RepAtLeastOnce) | (&\"c\" ~ Choice ~ Rep ~ Opt) | Peek | PeekLeft | PeekRight | PeekLeftRight | Drop | PeekAll)`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#Choice, super::Rule, super::Rule::r#Choice, super::generics::Choice_9::<super::generics::Str::<super::constant_wrappers::r#w_14>, super::generics::Seq_2::<'i, super::generics::RepOnce::<'i, super::generics::Insens::<'i, super::constant_wrappers::r#w_15>>, super::pairs::r#RepAtLeastOnce::<'i>>, super::generics::Seq_4::<'i, super::generics::Positive::<'i, super::generics::Str::<super::constant_wrappers::r#w_16>>, super::pairs::r#Choice::<'i>, super::pairs::r#Rep::<'i>, super::pairs::r#Opt::<'i>>, super::pairs::r#Peek::<'i>, super::pairs::r#PeekLeft::<'i>, super::pairs::r#PeekRight::<'i>, super::pairs::r#PeekLeftRight::<'i>, super::pairs::r#Drop::<'i>, super::pairs::r#PeekAll::<'i>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Choice<'i> {
+        #[doc = "A helper function to access [`Choice`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Choice<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::pairs::r#Choice<'i>> {
+            let res = &self.content;
+            {
+                let res = res._2().and_then(|res| {
+                    Some({
+                        let res = &res.content.1 .1;
+                        res
+                    })
+                });
+                res
+            }
+        }
+        #[doc = "A helper function to access [`Drop`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Drop<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::pairs::r#Drop<'i>> {
+            let res = &self.content;
+            {
+                let res = res._7().and_then(|res| Some(res));
+                res
+            }
+        }
+        #[doc = "A helper function to access [`Opt`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Opt<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::pairs::r#Opt<'i>> {
+            let res = &self.content;
+            {
+                let res = res._2().and_then(|res| {
+                    Some({
+                        let res = &res.content.3 .1;
+                        res
+                    })
+                });
+                res
+            }
+        }
+        #[doc = "A helper function to access [`Peek`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Peek<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::pairs::r#Peek<'i>> {
+            let res = &self.content;
+            {
+                let res = res._3().and_then(|res| Some(res));
+                res
+            }
+        }
+        #[doc = "A helper function to access [`PeekAll`]."]
+        #[allow(non_snake_case)]
+        pub fn r#PeekAll<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::pairs::r#PeekAll<'i>> {
+            let res = &self.content;
+            {
+                let res = res._8().and_then(|res| Some(res));
+                res
+            }
+        }
+        #[doc = "A helper function to access [`PeekLeft`]."]
+        #[allow(non_snake_case)]
+        pub fn r#PeekLeft<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::pairs::r#PeekLeft<'i>> {
+            let res = &self.content;
+            {
+                let res = res._4().and_then(|res| Some(res));
+                res
+            }
+        }
+        #[doc = "A helper function to access [`PeekLeftRight`]."]
+        #[allow(non_snake_case)]
+        pub fn r#PeekLeftRight<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::pairs::r#PeekLeftRight<'i>> {
+            let res = &self.content;
+            {
+                let res = res._6().and_then(|res| Some(res));
+                res
+            }
+        }
+        #[doc = "A helper function to access [`PeekRight`]."]
+        #[allow(non_snake_case)]
+        pub fn r#PeekRight<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::pairs::r#PeekRight<'i>> {
+            let res = &self.content;
+            {
+                let res = res._5().and_then(|res| Some(res));
+                res
+            }
+        }
+        #[doc = "A helper function to access [`Rep`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Rep<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::pairs::r#Rep<'i>> {
+            let res = &self.content;
+            {
+                let res = res._2().and_then(|res| {
+                    Some({
+                        let res = &res.content.2 .1;
+                        res
+                    })
+                });
+                res
+            }
+        }
+        #[doc = "A helper function to access [`RepAtLeastOnce`]."]
+        #[allow(non_snake_case)]
+        pub fn r#RepAtLeastOnce<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::pairs::r#RepAtLeastOnce<'i>> {
+            let res = &self.content;
+            {
+                let res = res._1().and_then(|res| {
+                    Some({
+                        let res = &res.content.1 .1;
+                        res
+                    })
+                });
+                res
+            }
+        }
+    }
+    #[doc = "Corresponds to expression: `^\"b\"*`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#Rep, super::Rule, super::Rule::r#Rep, super::generics::Rep::<'i, super::generics::Insens::<'i, super::constant_wrappers::r#w_17>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Rep<'i> {}
+    #[doc = "Corresponds to expression: `('0'..'9')+`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#RepAtLeastOnce, super::Rule, super::Rule::r#RepAtLeastOnce, super::generics::RepOnce::<'i, super::generics::CharRange::<'0', '9'>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#RepAtLeastOnce<'i> {}
+    #[doc = "Corresponds to expression: `\"?\"?`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#Opt, super::Rule, super::Rule::r#Opt, ::pest_typed::re_exported::Option::<super::generics::Str::<super::constant_wrappers::r#w_18>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Opt<'i> {}
+    #[doc = "Corresponds to expression: `(RepAtLeastOnce ~ RepAtLeastOnce ~ RepAtLeastOnce)`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#RepExact, super::Rule, super::Rule::r#RepExact, super::generics::Seq_3::<'i, super::pairs::r#RepAtLeastOnce::<'i>, super::pairs::r#RepAtLeastOnce::<'i>, super::pairs::r#RepAtLeastOnce::<'i>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#RepExact<'i> {
+        #[doc = "A helper function to access [`RepAtLeastOnce`]."]
+        #[allow(non_snake_case)]
+        pub fn r#RepAtLeastOnce<'s>(&'s self) -> (&'s super::pairs::r#RepAtLeastOnce<'i>, &'s super::pairs::r#RepAtLeastOnce<'i>, &'s super::pairs::r#RepAtLeastOnce<'i>) {
+            let res = &self.content;
+            {
+                let res = (
+                    {
+                        let res = &res.content.0 .1;
+                        res
+                    },
+                    {
+                        let res = &res.content.1 .1;
+                        res
+                    },
+                    {
+                        let res = &res.content.2 .1;
+                        res
+                    },
+                );
+                res
+            }
+        }
+    }
+    #[doc = "Corresponds to expression: `(RepExact ~ RepExact*)`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#RepLeft, super::Rule, super::Rule::r#RepLeft, super::generics::Seq_2::<'i, super::pairs::r#RepExact::<'i>, super::generics::Rep::<'i, super::pairs::r#RepExact::<'i>>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#RepLeft<'i> {
+        #[doc = "A helper function to access [`RepExact`]."]
+        #[allow(non_snake_case)]
+        pub fn r#RepExact<'s>(&'s self) -> (&'s super::pairs::r#RepExact<'i>, ::pest_typed::re_exported::Vec<&'s super::pairs::r#RepExact<'i>>) {
+            let res = &self.content;
+            {
+                let res = (
+                    {
+                        let res = &res.content.0 .1;
+                        res
+                    },
+                    {
+                        let res = &res.content.1 .1;
+                        {
+                            let res = res
+                                .content
+                                .iter()
+                                .map(|res| {
+                                    let res = &res.1;
+                                    res
+                                })
+                                .collect::<::pest_typed::re_exported::Vec<_>>();
+                            res
+                        }
+                    },
+                );
+                res
+            }
+        }
+    }
+    #[doc = "Corresponds to expression: `(RepLeft? ~ RepLeft?)`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#RepRight, super::Rule, super::Rule::r#RepRight, super::generics::Seq_2::<'i, ::pest_typed::re_exported::Option::<super::pairs::r#RepLeft::<'i>>, ::pest_typed::re_exported::Option::<super::pairs::r#RepLeft::<'i>>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#RepRight<'i> {
+        #[doc = "A helper function to access [`RepLeft`]."]
+        #[allow(non_snake_case)]
+        pub fn r#RepLeft<'s>(&'s self) -> (::pest_typed::re_exported::Option<&'s super::pairs::r#RepLeft<'i>>, ::pest_typed::re_exported::Option<&'s super::pairs::r#RepLeft<'i>>) {
+            let res = &self.content;
+            {
+                let res = (
+                    {
+                        let res = &res.content.0 .1;
+                        {
+                            let res = res.as_ref().and_then(|res| Some(res));
+                            res
+                        }
+                    },
+                    {
+                        let res = &res.content.1 .1;
+                        {
+                            let res = res.as_ref().and_then(|res| Some(res));
+                            res
+                        }
+                    },
+                );
+                res
+            }
+        }
+    }
+    #[doc = "Corresponds to expression: `(RepRight ~ RepRight?)`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#RepLeftRight, super::Rule, super::Rule::r#RepLeftRight, super::generics::Seq_2::<'i, super::pairs::r#RepRight::<'i>, ::pest_typed::re_exported::Option::<super::pairs::r#RepRight::<'i>>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#RepLeftRight<'i> {
+        #[doc = "A helper function to access [`RepRight`]."]
+        #[allow(non_snake_case)]
+        pub fn r#RepRight<'s>(&'s self) -> (&'s super::pairs::r#RepRight<'i>, ::pest_typed::re_exported::Option<&'s super::pairs::r#RepRight<'i>>) {
+            let res = &self.content;
+            {
+                let res = (
+                    {
+                        let res = &res.content.0 .1;
+                        res
+                    },
+                    {
+                        let res = &res.content.1 .1;
+                        {
+                            let res = res.as_ref().and_then(|res| Some(res));
+                            res
+                        }
+                    },
+                );
+                res
+            }
+        }
+    }
+    #[doc = "Corresponds to expression: `(SOI ~ RepLeftRight ~ RepLeftRight ~ RepLeftRight? ~ RepLeftRight?)`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#Pos, super::Rule, super::Rule::r#Pos, super::generics::Positive::<'i, super::generics::Seq_5::<'i, super::pairs::r#SOI, super::pairs::r#RepLeftRight::<'i>, super::pairs::r#RepLeftRight::<'i>, ::pest_typed::re_exported::Option::<super::pairs::r#RepLeftRight::<'i>>, ::pest_typed::re_exported::Option::<super::pairs::r#RepLeftRight::<'i>>>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Pos<'i> {
+        #[doc = "A helper function to access [`RepLeftRight`]."]
+        #[allow(non_snake_case)]
+        pub fn r#RepLeftRight<'s>(&'s self) -> (&'s super::pairs::r#RepLeftRight<'i>, &'s super::pairs::r#RepLeftRight<'i>, ::pest_typed::re_exported::Option<&'s super::pairs::r#RepLeftRight<'i>>, ::pest_typed::re_exported::Option<&'s super::pairs::r#RepLeftRight<'i>>) {
+            let res = &self.content;
+            {
+                let res = &res.content;
+                {
+                    let res = (
+                        {
+                            let res = &res.content.1 .1;
+                            res
+                        },
+                        {
+                            let res = &res.content.2 .1;
+                            res
+                        },
+                        {
+                            let res = &res.content.3 .1;
+                            {
+                                let res = res.as_ref().and_then(|res| Some(res));
+                                res
+                            }
+                        },
+                        {
+                            let res = &res.content.4 .1;
+                            {
+                                let res = res.as_ref().and_then(|res| Some(res));
+                                res
+                            }
+                        },
+                    );
+                    res
+                }
+            }
+        }
+        #[doc = "A helper function to access [`SOI`]."]
+        #[allow(non_snake_case)]
+        pub fn r#SOI<'s>(&'s self) -> &'s super::pairs::r#SOI {
+            let res = &self.content;
+            {
+                let res = &res.content;
+                {
+                    let res = &res.content.0 .1;
+                    res
+                }
+            }
+        }
+    }
+    #[doc = "Corresponds to expression: `(EOI ~ Pos)`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#Neg, super::Rule, super::Rule::r#Neg, super::generics::Negative::<'i, super::generics::Seq_2::<'i, super::pairs::r#EOI::<'i>, super::pairs::r#Pos::<'i>>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Neg<'i> {}
+    #[doc = "Corresponds to expression: `(RepLeft* ~ Neg ~ ExactString+ ~ Push ~ Pop ~ Push ~ PopAll)`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#Push, super::Rule, super::Rule::r#Push, super::generics::Push::<'i, super::generics::Seq_7::<'i, super::generics::Rep::<'i, super::pairs::r#RepLeft::<'i>>, super::pairs::r#Neg::<'i>, super::generics::RepOnce::<'i, super::pairs::r#ExactString::<'i>>, super::pairs::r#Push::<'i>, super::pairs::r#Pop::<'i>, super::pairs::r#Push::<'i>, super::pairs::r#PopAll::<'i>>>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Push<'i> {
+        #[doc = "A helper function to access [`ExactString`]."]
+        #[allow(non_snake_case)]
+        pub fn r#ExactString<'s>(&'s self) -> ::pest_typed::re_exported::Vec<&'s super::pairs::r#ExactString<'i>> {
+            let res = &self.content;
+            {
+                let res = &res.content;
+                {
+                    let res = &res.content.2 .1;
+                    {
+                        let res = res
+                            .content
+                            .iter()
+                            .map(|res| {
+                                let res = &res.1;
+                                res
+                            })
+                            .collect::<::pest_typed::re_exported::Vec<_>>();
+                        res
+                    }
+                }
+            }
+        }
+        #[doc = "A helper function to access [`Neg`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Neg<'s>(&'s self) -> &'s super::pairs::r#Neg<'i> {
+            let res = &self.content;
+            {
+                let res = &res.content;
+                {
+                    let res = &res.content.1 .1;
+                    res
+                }
+            }
+        }
+        #[doc = "A helper function to access [`Pop`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Pop<'s>(&'s self) -> &'s super::pairs::r#Pop<'i> {
+            let res = &self.content;
+            {
+                let res = &res.content;
+                {
+                    let res = &res.content.4 .1;
+                    res
+                }
+            }
+        }
+        #[doc = "A helper function to access [`PopAll`]."]
+        #[allow(non_snake_case)]
+        pub fn r#PopAll<'s>(&'s self) -> &'s super::pairs::r#PopAll<'i> {
+            let res = &self.content;
+            {
+                let res = &res.content;
+                {
+                    let res = &res.content.6 .1;
+                    res
+                }
+            }
+        }
+        #[doc = "A helper function to access [`Push`]."]
+        #[allow(non_snake_case)]
+        pub fn r#Push<'s>(&'s self) -> (&'s super::pairs::r#Push<'i>, &'s super::pairs::r#Push<'i>) {
+            let res = &self.content;
+            {
+                let res = &res.content;
+                {
+                    let res = (
+                        {
+                            let res = &res.content.3 .1;
+                            res
+                        },
+                        {
+                            let res = &res.content.5 .1;
+                            res
+                        },
+                    );
+                    res
+                }
+            }
+        }
+        #[doc = "A helper function to access [`RepLeft`]."]
+        #[allow(non_snake_case)]
+        pub fn r#RepLeft<'s>(&'s self) -> ::pest_typed::re_exported::Vec<&'s super::pairs::r#RepLeft<'i>> {
+            let res = &self.content;
+            {
+                let res = &res.content;
+                {
+                    let res = &res.content.0 .1;
+                    {
+                        let res = res
+                            .content
+                            .iter()
+                            .map(|res| {
+                                let res = &res.1;
+                                res
+                            })
+                            .collect::<::pest_typed::re_exported::Vec<_>>();
+                        res
+                    }
+                }
+            }
+        }
+    }
+    #[doc = "Corresponds to expression: `POP`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#Pop, super::Rule, super::Rule::r#Pop, super::pairs::r#POP::<'i>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Pop<'i> {
+        #[doc = "A helper function to access [`POP`]."]
+        #[allow(non_snake_case)]
+        pub fn r#POP<'s>(&'s self) -> &'s super::pairs::r#POP<'i> {
+            let res = &self.content;
+            res
+        }
+    }
+    #[doc = "Corresponds to expression: `POP_ALL`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#PopAll, super::Rule, super::Rule::r#PopAll, super::pairs::r#POP_ALL::<'i>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#PopAll<'i> {
+        #[doc = "A helper function to access [`POP_ALL`]."]
+        #[allow(non_snake_case)]
+        pub fn r#POP_ALL<'s>(&'s self) -> &'s super::pairs::r#POP_ALL<'i> {
+            let res = &self.content;
+            res
+        }
+    }
+    #[doc = "Corresponds to expression: `PEEK[0..]`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#Peek, super::Rule, super::Rule::r#Peek, super::generics::PeekSlice1::<0i32>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Peek<'i> {}
+    #[doc = "Corresponds to expression: `PEEK[1..]`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#PeekLeft, super::Rule, super::Rule::r#PeekLeft, super::generics::PeekSlice1::<1i32>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#PeekLeft<'i> {}
+    #[doc = "Corresponds to expression: `PEEK[0..]`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#PeekRight, super::Rule, super::Rule::r#PeekRight, super::generics::PeekSlice1::<0i32>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#PeekRight<'i> {}
+    #[doc = "Corresponds to expression: `PEEK[1..2]`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#PeekLeftRight, super::Rule, super::Rule::r#PeekLeftRight, super::generics::PeekSlice2::<1i32, 2i32>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#PeekLeftRight<'i> {}
+    #[doc = "Corresponds to expression: `DROP`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#Drop, super::Rule, super::Rule::r#Drop, super::pairs::r#DROP, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#Drop<'i> {
+        #[doc = "A helper function to access [`DROP`]."]
+        #[allow(non_snake_case)]
+        pub fn r#DROP<'s>(&'s self) -> &'s super::pairs::r#DROP {
+            let res = &self.content;
+            res
+        }
+    }
+    #[doc = "Corresponds to expression: `PEEK_ALL`."]
+    #[doc = "Normal rule."]
+    ::pest_typed::rule!(r#PeekAll, super::Rule, super::Rule::r#PeekAll, super::pairs::r#PEEK_ALL::<'i>, super::generics::Skipped::<'i>, ATOMIC, Both);
+    impl<'i> r#PeekAll<'i> {
+        #[doc = "A helper function to access [`PEEK_ALL`]."]
+        #[allow(non_snake_case)]
+        pub fn r#PEEK_ALL<'s>(&'s self) -> &'s super::pairs::r#PEEK_ALL<'i> {
+            let res = &self.content;
+            res
+        }
+    }
+    use super::unicode::*;
+    ::pest_typed::rule_eoi!(EOI, super::Rule);
+    #[allow(non_camel_case_types)]
+    pub type r#ANY = ::pest_typed::predefined_node::ANY;
+    #[allow(non_camel_case_types)]
+    pub type r#SOI = ::pest_typed::predefined_node::SOI;
+    #[allow(non_camel_case_types)]
+    pub type r#PEEK_ALL<'i> = ::pest_typed::predefined_node::PEEK_ALL<'i>;
+    #[allow(non_camel_case_types)]
+    pub type r#POP<'i> = ::pest_typed::predefined_node::POP<'i>;
+    #[allow(non_camel_case_types)]
+    pub type r#POP_ALL<'i> = ::pest_typed::predefined_node::POP_ALL<'i>;
+    #[allow(non_camel_case_types)]
+    pub type r#DROP = ::pest_typed::predefined_node::DROP;
+    #[allow(non_camel_case_types)]
+    pub type r#WHITESPACE<'i> = ::pest_typed::predefined_node::AlwaysFail<'i>;
+    #[allow(non_camel_case_types)]
+    pub type r#COMMENT<'i> = ::pest_typed::predefined_node::AlwaysFail<'i>;
+}
+#[doc(hidden)]
+mod generics {
+    use pest_typed::{predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
+    pub type Skipped<'i> = predefined_node::Skipped<super::pairs::WHITESPACE<'i>, super::pairs::COMMENT<'i>>;
+    pub type Str<Wrapper: StringWrapper> = predefined_node::Str<Wrapper>;
+    pub type Insens<'i, Wrapper: StringWrapper> = predefined_node::Insens<'i, Wrapper>;
+    pub type PeekSlice2<const START: ::core::primitive::i32, const END: ::core::primitive::i32> = predefined_node::PeekSlice2<START, END>;
+    pub type PeekSlice1<const START: ::core::primitive::i32> = predefined_node::PeekSlice1<START>;
+    pub type Push<'i, T: TypedNode<'i, super::Rule>> = predefined_node::Push<T>;
+    pub type Skip<'i, Strings: StringArrayWrapper> = predefined_node::Skip<'i, Strings>;
+    pub type CharRange<const START: ::core::primitive::char, const END: ::core::primitive::char> = predefined_node::CharRange<START, END>;
+    pub type Positive<'i, T: TypedNode<'i, super::Rule>> = predefined_node::Positive<T>;
+    pub type Negative<'i, T: TypedNode<'i, super::Rule>> = predefined_node::Negative<T>;
+    use pest_typed::sequence::Seq2;
+    pub type Seq_2<'i, T0, T1> = Seq2<T0, T1, Skipped<'i>>;
+    use pest_typed::sequence::Seq3;
+    pub type Seq_3<'i, T0, T1, T2> = Seq3<T0, T1, T2, Skipped<'i>>;
+    use pest_typed::sequence::Seq4;
+    pub type Seq_4<'i, T0, T1, T2, T3> = Seq4<T0, T1, T2, T3, Skipped<'i>>;
+    use pest_typed::sequence::Seq5;
+    pub type Seq_5<'i, T0, T1, T2, T3, T4> = Seq5<T0, T1, T2, T3, T4, Skipped<'i>>;
+    use pest_typed::sequence::Seq7;
+    pub type Seq_7<'i, T0, T1, T2, T3, T4, T5, T6> = Seq7<T0, T1, T2, T3, T4, T5, T6, Skipped<'i>>;
+    use pest_typed::choices::Choice2;
+    pub type Choice_2<T0, T1> = Choice2<T0, T1>;
+    use pest_typed::choices::Choice9;
+    pub type Choice_9<T0, T1, T2, T3, T4, T5, T6, T7, T8> = Choice9<T0, T1, T2, T3, T4, T5, T6, T7, T8>;
+    pub type Rep<'i, T> = predefined_node::Rep<T, Skipped<'i>>;
+    pub type RepOnce<'i, T> = predefined_node::RepOnce<T, Skipped<'i>>;
+}

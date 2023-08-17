@@ -1349,11 +1349,17 @@ mod tests {
     /// ```
     #[test]
     fn generated_rules() {
+        let path_generated = "tests/syntax.generated.txt";
+        let path_expected = if cfg!(feature = "grammar-extras") {
+            "tests/syntax.extras.expected.txt"
+        } else {
+            "tests/syntax.expected.txt"
+        };
         let actual = generate_typed_pair_from_rule(&PARSE_RESULT.1, &DOC_COMMENT, Config::all());
         let actual = actual.to_string();
-        std::fs::write("tests/syntax.generated.txt", &actual).unwrap();
+        std::fs::write(path_generated, &actual).unwrap();
         let output = std::process::Command::new("rustfmt")
-            .arg("tests/syntax.generated.txt")
+            .arg(path_generated)
             .arg("--config")
             .arg("use_small_heuristics=Max,max_width=1000")
             .output()
@@ -1361,8 +1367,8 @@ mod tests {
         assert!(output.status.success());
 
         assert_eq!(
-            std::fs::read("tests/syntax.generated.txt").unwrap(),
-            std::fs::read("tests/syntax.expected.txt").unwrap(),
+            std::fs::read(path_generated).unwrap(),
+            std::fs::read(path_expected).unwrap(),
             "Generated codes have changed."
         );
     }
