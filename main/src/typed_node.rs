@@ -86,14 +86,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Option<T> {
             T::try_parse_with::<ATOMIC>(input, stack, tracker)
         });
         match res {
-            Ok((input, inner)) => {
-                stack.clear_snapshot();
-                Ok((input, Self::from(Some(inner))))
-            }
-            Err(_) => {
-                stack.restore();
-                Ok((input, Self::from(None)))
-            }
+            Ok((input, inner)) => Ok((input, Self::from(Some(inner)))),
+            Err(_) => Ok((input, Self::from(None))),
         }
     }
 }
