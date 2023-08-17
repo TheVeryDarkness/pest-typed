@@ -282,7 +282,7 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
         tracker.positive_during(|tracker| {
             stack.snapshot();
             match N::try_parse_with::<ATOMIC>(input, stack, tracker) {
-                Ok((_input, content)) => {
+                Ok((_, content)) => {
                     stack.restore();
                     Ok((input, Self::from(content)))
                 }
