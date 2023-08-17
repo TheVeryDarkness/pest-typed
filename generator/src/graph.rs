@@ -788,7 +788,7 @@ fn generate_graph_node<'g>(
             )
         }
         OptimizedExpr::RestoreOnErr(inner) => {
-            generate_graph_node(inner, rule_config, map, false, emission, config, root)
+            generate_graph_node(inner, rule_config, map, explicit, emission, config, root)
         }
         OptimizedExpr::Seq(_, _) => {
             let vec = walk!(expr, Seq);
