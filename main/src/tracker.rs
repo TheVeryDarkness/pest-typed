@@ -137,6 +137,21 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     /// Record if the result doesn't match the state during calling `f`.
     #[inline]
+    pub(crate) fn record_during_with<T, E>(
+        &mut self,
+        pos: Position<'i>,
+        f: impl FnOnce(&mut Self) -> Result<(Position<'i>, T), E>,
+        rule: R,
+    ) -> Result<(Position<'i>, T), E> {
+        self.stack.push(rule);
+        let res = f(self);
+        let succeeded = res.is_ok();
+        let upper = self.stack.pop().unwrap();
+        self.record(upper, pos, succeeded);
+        res
+    }
+    /// Record if the result doesn't match the state during calling `f`.
+    #[inline]
     pub fn record_during<T: RuleWrapper<R>, E>(
         &mut self,
         pos: Position<'i>,
@@ -161,7 +176,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         let line_remained_index = line_string
             .char_indices()
             .nth(col.saturating_sub(1))
-            .unwrap_or((0, '\0'))
+            .unwrap_or_else(|| (line_string.len(), '\0'))
             .0;
         let line_remained = &line_string[line_remained_index..];
 
