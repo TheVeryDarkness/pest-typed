@@ -1,6 +1,7 @@
 /target
 /Cargo.lock
-.log
+*.log
+*.generated.txt
 .rs
 .*/**
 *.cmd

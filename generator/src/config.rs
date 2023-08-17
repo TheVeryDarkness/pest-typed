@@ -16,6 +16,20 @@ pub(crate) struct Config {
     pub simulate_pair_api: bool,
     pub no_warnigs: bool,
 }
+impl Config {
+    #[allow(dead_code)]
+    /// Enable as more as possible features.
+    pub fn all() -> Self {
+        Self {
+            emit_rule_reference: true,
+            emit_tagged_node_reference: true,
+            do_not_emit_span: false,
+            truncate_accesser_at_node_tag: true,
+            simulate_pair_api: true,
+            no_warnigs: false,
+        }
+    }
+}
 impl Default for Config {
     fn default() -> Self {
         Self {
