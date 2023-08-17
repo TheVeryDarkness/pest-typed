@@ -19,8 +19,8 @@ use crate::{
 /// Normally used by non-silent rules.
 #[macro_export]
 macro_rules! impl_pairs_with_self {
-    ($node:ident, $Rule:ty, $rule:expr) => {
-        impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, $Rule> for $node<'i> {
+    ($name:ident, $Rule:ty) => {
+        impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, $Rule> for $name<'i> {
             type Iter = ::core::iter::Once<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, $Rule>>;
             type IntoIter = ::core::iter::Once<
                 ::pest_typed::re_exported::Box<
@@ -43,8 +43,8 @@ macro_rules! impl_pairs_with_self {
 /// Normally used by [`crate::silent_rule!`].
 #[macro_export]
 macro_rules! impl_pairs_with_inner {
-    ($node:ident, $Rule:ty, $rule:expr, $inner:ty) => {
-        impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, $Rule> for $node<'i> {
+    ($name:ident, $Rule:ty, $inner:ty) => {
+        impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, $Rule> for $name<'i> {
             type Iter = ::pest_typed::re_exported::vec::IntoIter<
                 &'n dyn ::pest_typed::iterators::Pair<'i, 'n, $Rule>,
             >;
@@ -55,17 +55,39 @@ macro_rules! impl_pairs_with_inner {
             >;
 
             fn iter(&'n self) -> Self::Iter {
-                let i = <$inner as ::pest_typed::iterators::Pairs<'i, 'n, $Rule>>::iter(
-                    self.content.as_ref(),
-                );
+                let i =
+                    <$inner as ::pest_typed::iterators::Pairs<'i, 'n, $Rule>>::iter(&self.content);
                 i.collect::<::pest_typed::re_exported::Vec<_>>().into_iter()
             }
             fn into_iter(self) -> Self::IntoIter {
-                let i =
-                    <$inner as ::pest_typed::iterators::Pairs<'i, 'n, $Rule>>::iter(*self.content);
+                let i = self.content.into_iter();
+                /*
+                let i = <$inner as ::pest_typed::iterators::Pairs<'i, 'n, $Rule>>::into_iter(
+                    self.content,
+                );
+                */
                 i.collect::<::pest_typed::re_exported::Vec<_>>().into_iter()
             }
         }
+    };
+}
+
+/// Implement [`Pairs`](crate::iterators::Pairs) for a struct.
+///
+/// Arguments:
+///
+/// - `$name:ident`: struct name.
+/// - `$Rule:ty`: rule type.
+/// - `$rule:expr`: rule value.
+/// - `$inner:ty`: inner type.
+/// - `InnerExpression`, `Span` or `Both`: emission.
+#[macro_export]
+macro_rules! impl_pairs {
+    ($name:ident, $Rule:ty, $inner:ty, InnerExpression) => {
+        ::pest_typed::impl_pairs_with_inner!($name, $Rule, $inner);
+    };
+    ($name:ident, $Rule:ty, $inner:ty, $emit:tt) => {
+        ::pest_typed::impl_pairs_with_self!($name, $Rule);
     };
 }
 
@@ -87,20 +109,32 @@ macro_rules! impl_deref_with_content {
     };
 }
 
+/// Implement [`core::ops::Deref`] for structs if they have content.
+#[macro_export]
+macro_rules! impl_deref {
+    ($name:ident, $inner:ty, true) => {};
+    ($name:ident, $inner:ty, false) => {
+        ::pest_typed::impl_deref_with_content!($name, $inner);
+    };
+    ($name:ident, $inner:ty, ATOMIC) => {
+        ::pest_typed::impl_deref_with_content!($name, $inner);
+    };
+}
+
 /// Implement [`Pair`](crate::iterators::Pair) for a struct without inner [`Pair`](crate::iterators::Pair)s.
 ///
 /// Normally used by atomic rules.
 ///
-/// Arguments: `($node:ident, $Rule:ty, $rule:expr)`.
+/// Arguments: `($name:ident, $Rule:ty, $rule:expr)`.
 #[macro_export]
 macro_rules! impl_pair_with_empty {
-    ($node:ident, $Rule:ty, $rule:expr) => {
-        impl<'i: 'n, 'n> ::pest_typed::RuleStruct<'i, $Rule> for $node<'i> {
+    ($name:ident, $Rule:ty, $rule:expr) => {
+        impl<'i: 'n, 'n> ::pest_typed::RuleStruct<'i, $Rule> for $name<'i> {
             fn span(&self) -> ::pest_typed::Span<'i> {
                 self.span
             }
         }
-        impl<'i: 'n, 'n> ::pest_typed::iterators::Pair<'i, 'n, $Rule> for $node<'i> {
+        impl<'i: 'n, 'n> ::pest_typed::iterators::Pair<'i, 'n, $Rule> for $name<'i> {
             fn inner(
                 &'n self,
             ) -> ::pest_typed::re_exported::vec::IntoIter<
@@ -123,16 +157,23 @@ macro_rules! impl_pair_with_empty {
 
 /// Implement [`Pair`](crate::iterators::Pair) for a struct with inner [`Pair`](crate::iterators::Pair)s.
 ///
-/// Arguments: `($node:ident, $Rule:ty, $rule:expr)`.
+/// Arguments:
+/// - `$name:ident`: struct name.
+/// - `$Rule:ty`: rule type.
+/// - `$rule:expr`: rule value.
+/// - `$inner:ty`: inner type.
 #[macro_export]
 macro_rules! impl_pair_with_content {
-    ($node:ident, $Rule:ty, $rule:expr, $inner:ty) => {
-        impl<'i: 'n, 'n> ::pest_typed::RuleStruct<'i, $Rule> for $node<'i> {
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty) => {
+        impl<'i> ::pest_typed::TypeWrapper for $name<'i> {
+            type Inner = $inner;
+        }
+        impl<'i: 'n, 'n> ::pest_typed::RuleStruct<'i, $Rule> for $name<'i> {
             fn span(&self) -> ::pest_typed::Span<'i> {
                 self.span
             }
         }
-        impl<'i: 'n, 'n> ::pest_typed::iterators::Pair<'i, 'n, $Rule> for $node<'i> {
+        impl<'i: 'n, 'n> ::pest_typed::iterators::Pair<'i, 'n, $Rule> for $name<'i> {
             fn inner(
                 &'n self,
             ) -> ::pest_typed::re_exported::vec::IntoIter<
@@ -159,62 +200,96 @@ macro_rules! impl_pair_with_content {
     };
 }
 
-/// Inner tokens will be discarded, and only a [`Span`] will be contained.
+/// Implement [`Pair`](crate::iterators::Pair) for a struct.
 ///
-/// And inner errors will **not** be tracked.
+/// Arguments:
+/// - `$name:ident`: struct name.
+/// - `$Rule:ty`: rule type.
+/// - `$rule:expr`: rule value.
+/// - `$inner:ty`: inner type.
+/// - `true`, `false` or `None`: atomicity.
+/// - `InnerExpression`, `Span` or `Both`: emission.
 #[macro_export]
-macro_rules! silent_rule {
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty) => {
-        #[allow(non_camel_case_types)]
-        #[derive(Clone, Debug, PartialEq)]
-        pub struct $name<'i> {
-            /// Matched expression.
-            pub content: ::pest_typed::re_exported::Box<$inner>,
+macro_rules! impl_pair {
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $atomicity:expr, InnerExpression) => {};
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, true, $emit:tt) => {
+        ::pest_typed::impl_pair_with_empty!($name, $Rule, $rule);
+    };
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, false, $emit:tt) => {
+        ::pest_typed::impl_pair_with_content!($name, $Rule, $rule, $inner);
+    };
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, ATOMIC, $emit:tt) => {
+        ::pest_typed::impl_pair_with_content!($name, $Rule, $rule, $inner);
+    };
+}
+
+/// Implement [`crate::ParsableTypedNode::parse()`] for structs.
+#[macro_export]
+macro_rules! impl_parse {
+    ($name:ident, $Rule:ty, $ignored:ty, true) => {
+        impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i> {
+            #[inline]
+            fn parse(
+                input: &'i ::core::primitive::str,
+            ) -> ::core::result::Result<Self, ::pest_typed::error::Error<$Rule>> {
+                ::pest_typed::rule::parse_without_ignore::<$Rule, Self>(input, <$Rule>::EOI)
+            }
         }
+    };
+    ($name:ident, $Rule:ty, $ignored:ty, $non_true:tt) => {
+        impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i> {
+            #[inline]
+            fn parse(
+                input: &'i ::core::primitive::str,
+            ) -> ::core::result::Result<Self, ::pest_typed::error::Error<$Rule>> {
+                ::pest_typed::rule::parse::<$Rule, Self, $ignored>(input, <$Rule>::EOI)
+            }
+        }
+    };
+}
+
+/// Implement [`crate::TypedNode::try_parse_with()`] for structs.
+#[macro_export]
+macro_rules! impl_try_parse_with {
+    ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, InnerExpression) => {
         impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
+            #[inline]
             fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
                 input: ::pest_typed::Position<'i>,
                 stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
                 tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
             ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
-                let start = input;
-                match $inner::try_parse_with::<ATOMIC>(input, stack, tracker) {
-                    ::core::result::Result::Ok((input, _)) => {
-                        let span = start.span(&input);
-                        ::core::result::Result::Ok((input, Self { span }))
-                    }
-                    ::core::result::Result::Err(_) => ::core::result::Result::Err(()),
-                }
+                let (input, content) =
+                    <$inner>::try_parse_with::<$atomicity>(input, stack, tracker)?;
+                let content = ::pest_typed::re_exported::Box::new(content);
+                Ok((
+                    input,
+                    Self {
+                        content,
+                        _phantom: ::core::marker::PhantomData,
+                    },
+                ))
             }
         }
-        ::pest_typed::impl_deref_with_content!($name, $inner);
-        ::pest_typed::impl_pairs_with_inner!($name, $Rule, $rule, $inner);
     };
-}
-
-/// Start point of a normal rule.
-///
-/// Will not change atomicity.
-///
-/// See [`crate::atomic_rule!`] and [`crate::non_atomic_rule!`].
-#[macro_export]
-macro_rules! rule {
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
-        #[allow(non_camel_case_types)]
-        #[derive(Clone, Debug, PartialEq)]
-        pub struct $name<'i> {
-            /// Matched content.
-            pub content: ::pest_typed::re_exported::Box<$inner>,
-            /// Matched span
-            pub span: ::pest_typed::Span<'i>,
+    ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Span) => {
+        impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
+            #[inline]
+            fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
+                input: ::pest_typed::Position<'i>,
+                stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
+                tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
+                tracker.record_during(input, |tracker| {
+                    let start = input;
+                    let (input, _) = <$inner>::try_parse_with::<$atomicity>(input, stack, tracker)?;
+                    let span = start.span(&input);
+                    Ok((input, Self { span }))
+                })
+            }
         }
-        impl<'i> ::pest_typed::TypeWrapper for $name<'i> {
-            type Inner = $inner;
-        }
-        impl<'i> ::pest_typed::RuleWrapper<$Rule> for $name<'i> {
-            const RULE: $Rule = $rule;
-            type Rule = $Rule;
-        }
+    };
+    ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Both) => {
         impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
             #[inline]
             fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
@@ -225,203 +300,210 @@ macro_rules! rule {
                 tracker.record_during(input, |tracker| {
                     let start = input;
                     let (input, content) =
-                        <$inner>::try_parse_with::<ATOMIC>(input, stack, tracker)?;
+                        <$inner>::try_parse_with::<$atomicity>(input, stack, tracker)?;
                     let span = start.span(&input);
                     let content = ::pest_typed::re_exported::Box::new(content);
                     Ok((input, Self { content, span }))
                 })
             }
         }
-        impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i> {
-            #[inline]
-            fn parse(input: &'i str) -> Result<Self, ::pest_typed::error::Error<$Rule>> {
-                ::pest_typed::rule::parse::<$Rule, Self, $ignored>(input, <$Rule>::EOI)
-            }
-
-            fn parse_partial(
-                input: &'i str,
-            ) -> Result<(::pest_typed::Position<'i>, Self), ::pest_typed::error::Error<$Rule>> {
-                ::pest_typed::rule::parse_partial::<$Rule, Self>(input)
-            }
-        }
-        ::pest_typed::impl_deref_with_content!($name, $inner);
-        ::pest_typed::impl_pairs_with_self!($name, $Rule, $rule);
-        ::pest_typed::impl_pair_with_content!($name, $Rule, $rule, $inner);
     };
 }
 
-/// Start point of an atomic rule.
+/// Fields of structs.
+#[macro_export]
+macro_rules! impl_rule_wrapper {
+    ($name:ident, $Rule:ty, $rule:expr) => {
+        impl<'i> ::pest_typed::RuleWrapper<$Rule> for $name<'i> {
+            const RULE: $Rule = $rule;
+            type Rule = $Rule;
+        }
+    };
+}
+
+/// Fields of structs.
+#[macro_export]
+macro_rules! declare_rule_struct {
+    ($name:ident, $inner:ty, InnerExpression) => {
+        #[allow(non_camel_case_types)]
+        #[derive(Clone, PartialEq)]
+        pub struct $name<'i> {
+            /// Matched expression.
+            pub content: ::pest_typed::re_exported::Box<$inner>,
+            _phantom: ::core::marker::PhantomData<&'i ::core::primitive::str>,
+        }
+        impl<'i> ::core::fmt::Debug for $name<'i> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                f.debug_struct("Rule")
+                    .field("name", &::core::stringify!($name))
+                    .field("content", &self.content)
+                    .finish()
+            }
+        }
+    };
+    ($name:ident, $inner:ty, Span) => {
+        #[allow(non_camel_case_types)]
+        #[derive(Clone, PartialEq)]
+        pub struct $name<'i> {
+            /// Span of matched expression.
+            pub span: ::pest_typed::Span<'i>,
+        }
+        impl<'i> ::core::fmt::Debug for $name<'i> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                f.debug_struct("Rule")
+                    .field("name", &::core::stringify!($name))
+                    .field("span", &self.span)
+                    .finish()
+            }
+        }
+    };
+    ($name:ident, $inner:ty, Both) => {
+        #[allow(non_camel_case_types)]
+        #[derive(Clone, PartialEq)]
+        pub struct $name<'i> {
+            /// Matched expression.
+            pub content: ::pest_typed::re_exported::Box<$inner>,
+            /// Span of matched expression.
+            pub span: ::pest_typed::Span<'i>,
+        }
+        impl<'i> ::core::fmt::Debug for $name<'i> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                f.debug_struct("Rule")
+                    .field("name", &::core::stringify!($name))
+                    .field("content", &self.content)
+                    .field("span", &self.span)
+                    .finish()
+            }
+        }
+    };
+}
+
+/// The start point of a node tag.
+#[macro_export]
+macro_rules! tag {
+    ($name:ident, $Rule:ty, $inner:ty) => {
+        #[allow(non_camel_case_types)]
+        #[derive(Clone, Debug, PartialEq)]
+        pub struct $name<'i> {
+            /// Matched expression.
+            pub content: $inner,
+            /// Span of matched expression.
+            pub span: ::pest_typed::Span<'i>,
+        }
+        impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
+            fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
+                input: ::pest_typed::Position<'i>,
+                stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
+                tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
+                let start = input;
+                match <$inner>::try_parse_with::<ATOMIC>(input, stack, tracker) {
+                    ::core::result::Result::Ok((input, content)) => {
+                        let span = start.span(&input);
+                        ::core::result::Result::Ok((input, Self { content, span }))
+                    }
+                    ::core::result::Result::Err(_) => ::core::result::Result::Err(()),
+                }
+            }
+        }
+        ::pest_typed::impl_deref_with_content!($name, $inner);
+        ::pest_typed::impl_pairs_with_inner!($name, $Rule, $inner);
+    };
+}
+
+/// Start point of a normal rule.
 ///
-/// Force inner tokens to be atomic.
+/// Will not change atomicity.
 ///
-/// See [`crate::rule!`] and [`crate::non_atomic_rule!`].
+/// See [`crate::atomic_rule!`] and [`crate::non_atomic_rule!`].
+#[macro_export]
+macro_rules! rule {
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $atomicity:tt, $emission:tt) => {
+        ::pest_typed::declare_rule_struct! {$name, $inner, $emission}
+        ::pest_typed::impl_rule_wrapper!($name, $Rule, $rule);
+        ::pest_typed::impl_try_parse_with!($name, $Rule, $inner, $atomicity, $emission);
+        ::pest_typed::impl_parse!($name, $Rule, $ignored, $atomicity);
+        ::pest_typed::impl_deref!($name, $inner, $atomicity);
+        ::pest_typed::impl_pairs!($name, $Rule, $inner, $emission);
+        ::pest_typed::impl_pair!($name, $Rule, $rule, $inner, $atomicity, $emission);
+    };
+}
+/// Shortcut for atomic rule in pest.
 #[macro_export]
 macro_rules! atomic_rule {
     ($name:ident, $Rule:ty, $rule:expr, $inner:ty) => {
-        #[allow(non_camel_case_types)]
-        #[derive(Clone, Debug, PartialEq)]
-        pub struct $name<'i> {
-            /// Matched span.
-            pub span: ::pest_typed::Span<'i>,
-        }
-        impl<'i> ::pest_typed::RuleWrapper<$Rule> for $name<'i> {
-            const RULE: $Rule = $rule;
-            type Rule = $Rule;
-        }
-        impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
-            #[inline]
-            fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
-                input: ::pest_typed::Position<'i>,
-                stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
-                tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
-                let start = input;
-                tracker.record_during(start, |tracker| {
-                    let (input, _) = <$inner>::try_parse_with::<true>(input, stack, tracker)?;
-                    let span = start.span(&input);
-                    let res = Self { span };
-                    ::core::result::Result::Ok((input, res))
-                })
-            }
-        }
-        impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i> {
-            fn parse(
-                input: &'i ::core::primitive::str,
-            ) -> ::core::result::Result<Self, ::pest_typed::error::Error<$Rule>> {
-                ::pest_typed::rule::parse_without_ignore::<$Rule, Self>(input, <$Rule>::EOI)
-            }
-            fn parse_partial(
-                input: &'i str,
-            ) -> ::core::result::Result<
-                (::pest_typed::Position<'i>, Self),
-                ::pest_typed::error::Error<$Rule>,
-            > {
-                ::pest_typed::rule::parse_partial::<$Rule, Self>(input)
-            }
-        }
-        // ::pest_typed::impl_deref_with_content!($name, $inner);
-        ::pest_typed::impl_pairs_with_self!($name, $Rule, $rule);
-        ::pest_typed::impl_pair_with_empty!($name, $Rule, $rule);
+        ::pest_typed::rule!($name, $Rule, $rule, $inner, (), true, Span);
     };
 }
 
-/// Start point of an atomic rule.
-///
-/// Force inner tokens to be atomic.
-///
-/// See [`crate::rule!`] and [`crate::non_atomic_rule!`].
+/// Shortcut for compound atomic rule in pest.
 #[macro_export]
 macro_rules! compound_atomic_rule {
     ($name:ident, $Rule:ty, $rule:expr, $inner:ty) => {
-        #[allow(non_camel_case_types)]
-        #[derive(Clone, Debug, PartialEq)]
-        pub struct $name<'i> {
-            /// Matched content.
-            pub content: ::pest_typed::re_exported::Box<$inner>,
-            /// Matched span.
-            pub span: ::pest_typed::Span<'i>,
-        }
-        impl<'i> ::pest_typed::RuleWrapper<$Rule> for $name<'i> {
-            const RULE: $Rule = $rule;
-            type Rule = $Rule;
-        }
-        impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
-            #[inline]
-            fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
-                input: ::pest_typed::Position<'i>,
-                stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
-                tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
-                let start = input;
-                tracker.record_during(start, |tracker| {
-                    let (input, content) = <$inner>::try_parse_with::<true>(input, stack, tracker)?;
-                    let content = ::pest_typed::re_exported::Box::new(content);
-                    let span = start.span(&input);
-                    let res = Self { content, span };
-                    ::core::result::Result::Ok((input, res))
-                })
-            }
-        }
+        ::pest_typed::rule!($name, $Rule, $rule, $inner, (), true, Both);
+    };
+}
+
+/// Shortcut for non-atomic rule in pest.
+#[macro_export]
+macro_rules! non_atomic_rule {
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
+        ::pest_typed::rule!($name, $Rule, $rule, $inner, $ignored, false, Both);
+    };
+}
+
+/// Shortcut for normal rule in pest.
+#[macro_export]
+macro_rules! normal_rule {
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
+        ::pest_typed::rule!($name, $Rule, $rule, $inner, $ignored, ATOMIC, Both);
+    };
+}
+
+/// Shortcut for silent rule in pest.
+#[macro_export]
+macro_rules! silent_rule {
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
+        ::pest_typed::rule!(
+            $name,
+            $Rule,
+            $rule,
+            $inner,
+            $ignored,
+            ATOMIC,
+            InnerExpression
+        );
+    };
+}
+
+/// Start point of a normal rule.
+///
+/// Will not change atomicity.
+///
+/// See [`crate::atomic_rule!`] and [`crate::non_atomic_rule!`].
+#[macro_export]
+macro_rules! rule_eoi {
+    ($name:ident, $Rule:ty) => {
+        ::pest_typed::declare_rule_struct! {$name, ::pest_typed::predefined_node::EOI, Both}
+        ::pest_typed::impl_rule_wrapper!($name, $Rule, <$Rule>::EOI);
+        ::pest_typed::impl_try_parse_with!(
+            $name,
+            $Rule,
+            ::pest_typed::predefined_node::EOI,
+            ATOMIC,
+            Both
+        );
         impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i> {
+            #[inline]
             fn parse(
                 input: &'i ::core::primitive::str,
             ) -> ::core::result::Result<Self, ::pest_typed::error::Error<$Rule>> {
                 ::pest_typed::rule::parse_without_ignore::<$Rule, Self>(input, <$Rule>::EOI)
             }
-            fn parse_partial(
-                input: &'i str,
-            ) -> ::core::result::Result<
-                (::pest_typed::Position<'i>, Self),
-                ::pest_typed::error::Error<$Rule>,
-            > {
-                ::pest_typed::rule::parse_partial::<$Rule, Self>(input)
-            }
         }
-        ::pest_typed::impl_deref_with_content!($name, $inner);
-        ::pest_typed::impl_pairs_with_self!($name, $Rule, $rule);
-        ::pest_typed::impl_pair_with_content!($name, $Rule, $rule, $inner);
-    };
-}
-
-/// Start point of a non-atomic rule.
-///
-/// Force inner tokens to be non-atomic.
-///
-/// Will use `WHITESPACE` and `COMMENT` by name automatically, so remember to define them.
-///
-/// See [`crate::rule!`] and [`crate::atomic_rule!`].
-#[macro_export]
-macro_rules! non_atomic_rule {
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $skipped:ty) => {
-        #[allow(non_camel_case_types)]
-        #[derive(Clone, Debug, PartialEq)]
-        pub struct $name<'i> {
-            /// Matched content.
-            pub content: ::pest_typed::re_exported::Box<$inner>,
-            /// Matched span.
-            pub span: ::pest_typed::Span<'i>,
-        }
-        impl<'i> ::pest_typed::RuleWrapper<$Rule> for $name<'i> {
-            const RULE: $Rule = $rule;
-            type Rule = $Rule;
-        }
-        impl<'i> ::pest_typed::TypeWrapper for $name<'i> {
-            type Inner = $inner;
-        }
-        impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
-            #[inline]
-            fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
-                input: ::pest_typed::Position<'i>,
-                stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
-                tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
-                tracker.record_during(input, |tracker| {
-                    let start = input;
-                    let (input, content) = $inner::try_parse_with::<false>(input, stack, tracker)?;
-                    let content = ::pest_typed::re_exported::Box::new(content);
-                    let span = start.span(&input);
-                    ::core::result::Result::Ok((input, Self { content, span }))
-                })
-            }
-        }
-        impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i> {
-            fn parse(
-                input: &'i ::core::primitive::str,
-            ) -> ::core::result::Result<Self, ::pest_typed::error::Error<$Rule>> {
-                ::pest_typed::rule::parse::<$Rule, Self, $skipped>(input, $Rule::EOI)
-            }
-            fn parse_partial(
-                input: &'i ::core::primitive::str,
-            ) -> ::core::result::Result<
-                (::pest_typed::Position<'i>, Self),
-                ::pest_typed::error::Error<$Rule>,
-            > {
-                ::pest_typed::rule::parse_partial::<$Rule, Self>(input)
-            }
-        }
-        ::pest_typed::impl_deref_with_content!($name, $inner);
-        ::pest_typed::impl_pairs_with_self!($name, $Rule, $rule);
-        ::pest_typed::impl_pair_with_content!($name, $Rule, $rule, $inner);
+        ::pest_typed::impl_deref!($name, ::pest_typed::predefined_node::EOI, ATOMIC);
+        ::pest_typed::impl_pairs_with_self!($name, $Rule);
+        ::pest_typed::impl_pair_with_empty!($name, $Rule, <$Rule>::EOI);
     };
 }
 
@@ -479,19 +561,4 @@ pub fn parse_without_ignore<'i, R: RuleType + 'i, _Self: TypedNode<'i, R>>(
         Err(_) => return Err(tracker.collect()),
     };
     Ok(res)
-}
-
-/// Partially parse.
-///
-/// For [`crate::ParsableTypedNode::parse_partial()`]
-pub fn parse_partial<'i, R: RuleType, _Self: TypedNode<'i, R>>(
-    input: &'i str,
-) -> Result<(Position<'i>, _Self), Error<R>> {
-    let mut stack = Stack::new();
-    let input = Position::from_start(input);
-    let mut tracker = Tracker::new(input);
-    match _Self::try_parse_with::<false>(input, &mut stack, &mut tracker) {
-        Ok((input, res)) => Ok((input, res)),
-        Err(_) => Err(tracker.collect()),
-    }
 }

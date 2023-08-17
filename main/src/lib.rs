@@ -36,7 +36,6 @@ pub use wrapper::{
 
 pub mod choices;
 pub mod iterators;
-mod macros;
 mod pratt;
 pub mod predefined_node;
 pub mod re_exported;

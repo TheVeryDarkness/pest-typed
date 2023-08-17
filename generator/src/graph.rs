@@ -9,15 +9,14 @@
 
 use crate::config::Config;
 use crate::docs::DocComment;
-
-use super::types::{box_type, option_type, result_type, vec_mod, vec_type};
+use crate::types::{box_type, option_type, result_type, vec_type};
 use pest::unicode::unicode_property_names;
 use pest_meta::{
     ast::RuleType,
     optimizer::{OptimizedExpr, OptimizedRule},
 };
 use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use std::collections::{btree_map, BTreeMap, BTreeSet};
 use syn::Index;
 
@@ -63,16 +62,6 @@ fn ignore(root: &TokenStream) -> TokenStream {
     let generics = generics();
     quote! {
         #root::#generics::Skipped::<'i>
-    }
-}
-
-/// Reserved for future use.
-#[allow(dead_code)]
-fn quote_if<T: quote::ToTokens>(v: Option<T>) -> TokenStream {
-    if let Some(v) = v {
-        quote! {#v}
-    } else {
-        quote! {}
     }
 }
 
@@ -319,7 +308,7 @@ impl<'g> Accesser<'g> {
             let src = quote! {
                 #[allow(non_snake_case)]
                 pub fn #id<'s>(&'s self) -> #types {
-                    let res = self.content.as_ref();
+                    let res = &self.content;
                     #paths
                 }
             };
@@ -369,24 +358,33 @@ fn _span() -> TokenStream {
 enum Emission {
     /// Current rule will not contain a span.
     /// Current rule will not be visible in some APIs.
-    Silent,
+    InnerExpression,
     /// Current rule will only contain a span.
     /// Inner structures will not be emitted.
     Span,
     /// Normal rule.
-    InnerToken,
+    Both,
 }
 impl Emission {
     pub fn emit_content(&self) -> bool {
         match self {
-            Emission::InnerToken | Emission::Silent => true,
+            Emission::Both | Emission::InnerExpression => true,
             Emission::Span => false,
         }
     }
     pub fn emit_span(&self) -> bool {
         match self {
-            Emission::InnerToken | Emission::Span => true,
-            Emission::Silent => false,
+            Emission::Both | Emission::Span => true,
+            Emission::InnerExpression => false,
+        }
+    }
+}
+impl ToTokens for Emission {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Self::InnerExpression => tokens.append(format_ident!("InnerExpression")),
+            Self::Span => tokens.append(format_ident!("Span")),
+            Self::Both => tokens.append(format_ident!("Both")),
         }
     }
 }
@@ -400,271 +398,6 @@ struct RuleConfig<'g> {
     pub builtins_without_lifetime: &'g BTreeSet<&'g str>,
 }
 impl<'g> RuleConfig<'g> {}
-
-fn create<'g>(
-    doc: impl Iterator<Item = &'g str>,
-    id: &Ident,
-    type_name: &TokenStream,
-    rule_config: &RuleConfig<'g>,
-    emission: Emission,
-    accessers: TokenStream,
-    root: &TokenStream,
-) -> TokenStream {
-    let pest_typed = pest_typed();
-    let result = result_type();
-    let position = position();
-    let stack = stack();
-    let span = _span();
-    let pest = pest();
-    let error = quote! {#pest::error::Error};
-    let _bool = _bool();
-    let str = _str();
-    let tracker = tracker();
-    let ignore = ignore(root);
-    let rule = quote! {#root::Rule};
-    let pairs = pairs();
-    let box_ = box_type();
-    let vec = vec_type();
-    let vec_mod = vec_mod();
-
-    let emit_content = emission.emit_content();
-    let emit_span = emission.emit_span();
-    let rule_id = &rule_config.rule_id;
-    let atomicity = match rule_config.atomicity {
-        Some(true) => quote! {true},
-        Some(false) => quote! {false},
-        None => quote! {ATOMIC},
-    };
-
-    let fields = {
-        let content = if emit_content {
-            quote! {
-                #[doc = "Matched content."]
-                pub content: #pest_typed::re_exported::Box<#type_name>,
-            }
-        } else {
-            quote! {}
-        };
-        let span = if emit_span {
-            quote! {
-                #[doc = "Matched span."]
-                pub span: #span<'i>,
-            }
-        } else {
-            quote! {}
-        };
-        quote! {
-            #content
-            #span
-            _phantom: ::core::marker::PhantomData<&'i ::core::primitive::char>,
-        }
-    };
-    let deref = if emit_content {
-        quote! {
-            impl<'i> ::core::ops::Deref for #id<'i> {
-                type Target = #type_name;
-                fn deref(&self) -> &Self::Target {
-                    &self.content
-                }
-            }
-            impl<'i> ::core::ops::DerefMut for #id<'i> {
-                fn deref_mut(&mut self) -> &mut Self::Target {
-                    &mut self.content
-                }
-            }
-        }
-    } else {
-        quote! {}
-    };
-    let pairs_impl = match emission {
-        Emission::Span | Emission::InnerToken => quote! {
-            impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #id<'i> {
-                type Iter = ::core::iter::Once<&'n dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>>;
-                type IntoIter = ::core::iter::Once<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>>;
-
-                fn iter(&'n self) -> Self::Iter {
-                    ::core::iter::once(self)
-                }
-                fn into_iter(self) -> Self::IntoIter {
-                    ::core::iter::once(#box_::new(self))
-                }
-            }
-        },
-        Emission::Silent => quote! {
-            impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #id<'i> {
-                type Iter = #vec_mod::IntoIter<&'n dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>>;
-                type IntoIter = #vec_mod::IntoIter<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>>;
-
-                fn iter(&'n self) -> Self::Iter {
-                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::iter(self.content.as_ref());
-                    i.collect::<#vec<_>>().into_iter()
-                }
-                fn into_iter(self) -> Self::IntoIter {
-                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::into_iter(*self.content);
-                    i.collect::<#vec<_>>().into_iter()
-                }
-            }
-        },
-    };
-    let pair_impl = match emission {
-        Emission::Silent => quote! {},
-        Emission::InnerToken => quote! {
-            impl<'i: 'n, 'n> #pest_typed::iterators::Pair<'i, 'n, #root::Rule> for #id<'i> {
-                fn inner(&'n self) -> #vec_mod::IntoIter<&'n (dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>)> {
-                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::iter(self.content.as_ref());
-                    i.collect::<#vec::<_>>().into_iter()
-                }
-                fn into_inner(self) -> #vec_mod::IntoIter<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>> {
-                    let i = <#type_name as #pest_typed::iterators::Pairs::<'i, 'n, #root::Rule>>::into_iter(*self.content);
-                    i.collect::<#vec::<_>>().into_iter()
-                }
-            }
-        },
-        Emission::Span => quote! {
-            impl<'i: 'n, 'n> #pest_typed::iterators::Pair<'i, 'n, #root::Rule> for #id<'i> {
-                fn inner(&'n self) -> #vec_mod::IntoIter<&'n (dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>)> {
-                    #vec::new().into_iter()
-                }
-                fn into_inner(self) -> #vec_mod::IntoIter<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>> {
-                    #vec::new().into_iter()
-                }
-            }
-        },
-    };
-    let rule_struct_impl = {
-        match emission {
-            Emission::Silent => quote! {
-                // impl<'i> ! #pest_typed::RuleStruct<'i, #root::Rule> for #id<'i> {}
-            },
-            Emission::Span | Emission::InnerToken => quote! {
-                impl<'i> #pest_typed::RuleStruct<'i, #root::Rule> for #id<'i> {
-                    fn span(&self) -> #span<'i> {
-                        self.span
-                    }
-                }
-            },
-        }
-    };
-    let phantom = quote! { _phantom: ::core::marker::PhantomData };
-    let parse_impl = match emission {
-        Emission::Silent => quote! {
-            let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
-            let content = #pest_typed::re_exported::Box::new(content);
-            Ok((input, Self { content, #phantom, }))
-        },
-        Emission::Span => quote! {
-            let start = input;
-            tracker.record_during(
-                input,
-                |tracker| {
-                    let (input, _) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
-                    let span = start.span(&input);
-                    Ok((input, Self { span, #phantom, }))
-                }
-            )
-        },
-        Emission::InnerToken => quote! {
-            let start = input;
-            tracker.record_during(
-                input,
-                |tracker| {
-                    let (input, content) = #type_name::try_parse_with::<#atomicity>(input, stack, tracker)?;
-                    let content = #pest_typed::re_exported::Box::new(content);
-                    let span = start.span(&input);
-                    Ok((input, Self { content, span, #phantom, }))
-                }
-            )
-        },
-    };
-    let debug_impl = {
-        let rule_name = rule_config.rule_name;
-        match emission {
-            Emission::Silent => quote! {
-                f.debug_struct(#rule_name)
-                    .field("content", &self.content)
-                    .finish()
-            },
-            Emission::Span => quote! {
-                f.debug_struct(#rule_name)
-                    .field("span", &self.span)
-                    .finish()
-            },
-            Emission::InnerToken => quote! {
-                f.debug_struct(#rule_name)
-                    .field("content", &self.content)
-                    .field("span", &self.span)
-                    .finish()
-            },
-        }
-    };
-    quote! {
-        #(#[doc = #doc])*
-        #[allow(non_camel_case_types)]
-        #[derive(Clone, PartialEq)]
-        pub struct #id<'i> {
-            #fields
-        }
-        impl<'i> #id<'i> {
-            #accessers
-        }
-        #deref
-        impl<'i> #pest_typed::RuleWrapper<#root::Rule> for #id<'i> {
-            const RULE: #root::Rule = #root::Rule::#rule_id;
-            type Rule = #root::Rule;
-        }
-        impl<'i> #pest_typed::TypeWrapper for #id<'i> {
-            type Inner = #type_name;
-        }
-        impl<'i> #pest_typed::TypedNode<'i, #rule> for #id<'i> {
-            #[inline]
-            fn try_parse_with<const ATOMIC: #_bool>(
-                input: #position<'i>,
-                stack: &mut #stack<#span<'i>>,
-                tracker: &mut #tracker<'i, #rule>,
-            ) -> #result<(#position<'i>, Self), ()> {
-                #parse_impl
-            }
-        }
-        impl<'i> #pest_typed::ParsableTypedNode<'i, #rule> for #id<'i> {
-            #[inline]
-            fn parse(input: &'i #str) -> #result<Self, #error<#rule>> {
-                let mut stack = #stack::new();
-                let input = #position::from_start(input);
-                let mut tracker = #tracker::new(input);
-                let (input, res) =
-                    match Self::try_parse_with::<false>(input, &mut stack, &mut tracker) {
-                        Ok((input, res)) => (input, res),
-                        Err(_) => return Err(tracker.collect()),
-                    };
-                let (input, _) = <#ignore as #pest_typed::NeverFailedTypedNode<'i, #rule>>::parse_with::<false>(input, &mut stack);
-                let (_, _) = match <#root::#pairs::EOI as #pest_typed::TypedNode<'i, #rule>>::try_parse_with::<false>(input, &mut stack, &mut tracker) {
-                    Ok((input, res)) => (input, res),
-                    Err(_) => return Err(tracker.collect()),
-                };
-                Ok(res)
-            }
-
-            #[inline]
-            fn parse_partial(input: &'i #str) -> #result<(#position<'i>, Self), #error<#rule>> {
-                let mut stack = #stack::new();
-                let input = #position::from_start(input);
-                let mut tracker = #tracker::new(input);
-                match Self::try_parse_with::<false>(input, &mut stack, &mut tracker) {
-                    Ok((input, res)) => Ok((input, res)),
-                    Err(_) => return Err(tracker.collect()),
-                }
-            }
-        }
-        impl<'i> ::core::fmt::Debug for #id<'i> {
-            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                #debug_impl
-            }
-        }
-        #pairs_impl
-        #pair_impl
-        #rule_struct_impl
-    }
-}
 
 fn rule<'g, 'f>(
     rule_config: &RuleConfig<'g>,
@@ -681,29 +414,53 @@ fn rule<'g, 'f>(
         None => "Normal rule.",
     };
     let accessers = match emission {
-        Emission::InnerToken => accessers.collect(&root, rule_config),
-        Emission::Silent | Emission::Span => quote! {},
+        Emission::Both => accessers.collect(&root, rule_config),
+        Emission::InnerExpression | Emission::Span => quote! {},
     };
     let docs = [doc, atomicity_doc];
-    macro_rules! create {
-        ($docs:expr) => {{
-            create(
-                $docs,
-                &rule_config.rule_id,
-                type_name,
-                rule_config,
-                emission,
-                accessers,
-                &root,
-            )
-        }};
+    fn create<'g>(
+        rule_config: &RuleConfig<'g>,
+        accesser_impl: TokenStream,
+        inner_type: &TokenStream,
+        emission: Emission,
+        docs: impl Iterator<Item = &'g str>,
+    ) -> TokenStream {
+        let root = quote! {super};
+        let pest_typed = pest_typed();
+        let name = &rule_config.rule_id;
+        let atomicity = match rule_config.atomicity {
+            Some(true) => quote! {true},
+            Some(false) => quote! {false},
+            None => quote! {ATOMIC},
+        };
+        let ignore = ignore(&root);
+        quote! {
+            #(
+                #[doc = #docs]
+            )*
+            #pest_typed::rule!(#name, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission);
+            impl<'i> #name<'i> {
+                #accesser_impl
+            }
+        }
     }
     match rule_config.rule_doc {
-        Some(rule_doc) => create!(docs
-            .into_iter()
-            .chain(std::iter::once(""))
-            .chain(std::iter::once(rule_doc))),
-        None => create!(docs.into_iter()),
+        Some(rule_doc) => create(
+            rule_config,
+            accessers,
+            type_name,
+            emission,
+            docs.into_iter()
+                .chain(std::iter::once(""))
+                .chain(std::iter::once(rule_doc)),
+        ),
+        None => create(
+            rule_config,
+            accessers,
+            type_name,
+            emission,
+            docs.into_iter(),
+        ),
     }
 }
 
@@ -1155,17 +912,17 @@ fn generate_graph_node<'g>(
                     config,
                     new_root,
                 );
-                let def = create(
-                    [format!("Tag {} referenced by {}.", tag, rule_config.rule_name).as_str()]
-                        .into_iter(),
-                    &tag_id,
-                    &inner,
-                    rule_config,
-                    Emission::InnerToken,
-                    accesser.collect(new_root, rule_config),
-                    new_root,
-                );
+                let pest_typed = pest_typed();
                 let rule_id = &rule_config.rule_id;
+                let accessers_def = accesser.collect(new_root, rule_config);
+                let comment = format!("Tag {} referenced by {}.", tag, rule_config.rule_name);
+                let def = quote! {
+                    #[doc = #comment]
+                    #pest_typed::tag!(#tag_id, #new_root::Rule, #inner);
+                    impl<'i> #tag_id<'i> {
+                        #accessers_def
+                    }
+                };
                 let tag_module = map.insert_tag(rule_id, def);
                 let new_accesser = Accesser::from_tag(tag.as_str(), tag.as_str());
                 if config.truncate_accesser_at_node_tag {
@@ -1212,10 +969,10 @@ fn generate_graph<'g: 'f, 'f>(
     for rule in rules.iter() {
         let rule_name = rule.name.as_str();
         let (atomicity, emission) = match rule.ty {
-            RuleType::Normal => (None, Emission::InnerToken),
-            RuleType::Silent => (None, Emission::Silent),
-            RuleType::NonAtomic => (Some(false), Emission::InnerToken),
-            RuleType::CompoundAtomic => (Some(true), Emission::InnerToken),
+            RuleType::Normal => (None, Emission::Both),
+            RuleType::Silent => (None, Emission::InnerExpression),
+            RuleType::NonAtomic => (Some(false), Emission::Both),
+            RuleType::CompoundAtomic => (Some(true), Emission::Both),
             RuleType::Atomic => (Some(true), Emission::Span),
         };
         let rule_doc = doc.line_docs.get(rule_name).map(|s| s.as_str());
@@ -1540,7 +1297,7 @@ fn generate_builtin(
     }
 
     results.push(quote! {
-        #pest_typed::atomic_rule!(EOI, super::Rule, super::Rule::EOI, #pest_typed::predefined_node::EOI);
+        #pest_typed::rule_eoi!(EOI, super::Rule);
     });
 
     insert_builtin!("ANY", ANY);

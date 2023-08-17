@@ -7,7 +7,39 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! Definition of choices-related macros and types.
+//! Definition of sequence-related macros and types.
+
+#[macro_export]
+/// Chained iterator type.
+///
+/// Used by [`crate::seq`].
+macro_rules! chains {
+    ($pest_typed:ident, $trait:ty, $t:ident, $T0:ty, ) => {
+        <$T0 as $trait>::$t
+    };
+    ($pest_typed:ident, $trait:ty, $t:ident, $T0:ty, $($T:ty, )+) => {
+        core::iter::Chain<<$T0 as $trait>::$t, $pest_typed::chains!($pest_typed, $trait, $t, $($T,)*)>
+    };
+}
+
+#[macro_export]
+/// Chained iterator.
+///
+/// Used by [`crate::seq`].
+macro_rules! chain {
+    ($pest_typed:ident, $trait:ty, $self: ident, iter, $Skipped:ty, $T0:ty, $t0:tt, ) => {
+        <($Skipped, $T0) as $trait>::iter(&$self.content.$t0)
+    };
+    ($pest_typed:ident, $trait:ty, $self: ident, iter, $Skipped:ty, $T0:ty, $t0:tt, $($T:ty, $t:tt, )+) => {
+        <($Skipped, $T0) as $trait>::iter(&$self.content.$t0).chain($pest_typed::chain!($pest_typed, $trait, $self, iter, $Skipped, $($T, $t, )*))
+    };
+    ($pest_typed:ident, $trait:ty, $self: ident, into_iter, $Skipped:ty, $T0:ty, $t0:tt, ) => {
+        <($Skipped, $T0) as $trait>::into_iter($self.content.$t0)
+    };
+    ($pest_typed:ident, $trait:ty, $self: ident, into_iter, $Skipped:ty, $T0:ty, $t0:tt, $($T:ty, $t:tt, )+) => {
+        <($Skipped, $T0) as $trait>::into_iter($self.content.$t0).chain($pest_typed::chain!($pest_typed, $trait, $self, into_iter, $Skipped, $($T, $t, )*))
+    };
+}
 
 #[macro_export]
 /// Generate sequences generics.
@@ -76,10 +108,10 @@ macro_rules! seq {
             type IntoIter = $pest_typed::chains!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, IntoIter, (IGNORED, $T0), $((IGNORED, $T), )*);
 
             fn iter(&'n self) -> Self::Iter {
-                $pest_typed::chain!($pest_typed, self, iter, $t0, $($t, )*)
+                $pest_typed::chain!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, self, iter, IGNORED, $T0, $t0, $($T, $t, )*)
             }
             fn into_iter(self) -> Self::IntoIter {
-                $pest_typed::chain!($pest_typed, self, into_iter, $t0, $($t, )*)
+                $pest_typed::chain!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, self, into_iter, IGNORED, $T0, $t0, $($T, $t, )*)
             }
         }
         impl<$T0, $($T),*, IGNORED> ::core::ops::Deref for $name<T0, $($T),*, IGNORED> {

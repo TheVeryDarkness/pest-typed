@@ -12,7 +12,7 @@
 //! Overrided the macro [`parses_to`].
 
 use pest_typed::{
-    iterators::{Pair, Token},
+    iterators::{Pair, PairTree, Token},
     ParsableTypedNode,
 };
 use pest_typed_derive::TypedParser;
@@ -55,7 +55,15 @@ macro_rules! parses_to {
     ) => {
         let tokens = tokens!([$($names $tokens),*]);
         let (_, res) = pairs::$rule::parse_partial($input).unwrap();
-        assert_eq!(vec![res.as_token_tree()], tokens);
+        let actual = vec![res.as_token_tree()];
+        assert_eq!(
+            actual,
+            tokens,
+            "Expected:\n{:#?}\nGot:\n{:#?}\nGot:\n{:#?}\n",
+            tokens,
+            actual,
+            res,
+        );
     };
 }
 

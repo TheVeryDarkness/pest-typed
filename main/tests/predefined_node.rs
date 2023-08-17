@@ -16,8 +16,8 @@ mod tests {
     use super::*;
     use alloc::string::String;
     use pest_typed::{
-        atomic_rule, non_atomic_rule, rule, silent_rule, BoundWrapper, ParsableTypedNode,
-        RuleWrapper, Storage, StringWrapper, TypeWrapper,
+        atomic_rule, non_atomic_rule, normal_rule, rule, silent_rule, BoundWrapper,
+        ParsableTypedNode, RuleWrapper, Storage, StringWrapper, TypeWrapper,
     };
 
     macro_rules! make_rules {
@@ -57,9 +57,9 @@ mod tests {
         type Rule = Rule;
     }
 
-    atomic_rule!(WHITESPACE, Rule, Rule::WHITESPACE, CharRange<' ', ' '>);
-    atomic_rule!(COMMENT, Rule, Rule::COMMENT, CharRange<'\t', '\t'>);
-    rule!(StrFoo, Rule, Rule::Foo, Str<Foo>, Ignore<'i>);
+    atomic_rule!(WHITESPACE, Rule, Rule::WHITESPACE, CharRange::<' ', ' '>);
+    atomic_rule!(COMMENT, Rule, Rule::COMMENT, CharRange::<'\t', '\t'>);
+    normal_rule!(StrFoo, Rule, Rule::Foo, Str::<Foo>, Ignore::<'i>);
     #[test]
     fn string() {
         assert_eq!(<StrFoo<'_> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
@@ -67,7 +67,7 @@ mod tests {
         assert_eq!(s.content.get_content(), "foo");
         assert_eq!(
             format!("{:?}", s),
-            "StrFoo { content: Str, span: Span { str: \"foo\", start: 0, end: 3 } }"
+            r#"Rule { name: "StrFoo", content: Str, span: Span { str: "foo", start: 0, end: 3 } }"#
         )
     }
     #[test]
@@ -75,23 +75,23 @@ mod tests {
         let whitespace = WHITESPACE::parse(" ").unwrap();
         assert_eq!(
             format!("{:?}", whitespace),
-            "WHITESPACE { span: Span { str: \" \", start: 0, end: 1 } }"
+            "Rule { name: \"WHITESPACE\", span: Span { str: \" \", start: 0, end: 1 } }"
         );
         let comment = COMMENT::parse("\t").unwrap();
         assert_eq!(
             format!("{:?}", comment),
-            "COMMENT { span: Span { str: \"\\t\", start: 0, end: 1 } }"
+            "Rule { name: \"COMMENT\", span: Span { str: \"\\t\", start: 0, end: 1 } }"
         );
     }
     type Ignore<'i> = Skipped<COMMENT<'i>, WHITESPACE<'i>>;
     #[test]
     fn ignore() {
-        rule!(tmp, Rule, Rule::RepFoo, Ignore<'i>, Ignore<'i>);
+        normal_rule!(tmp, Rule, Rule::RepFoo, Ignore<'i>, Ignore<'i>);
         tmp::parse(" \t  ").unwrap();
     }
 
     type REP<'i> = Rep<Str<Foo>, Ignore<'i>>;
-    rule!(R, Rule, Rule::RepFoo, REP<'i>, Ignore<'i>);
+    normal_rule!(R, Rule, Rule::RepFoo, REP<'i>, Ignore<'i>);
     #[test]
     fn repetition() {
         let rep1 = R::parse("foofoofoo").unwrap();
