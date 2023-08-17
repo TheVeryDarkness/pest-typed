@@ -42,11 +42,15 @@
 //!
 //! - Emit inner nodes and a span (normal rule, non-atomic rule and compound atomic rule in **pest**).
 //! - Emit a span (atomic rule in **pest**).
-//! - Emit nothing (silent rule in **pest**, but note that this is not like what `Pair`/`Pairs` API does in **pest**). Just parse and drop.
+//! - Emit inner expression (silent rule in **pest**).
 //!
 //! ## Examples
 //!
 //! Note: to use **pest_typed_derive** as a dependency, **pest_typed** is also needed.
+//!
+//! ### Pairs API
+//!
+//! Note: the simulated [Pairs](#https://docs.rs/pest/latest/pest/iterators/struct.Pairs.html) API behaves a bit different from original version. An atomic rule will not contain inner pairs.
 //!
 //! ### Accesser API
 //!
