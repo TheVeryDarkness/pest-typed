@@ -12,27 +12,27 @@
 //! Normally you don't need to reference this module by yourself.
 
 use super::{parser_state::constrain_idxs, position::Position, stack::Stack};
-use crate::wrapper::BoundWrapper;
-use alloc::vec::Vec;
-use core::ops::{Deref, DerefMut};
-use core::{fmt, fmt::Debug, marker::PhantomData};
-use pest::RuleType;
-
 use super::{
     span::Span,
     tracker::Tracker,
     typed_node::NeverFailedTypedNode,
     wrapper::{StringArrayWrapper, StringWrapper},
-    TypedNode,
+    RuleType, TypedNode,
 };
+use crate::wrapper::BoundWrapper;
+use alloc::vec::Vec;
+use core::ops::{Deref, DerefMut};
+use core::{fmt::Debug, marker::PhantomData};
+use custom_debug_derive::Debug as Dbg;
 
 /// Match given string case sensitively.
 ///
 /// The `CONTENT` on the type (by [`StringWrapper`]) is the original string to match.
 ///
 /// See [`Insens`] for case-insensitive matching.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Dbg, PartialEq)]
 pub struct Str<T: StringWrapper + 'static> {
+    #[debug(skip)]
     _phantom: PhantomData<&'static T>,
 }
 impl<T: StringWrapper> StringWrapper for Str<T> {
@@ -58,24 +58,20 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<T> {
         }
     }
 }
-impl<T: StringWrapper> Debug for Str<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Str").finish()
-    }
-}
 
 /// Match given string case insensitively.
 ///
 /// - The field `content` is the matched string.
 /// - The `CONTENT` on the type (by [`StringWrapper`]) is the original string to match, and it may differ from `content` in case.
 ///   
-///   For example, A `^"x"` may match `"X"`, and in the parsing result, `content` is `"X"`, while `CONTENT` is still `"x"`.    
+///   For example, A `^"x"` may match `"X"`, and in the parsing result, `self.content` is `"X"`, while `Self::CONTENT` is still `"x"`.    
 ///
 /// See [`Str`] for case-sensitive matching.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Dbg, PartialEq)]
 pub struct Insens<'i, T: StringWrapper> {
     /// Matched content.
     pub content: &'i str,
+    #[debug(skip)]
     _phantom: PhantomData<&'i T>,
 }
 impl<'i, T: StringWrapper> StringWrapper for Insens<'i, T> {
@@ -104,18 +100,17 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, T> {
         }
     }
 }
-impl<'i, T: StringWrapper> Debug for Insens<'i, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Insens").finish()
-    }
-}
 
-/// Skips until one of the given `strings`
-#[derive(Clone, PartialEq)]
+/// Skips until one of the given strings.
+#[derive(Clone, Dbg, PartialEq)]
 pub struct Skip<'i, Strings: StringArrayWrapper> {
     /// Skipped span.
     pub span: Span<'i>,
+    #[debug(skip)]
     _phantom: PhantomData<&'i Strings>,
+}
+impl<'i, Strings: StringArrayWrapper> StringArrayWrapper for Skip<'i, Strings> {
+    const CONTENT: &'static [&'static str] = Strings::CONTENT;
 }
 impl<'i, Strings: StringArrayWrapper> From<Span<'i>> for Skip<'i, Strings> {
     fn from(span: Span<'i>) -> Self {
@@ -135,26 +130,15 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i,
         match input.skip_until(Strings::CONTENT) {
             true => {
                 let span = start.span(&input);
-                Ok((
-                    input,
-                    Self {
-                        span,
-                        _phantom: PhantomData,
-                    },
-                ))
+                Ok((input, Self::from(span)))
             }
             false => Err(()),
         }
     }
 }
-impl<'i, Strings: StringArrayWrapper> Debug for Skip<'i, Strings> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Skip").finish()
-    }
-}
 
 /// Skip `n` characters if there are.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SkipChar<'i, const N: usize> {
     /// Skipped span.
     pub span: Span<'i>,
@@ -173,11 +157,6 @@ impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, N> {
             }
             false => Err(()),
         }
-    }
-}
-impl<'i, const N: usize> Debug for SkipChar<'i, N> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SkipChar").finish()
     }
 }
 
@@ -298,8 +277,9 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
 /// Negative predicate.
 ///
 /// Will not contain anything.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Dbg, PartialEq)]
 pub struct Negative<T> {
+    #[debug(skip)]
     _phantom: PhantomData<T>,
 }
 impl<T> From<()> for Negative<T> {
@@ -328,11 +308,6 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
                 }
             }
         })
-    }
-}
-impl<T> Debug for Negative<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Negative").finish()
     }
 }
 
@@ -492,8 +467,8 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
 }
 
 /// Skip single whitespace or comment.
-#[derive(Clone, PartialEq)]
-pub enum SkippedUnit<COMMENT: Clone + PartialEq, WHITESPACE: Clone + PartialEq> {
+#[derive(Clone, Debug, PartialEq)]
+pub enum SkippedUnit<COMMENT: Clone + Debug + PartialEq, WHITESPACE: Clone + Debug + PartialEq> {
     /// Comment.
     Comment(COMMENT),
     /// White space.
@@ -701,6 +676,7 @@ pub type Rep<T, IGNORED> = RepMin<T, IGNORED, 0>;
 pub type RepOnce<T, IGNORED> = RepMin<T, IGNORED, 1>;
 
 /// Drop the top of the stack.
+///
 /// Fail if there is no span in the stack.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DROP;
@@ -722,7 +698,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for DROP {
 }
 
 /// Match and pop the top span of the stack.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct POP<'i> {
     /// Matched span.
     pub span: Span<'i>,
@@ -752,11 +728,6 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
         }
     }
 }
-impl<'i> Debug for POP<'i> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("POP").finish()
-    }
-}
 
 /// Match and pop all spans in the stack in top-to-bottom-order.
 #[allow(non_camel_case_types)]
@@ -765,7 +736,6 @@ pub struct POP_ALL<'i> {
     /// Matched span.
     pub span: Span<'i>,
 }
-
 impl<'i> From<Span<'i>> for POP_ALL<'i> {
     fn from(span: Span<'i>) -> Self {
         Self { span }
@@ -785,14 +755,14 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
 }
 
 /// Always fail.
-#[derive(Clone, PartialEq)]
-pub struct AlwaysFail<'i>(PhantomData<&'i char>);
+#[derive(Clone, Dbg, PartialEq)]
+pub struct AlwaysFail<'i>(#[debug(skip)] PhantomData<&'i char>);
 impl<'i> Default for AlwaysFail<'i> {
     fn default() -> Self {
         Self(PhantomData)
     }
 }
-/// A trait that only `AlwaysFail` implements.
+/// A trait that only [AlwaysFail] implements.
 pub trait AlwaysFailed: Debug + Default + Clone + PartialEq {}
 impl<'i> AlwaysFailed for AlwaysFail<'i> {}
 impl<'i, R: RuleType, T: AlwaysFailed> TypedNode<'i, R> for T {
@@ -805,13 +775,8 @@ impl<'i, R: RuleType, T: AlwaysFailed> TypedNode<'i, R> for T {
         Err(())
     }
 }
-impl<'i> Debug for AlwaysFail<'i> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("AlwaysFail").finish()
-    }
-}
 
-/// Match an expression and push it.
+/// Match an expression and push it to the [Stack].
 #[derive(Clone, Debug, PartialEq)]
 pub struct Push<T> {
     /// Matched content.
@@ -847,7 +812,7 @@ impl<T> DerefMut for Push<T> {
     }
 }
 
-/// Match `[START:END]` in top-to-bottom order of the stack.
+/// Match `[START..END]` in top-to-bottom order of the stack.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PeekSlice2<const START: i32, const END: i32>;
 impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
@@ -865,7 +830,7 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
     }
 }
 
-/// Match `[START:END]` in top-to-bottom order of the stack.
+/// Match `[START..]` in top-to-bottom order of the stack.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PeekSlice1<const START: i32>;
 impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<START> {
