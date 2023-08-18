@@ -148,20 +148,59 @@ fn generate_typed(
     res
 }
 
-#[test]
-fn test_default_config() {
+#[cfg(test)]
+mod tests {
+    use super::*;
     use quote::format_ident;
+    #[test]
+    fn test_default_config() {
+        let ast: DeriveInput = syn::parse2(quote! {
+            #[grammar_inline = "x = { \"x\" }"]
+            struct x;
+        })
+        .unwrap();
+        let (name, _, contents, config) = parse_typed_derive(ast);
+        assert_eq!(name, format_ident!("x"));
+        assert_eq!(
+            contents,
+            vec![GrammarSource::Inline(r#"x = { "x" }"#.to_owned())]
+        );
+        assert_eq!(config, Config::default());
+    }
 
-    let ast: DeriveInput = syn::parse2(quote! {
-        #[grammar_inline = "x = { \"x\" }"]
-        struct x;
-    })
-    .unwrap();
-    let (name, _, contents, config) = parse_typed_derive(ast);
-    assert_eq!(name, format_ident!("x"));
-    assert_eq!(
-        contents,
-        vec![GrammarSource::Inline(r#"x = { "x" }"#.to_owned())]
-    );
-    assert_eq!(config, Config::default());
+    #[test]
+    fn test_extra_config() {
+        let ast: DeriveInput = syn::parse2(quote! {
+            #[grammar_inline = "x = { \"x\" }"]
+            #[emit_rule_reference]
+            #[no_warnings = true]
+            #[truncate_accesser_at_node_tag = false]
+            struct x;
+        })
+        .unwrap();
+        let (_, _, _, config) = parse_typed_derive(ast);
+        assert_eq!(
+            config,
+            Config {
+                emit_rule_reference: true,
+                emit_tagged_node_reference: false,
+                do_not_emit_span: false,
+                truncate_accesser_at_node_tag: false,
+                simulate_pair_api: false,
+                no_warnigs: true
+            }
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_failure() {
+        let _ = derive_typed_parser(
+            quote! {
+                #[grammar_inline = "x = { }"]
+                struct x;
+            },
+            false,
+        );
+    }
 }

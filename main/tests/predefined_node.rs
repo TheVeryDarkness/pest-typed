@@ -13,6 +13,8 @@ use pest_typed::predefined_node::*;
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Deref;
+
     use super::*;
     use alloc::string::String;
     use pest_typed::{
@@ -99,20 +101,21 @@ mod tests {
         tmp::parse(" \t  ").unwrap();
     }
 
-    type REP<'i> = Rep<Str<Foo>, Ignore<'i>>;
-    non_atomic_rule!(
-        R,
-        "Repetion of [StrFoo].",
-        Rule,
-        Rule::RepFoo,
-        REP<'i>,
-        Ignore<'i>
-    );
     #[test]
     fn repetition() {
+        type REP<'i> = Rep<Str<Foo>, Ignore<'i>>;
+        non_atomic_rule!(
+            R,
+            "Repetion of [StrFoo].",
+            Rule,
+            Rule::RepFoo,
+            REP<'i>,
+            Ignore<'i>
+        );
         let rep1 = R::parse("foofoofoo").unwrap();
         let rep2 = R::parse("foo foo foo").unwrap();
         let rep3 = R::parse("foo foo\tfoo").unwrap();
+        let _ = R::parse("").unwrap();
         assert_ne!(rep1, rep2);
         assert_ne!(rep1, rep3);
         let format = |rep: &R<'_>| -> String {
@@ -124,5 +127,32 @@ mod tests {
         assert_eq!(format(&rep1), format(&rep2));
         assert_eq!(format(&rep1), format(&rep3));
         assert_eq!(REP::MIN, 0);
+        assert_eq!(rep1.deref().get_min_len(), 0);
+        assert_eq!(rep1.deref().get_max_len(), usize::MAX);
+        assert_eq!(<R<'_> as TypeWrapper>::Inner::MIN, 0);
+    }
+
+    #[test]
+    fn repetition_at_least_once() {
+        type REP<'i> = RepOnce<Insens<'i, Foo>, Ignore<'i>>;
+        non_atomic_rule!(
+            R,
+            "Repetion of [StrFoo].",
+            Rule,
+            Rule::RepFoo,
+            REP<'i>,
+            Ignore<'i>
+        );
+        let rep1 = R::parse("fooFoofoo").unwrap();
+        let rep2 = R::parse("foo Foo foo").unwrap();
+        let rep3 = R::parse("Foo foo\tfoo").unwrap();
+        let rep4 = R::parse("Foofoofoo").unwrap();
+        assert_ne!(rep1, rep2);
+        assert_ne!(rep1, rep3);
+        assert_ne!(rep1, rep4);
+        assert_eq!(REP::MIN, 1);
+        assert_eq!(rep1.deref().get_min_len(), 1);
+        assert_eq!(rep1.deref().get_max_len(), usize::MAX);
+        assert_eq!(<R<'_> as TypeWrapper>::Inner::MIN, 1);
     }
 }
