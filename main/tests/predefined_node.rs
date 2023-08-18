@@ -9,18 +9,15 @@
 
 extern crate alloc;
 
-use pest_typed::predefined_node::*;
-
 #[cfg(test)]
 mod tests {
-    use std::ops::Deref;
-
-    use super::*;
     use alloc::string::String;
     use pest_typed::{
-        atomic_rule, compound_atomic_rule, non_atomic_rule, normal_rule, rule_eoi, silent_rule,
-        BoundWrapper, ParsableTypedNode, RuleWrapper, Storage, StringWrapper, TypeWrapper,
+        atomic_rule, compound_atomic_rule, non_atomic_rule, normal_rule, predefined_node::*,
+        rule_eoi, silent_rule, BoundWrapper, ParsableTypedNode, RuleWrapper, Storage,
+        StringWrapper, TypeWrapper,
     };
+    use std::ops::Deref;
 
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     enum Rule {
@@ -64,6 +61,7 @@ mod tests {
         Ignore::<'i>
     );
     rule_eoi!(EOI, Rule);
+
     #[test]
     fn string() {
         assert_eq!(<StrFoo<'_> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
@@ -74,6 +72,7 @@ mod tests {
             r#"Rule { name: "StrFoo", content: Str, span: Span { str: "foo", start: 0, end: 3 } }"#
         )
     }
+
     #[test]
     fn range() {
         let whitespace = WHITESPACE::parse(" ").unwrap();
@@ -87,7 +86,9 @@ mod tests {
             "Rule { name: \"COMMENT\", content: CharRange { content: '\\t' }, span: Span { str: \"\\t\", start: 0, end: 1 } }"
         );
     }
+
     type Ignore<'i> = Skipped<COMMENT<'i>, WHITESPACE<'i>>;
+
     #[test]
     fn ignore() {
         silent_rule!(
@@ -112,12 +113,14 @@ mod tests {
             REP<'i>,
             Ignore<'i>
         );
+
         let rep1 = R::parse("foofoofoo").unwrap();
         let rep2 = R::parse("foo foo foo").unwrap();
         let rep3 = R::parse("foo foo\tfoo").unwrap();
         let _ = R::parse("").unwrap();
         assert_ne!(rep1, rep2);
         assert_ne!(rep1, rep3);
+
         let format = |rep: &R<'_>| -> String {
             rep.iter()
                 .map(|e| e.get_content())
@@ -126,6 +129,7 @@ mod tests {
         };
         assert_eq!(format(&rep1), format(&rep2));
         assert_eq!(format(&rep1), format(&rep3));
+
         assert_eq!(REP::MIN, 0);
         assert_eq!(rep1.deref().get_min_len(), 0);
         assert_eq!(rep1.deref().get_max_len(), usize::MAX);
@@ -143,6 +147,7 @@ mod tests {
             REP<'i>,
             Ignore<'i>
         );
+
         let rep1 = R::parse("fooFoofoo").unwrap();
         let rep2 = R::parse("foo Foo foo").unwrap();
         let rep3 = R::parse("Foo foo\tfoo").unwrap();
@@ -150,6 +155,7 @@ mod tests {
         assert_ne!(rep1, rep2);
         assert_ne!(rep1, rep3);
         assert_ne!(rep1, rep4);
+
         assert_eq!(REP::MIN, 1);
         assert_eq!(rep1.deref().get_min_len(), 1);
         assert_eq!(rep1.deref().get_max_len(), usize::MAX);
