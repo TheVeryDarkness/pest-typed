@@ -13,9 +13,9 @@ extern crate alloc;
 mod tests {
     use alloc::string::String;
     use pest_typed::{
-        atomic_rule, compound_atomic_rule, non_atomic_rule, normal_rule, predefined_node::*,
-        rule_eoi, silent_rule, BoundWrapper, ParsableTypedNode, RuleWrapper, Storage,
-        StringWrapper, TypeWrapper,
+        atomic_rule, choices::Choice2, compound_atomic_rule, non_atomic_rule, normal_rule,
+        predefined_node::*, rule_eoi, sequence::Seq2, silent_rule, BoundWrapper, ParsableTypedNode,
+        RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper,
     };
     use std::ops::Deref;
 
@@ -23,9 +23,11 @@ mod tests {
     enum Rule {
         Foo,
         RepFoo,
+        NotFooBar,
         WHITESPACE,
         COMMENT,
         EOI,
+        String,
     }
 
     #[derive(Clone, PartialEq)]
@@ -156,9 +158,80 @@ mod tests {
         assert_ne!(rep1, rep3);
         assert_ne!(rep1, rep4);
 
+        let collect = |r: &R<'_>| {
+            r.iter()
+                .map(|r| r.get_content())
+                .collect::<Vec<_>>()
+                .concat()
+        };
+        assert_eq!(collect(&rep1), collect(&rep2));
+        assert_eq!(collect(&rep1), collect(&rep3));
+        assert_eq!(collect(&rep1), collect(&rep4));
+
         assert_eq!(REP::MIN, 1);
         assert_eq!(rep1.deref().get_min_len(), 1);
         assert_eq!(rep1.deref().get_max_len(), usize::MAX);
         assert_eq!(<R<'_> as TypeWrapper>::Inner::MIN, 1);
+    }
+
+    #[test]
+    fn skip() {
+        #[derive(Clone, Debug, PartialEq)]
+        pub struct NewLine;
+        impl StringArrayWrapper for NewLine {
+            const CONTENT: &'static [&'static str] = &["\r\n", "\n", "\r"];
+        }
+        compound_atomic_rule!(
+            QuotedString,
+            "Quoted string.",
+            Rule,
+            Rule::String,
+            Seq2<Skip<'i, NewLine>, NEWLINE, Ignore<'i>>
+        );
+
+        let s1 = QuotedString::parse("2\r\n").unwrap();
+        let s2 = QuotedString::parse("\r\n").unwrap();
+        assert_ne!(s1, s2);
+
+        let new_line = NewLine;
+        assert_eq!(new_line.get_content(), NewLine::CONTENT);
+    }
+
+    #[test]
+    fn skip_char() {
+        compound_atomic_rule!(
+            three,
+            "Skip 3 characters.",
+            Rule,
+            Rule::Foo,
+            SkipChar<'i, 3>
+        );
+        three::parse("foo").unwrap();
+        three::parse("foobar").unwrap_err();
+    }
+
+    #[test]
+    fn negative_predicate() {
+        #[derive(Clone, Debug, PartialEq)]
+        pub struct StrFoo;
+        impl StringWrapper for StrFoo {
+            const CONTENT: &'static str = "foo";
+        }
+        #[derive(Clone, Debug, PartialEq)]
+        pub struct StrBar;
+        impl StringWrapper for StrBar {
+            const CONTENT: &'static str = "bar";
+        }
+        compound_atomic_rule!(
+            not_foo_bar,
+            "Any character except \"foo\" or \"bar\".",
+            Rule,
+            Rule::NotFooBar,
+            Rep<Seq2<Negative<Choice2<Str<StrFoo>, Str<StrBar>>>, ANY, Ignore<'i>>, Ignore<'i>>
+        );
+        not_foo_bar::parse("").unwrap();
+        not_foo_bar::parse("baz").unwrap();
+        not_foo_bar::parse("Foofoo").unwrap_err();
+        not_foo_bar::parse("bazfoo").unwrap_err();
     }
 }
