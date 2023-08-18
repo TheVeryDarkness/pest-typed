@@ -39,9 +39,28 @@ mod tests {
         type Rule = Rule;
     }
 
-    atomic_rule!(WHITESPACE, Rule, Rule::WHITESPACE, CharRange::<' ', ' '>);
-    compound_atomic_rule!(COMMENT, Rule, Rule::COMMENT, CharRange::<'\t', '\t'>);
-    normal_rule!(StrFoo, Rule, Rule::Foo, Str::<Foo>, Ignore::<'i>);
+    atomic_rule!(
+        WHITESPACE,
+        "White space.",
+        Rule,
+        Rule::WHITESPACE,
+        CharRange::<' ', ' '>
+    );
+    compound_atomic_rule!(
+        COMMENT,
+        "Comment",
+        Rule,
+        Rule::COMMENT,
+        CharRange::<'\t', '\t'>
+    );
+    normal_rule!(
+        StrFoo,
+        "String \"Foo\"",
+        Rule,
+        Rule::Foo,
+        Str::<Foo>,
+        Ignore::<'i>
+    );
     rule_eoi!(EOI, Rule);
     #[test]
     fn string() {
@@ -69,12 +88,26 @@ mod tests {
     type Ignore<'i> = Skipped<COMMENT<'i>, WHITESPACE<'i>>;
     #[test]
     fn ignore() {
-        silent_rule!(tmp, Rule, Rule::RepFoo, Ignore<'i>, Ignore<'i>);
+        silent_rule!(
+            tmp,
+            "Temporary rule.",
+            Rule,
+            Rule::RepFoo,
+            Ignore<'i>,
+            Ignore<'i>
+        );
         tmp::parse(" \t  ").unwrap();
     }
 
     type REP<'i> = Rep<Str<Foo>, Ignore<'i>>;
-    non_atomic_rule!(R, Rule, Rule::RepFoo, REP<'i>, Ignore<'i>);
+    non_atomic_rule!(
+        R,
+        "Repetion of [StrFoo].",
+        Rule,
+        Rule::RepFoo,
+        REP<'i>,
+        Ignore<'i>
+    );
     #[test]
     fn repetition() {
         let rep1 = R::parse("foofoofoo").unwrap();
