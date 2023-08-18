@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! Macros and functions for defining structs, most of which are [`crate::RuleStruct`].
+//! Macros and functions for defining structs, most of which are [RuleStruct](crate::RuleStruct).
 
 use crate::{
     error::Error, predefined_node::EOI, tracker::Tracker, NeverFailedTypedNode, Position, RuleType,
@@ -40,7 +40,7 @@ macro_rules! impl_pairs_with_self {
 
 /// Implement [`Pairs`](crate::iterators::Pairs) for a struct that contains [`Pair`](crate::iterators::Pair)s.
 ///
-/// Normally used by [`crate::silent_rule!`].
+/// Normally used by [silent_rule](crate::silent_rule!).
 #[macro_export]
 macro_rules! impl_pairs_with_inner {
     ($name:ident, $Rule:ty, $inner:ty) => {
@@ -223,7 +223,7 @@ macro_rules! impl_pair {
     };
 }
 
-/// Implement [`crate::ParsableTypedNode::parse()`] for structs.
+/// Implement [ParsableTypedNode::parse](crate::ParsableTypedNode::parse()) for structs.
 #[macro_export]
 macro_rules! impl_parse {
     ($name:ident, $Rule:ty, $ignored:ty, true) => {
@@ -248,7 +248,7 @@ macro_rules! impl_parse {
     };
 }
 
-/// Implement [`crate::TypedNode::try_parse_with()`] for structs.
+/// Implement [TypedNode::try_parse_with](crate::TypedNode::try_parse_with()) for structs.
 #[macro_export]
 macro_rules! impl_try_parse_with {
     ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, InnerExpression) => {
@@ -310,7 +310,7 @@ macro_rules! impl_try_parse_with {
     };
 }
 
-/// Fields of structs.
+/// Implement [RuleWrapper](crate::RuleWrapper) for the struct.
 #[macro_export]
 macro_rules! impl_rule_wrapper {
     ($name:ident, $Rule:ty, $rule:expr) => {
@@ -321,10 +321,13 @@ macro_rules! impl_rule_wrapper {
     };
 }
 
-/// Fields of structs.
+/// Declare the body of the struct.
 #[macro_export]
 macro_rules! declare_rule_struct {
-    ($name:ident, $inner:ty, InnerExpression) => {
+    ($name:ident, $($doc:literal)*, $inner:ty, InnerExpression) => {
+        $(
+            #[doc = $doc]
+        )*
         #[allow(non_camel_case_types)]
         #[derive(Clone, PartialEq)]
         pub struct $name<'i> {
@@ -341,7 +344,10 @@ macro_rules! declare_rule_struct {
             }
         }
     };
-    ($name:ident, $inner:ty, Span) => {
+    ($name:ident, $($doc:literal)*, $inner:ty, Span) => {
+        $(
+            #[doc = $doc]
+        )*
         #[allow(non_camel_case_types)]
         #[derive(Clone, PartialEq)]
         pub struct $name<'i> {
@@ -357,7 +363,10 @@ macro_rules! declare_rule_struct {
             }
         }
     };
-    ($name:ident, $inner:ty, Both) => {
+    ($name:ident, $($doc:literal)*, $inner:ty, Both) => {
+        $(
+            #[doc = $doc]
+        )*
         #[allow(non_camel_case_types)]
         #[derive(Clone, PartialEq)]
         pub struct $name<'i> {
@@ -411,15 +420,31 @@ macro_rules! tag {
     };
 }
 
-/// Start point of a normal rule.
+/// Start point of a rule.
 ///
-/// Will not change atomicity.
+/// Arguments:
 ///
-/// See [`crate::atomic_rule!`] and [`crate::non_atomic_rule!`].
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$rule:expr`. Rule enumeration.
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$ignored:ty`. Type of auto-skipped parsing  expressions.
+///
+///   Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
+///
+/// - `$atomicity:tt`. `true`, `false` or `INHERITED`.
+/// - `$emission:tt`. `Span`, `InnerExpression` or `Both`.
+///
+/// See the below macros that reference this:
+/// - [atomic_rule](`crate::atomic_rule!`).
+/// - [compound_atomic_rule](`crate::compound_atomic_rule!`).
+/// - [non_atomic_rule](`crate::non_atomic_rule!`).
+/// - [normal_rule](`crate::normal_rule!`).
+/// - [silent_rule](`crate::silent_rule!`).
 #[macro_export]
 macro_rules! rule {
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $atomicity:tt, $emission:tt) => {
-        ::pest_typed::declare_rule_struct! {$name, $inner, $emission}
+    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $atomicity:tt, $emission:tt) => {
+        ::pest_typed::declare_rule_struct!($name, $($doc)*, $inner, $emission);
         ::pest_typed::impl_rule_wrapper!($name, $Rule, $rule);
         ::pest_typed::impl_try_parse_with!($name, $Rule, $inner, $atomicity, $emission);
         ::pest_typed::impl_parse!($name, $Rule, $ignored, $atomicity);
@@ -428,63 +453,61 @@ macro_rules! rule {
         ::pest_typed::impl_pair!($name, $Rule, $rule, $inner, $atomicity, $emission);
     };
 }
-/// Shortcut for atomic rule in pest.
+/// Shortcut for atomic rule in [pest].
 #[macro_export]
 macro_rules! atomic_rule {
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty) => {
-        ::pest_typed::rule!($name, $Rule, $rule, $inner, (), true, Span);
+    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty) => {
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Span);
     };
 }
 
-/// Shortcut for compound atomic rule in pest.
+/// Shortcut for compound atomic rule in [pest].
 #[macro_export]
 macro_rules! compound_atomic_rule {
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty) => {
-        ::pest_typed::rule!($name, $Rule, $rule, $inner, (), true, Both);
+    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty) => {
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Both);
     };
 }
 
-/// Shortcut for non-atomic rule in pest.
+/// Shortcut for non-atomic rule in [pest].
 #[macro_export]
 macro_rules! non_atomic_rule {
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
-        ::pest_typed::rule!($name, $Rule, $rule, $inner, $ignored, false, Both);
+    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, false, Both);
     };
 }
 
-/// Shortcut for normal rule in pest.
+/// Shortcut for normal rule in [pest].
 #[macro_export]
 macro_rules! normal_rule {
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
-        ::pest_typed::rule!($name, $Rule, $rule, $inner, $ignored, ATOMIC, Both);
+    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, ATOMIC, Both);
     };
 }
 
-/// Shortcut for silent rule in pest.
+/// Shortcut for silent rule in [pest].
 #[macro_export]
 macro_rules! silent_rule {
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
-        ::pest_typed::rule!(
-            $name,
-            $Rule,
-            $rule,
-            $inner,
-            $ignored,
-            ATOMIC,
-            InnerExpression
-        );
+    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, ATOMIC, InnerExpression);
     };
 }
 
-/// Start point of a normal rule.
+/// Start point of a end-of-input rule.
 ///
-/// Will not change atomicity.
+/// Arguments:
 ///
-/// See [`crate::atomic_rule!`] and [`crate::non_atomic_rule!`].
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType].
 #[macro_export]
 macro_rules! rule_eoi {
     ($name:ident, $Rule:ty) => {
-        ::pest_typed::declare_rule_struct! {$name, ::pest_typed::predefined_node::EOI, Both}
+        ::pest_typed::declare_rule_struct!(
+            $name,
+            "The rule for end of input.",
+            ::pest_typed::predefined_node::EOI,
+            Both
+        );
         ::pest_typed::impl_rule_wrapper!($name, $Rule, <$Rule>::EOI);
         ::pest_typed::impl_try_parse_with!(
             $name,
@@ -507,9 +530,9 @@ macro_rules! rule_eoi {
     };
 }
 
-/// Full parse as non-atomic rule.
+/// Full parse as a non-atomic rule.
 ///
-/// For [`crate::rule!`].
+/// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
 pub fn parse<
     'i,
     R: RuleType + 'i,
@@ -538,9 +561,9 @@ pub fn parse<
     Ok(res)
 }
 
-/// Full parse as non-atomic rule.
+/// Full parse as an atomic rule.
 ///
-/// For [`crate::atomic_rule!`].
+/// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
 pub fn parse_without_ignore<'i, R: RuleType + 'i, _Self: TypedNode<'i, R>>(
     input: &'i str,
     rule_eoi: R,

@@ -46,8 +46,8 @@ macro_rules! chain {
 ///
 /// Also generate iterator type with [`crate::chain`] and [`crate::chain`].
 macro_rules! seq {
-    ($name:ident, $pest_typed:ident, $T0:ident, $t0:tt, $( $T:ident, $t:tt, )* ) => {
-        #[doc = "Match a sequence of several expressions."]
+    ($name:ident, $pest_typed:ident, $number:literal, $T0:ident, $t0:tt, $( $T:ident, $t:tt, )* ) => {
+        #[doc = ::core::stringify!(Match a sequence with $number items.)]
         #[derive(Clone)]
         pub struct $name<$T0, $($T),*, IGNORED, > {
             #[doc = "Matched and skipped expressions."]
@@ -162,17 +162,20 @@ macro_rules! seq {
     };
 }
 
-seq!(Seq2, crate, T0, 0, T1, 1,);
-seq!(Seq3, crate, T0, 0, T1, 1, T2, 2,);
-seq!(Seq4, crate, T0, 0, T1, 1, T2, 2, T3, 3,);
-seq!(Seq5, crate, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4,);
-seq!(Seq6, crate, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5,);
-seq!(Seq7, crate, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6,);
-seq!(Seq8, crate, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6, T7, 7,);
-seq!(Seq9, crate, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6, T7, 7, T8, 8,);
-seq!(Seq10, crate, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6, T7, 7, T8, 8, T9, 9,);
-seq!(Seq11, crate, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6, T7, 7, T8, 8, T9, 9, T10, 10,);
+seq!(Seq2, crate, 2, T0, 0, T1, 1,);
+seq!(Seq3, crate, 3, T0, 0, T1, 1, T2, 2,);
+seq!(Seq4, crate, 4, T0, 0, T1, 1, T2, 2, T3, 3,);
+seq!(Seq5, crate, 5, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4,);
+seq!(Seq6, crate, 6, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5,);
+seq!(Seq7, crate, 7, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6,);
+seq!(Seq8, crate, 8, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6, T7, 7,);
+seq!(Seq9, crate, 9, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6, T7, 7, T8, 8,);
+seq!(Seq10, crate, 10, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6, T7, 7, T8, 8, T9, 9,);
 seq!(
-    Seq12, crate, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6, T7, 7, T8, 8, T9, 9, T10, 10,
-    T11, 11,
+    Seq11, crate, 11, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6, T7, 7, T8, 8, T9, 9, T10,
+    10,
+);
+seq!(
+    Seq12, crate, 12, T0, 0, T1, 1, T2, 2, T3, 3, T4, 4, T5, 5, T6, 6, T7, 7, T8, 8, T9, 9, T10,
+    10, T11, 11,
 );

@@ -91,134 +91,140 @@ macro_rules! choices_iter {
 ///
 /// Also traverse helpers by calling [`choices_helper`] and iterators by calling [`choices_iter`].
 macro_rules! choices {
-    ($name:ident, $pest_typed:ident, $helper:ident, $iter:ident, $V0:ident, $v0:tt, $( $V:ident, $v:tt, )* ) => {
-        /// Match either of two expressions.
-        #[derive(Clone, PartialEq)]
-        pub enum $name<$V0, $($V, )* > {
-            #[doc = ::core::stringify!(Variant $v0 for choice $V0.)]
-            $v0($V0),
-            $(
-                #[doc = ::core::stringify!(Variant $v for choice $V.)]
-                $v($V),
-            )*
-        }
-        impl<$V0, $($V, )* > $name<$V0, $($V, )* > {
-            /// Invoke if is not None and is the first case.
-            pub fn if_then<'n, Ret>(&'n self, f: impl FnOnce(&$V0) -> Ret) -> <$helper::$v0<'n, Ret, $V0, $($V, )* > as $crate::choices::NextChoice>::Next {
-                let helper = $helper::$v0 { result: Err(self) };
-                helper.else_if(f)
+    ($name:ident, $pest_typed:ident, $mod:ident, $number:literal, $V0:ident, $v0:tt, $( $V:ident, $v:tt, )* ) => {
+        pub use $mod::$name;
+        #[doc = ::core::stringify!(Types for choices type [$name].)]
+        pub mod $mod {
+            #[doc = ::core::stringify!(Match one of $number expressions.)]
+            #[derive(Clone, PartialEq)]
+            pub enum $name<$V0, $($V, )* > {
+                #[doc = ::core::stringify!(Variant $v0 for choice $V0.)]
+                $v0($V0),
+                $(
+                    #[doc = ::core::stringify!(Variant $v for choice $V.)]
+                    $v($V),
+                )*
             }
-            /// Access inner node if matched.
-            pub fn $v0(&self) -> ::core::option::Option<&$V0> {
-                if let Self::$v0(res) = self {
-                    ::core::option::Option::Some(res)
-                } else {
-                    ::core::option::Option::None
+            impl<$V0, $($V, )* > $name<$V0, $($V, )* > {
+                /// Invoke if is not None and is the first case.
+                pub fn if_then<'n, Ret>(&'n self, f: impl FnOnce(&$V0) -> Ret) -> <helper::$v0<'n, Ret, $V0, $($V, )* > as $crate::choices::NextChoice>::Next {
+                    let helper = helper::$v0 { result: Err(self) };
+                    helper.else_if(f)
                 }
-            }
-            $(
                 /// Access inner node if matched.
-                pub fn $v(&self) -> ::core::option::Option<&$V> {
-                    if let Self::$v(res) = self {
+                pub fn $v0(&self) -> ::core::option::Option<&$V0> {
+                    if let Self::$v0(res) = self {
                         ::core::option::Option::Some(res)
                     } else {
                         ::core::option::Option::None
                     }
                 }
-            )*
-        }
-        impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* > $pest_typed::TypedNode<'i, R>
-            for $name<$V0, $($V, )* >
-        {
-            #[inline]
-            fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
-                input: $pest_typed::Position<'i>,
-                stack: &mut $pest_typed::Stack<$pest_typed::Span<'i>>,
-                tracker: &mut $pest_typed::tracker::Tracker<'i, R>,
-            ) -> ::core::result::Result<($pest_typed::Position<'i>, Self), ()> {
-                let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V0::try_parse_with::<ATOMIC>(input, stack, tracker));
-                if let Ok((input, res)) = res {
-                    return Ok((input, Self::$v0(res)));
-                }
                 $(
-                    let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V::try_parse_with::<ATOMIC>(input, stack, tracker));
-                    if let Ok((input, res)) = res {
-                        return Ok((input, Self::$v(res)));
+                    /// Access inner node if matched.
+                    pub fn $v(&self) -> ::core::option::Option<&$V> {
+                        if let Self::$v(res) = self {
+                            ::core::option::Option::Some(res)
+                        } else {
+                            ::core::option::Option::None
+                        }
                     }
                 )*
-                Err(())
             }
-        }
-        impl<
-            'i: 'n,
-            'n,
-            R: $pest_typed::RuleType + 'i,
-            $V0: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>,
-            $($V: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>, )*
-        > $pest_typed::iterators::Pairs<'i, 'n, R> for $name<$V0, $($V, )* >
-        {
-            type Iter = $iter::Iter<'i, 'n, R, $V0, $($V, )*>;
-            type IntoIter = $iter::IntoIter<'i, 'n, R, $V0, $($V, )*>;
+            impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* > $pest_typed::TypedNode<'i, R>
+                for $name<$V0, $($V, )* >
+            {
+                #[inline]
+                fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
+                    input: $pest_typed::Position<'i>,
+                    stack: &mut $pest_typed::Stack<$pest_typed::Span<'i>>,
+                    tracker: &mut $pest_typed::tracker::Tracker<'i, R>,
+                ) -> ::core::result::Result<($pest_typed::Position<'i>, Self), ()> {
+                    let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V0::try_parse_with::<ATOMIC>(input, stack, tracker));
+                    if let Ok((input, res)) = res {
+                        return Ok((input, Self::$v0(res)));
+                    }
+                    $(
+                        let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V::try_parse_with::<ATOMIC>(input, stack, tracker));
+                        if let Ok((input, res)) = res {
+                            return Ok((input, Self::$v(res)));
+                        }
+                    )*
+                    Err(())
+                }
+            }
+            impl<
+                'i: 'n,
+                'n,
+                R: $pest_typed::RuleType + 'i,
+                $V0: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>,
+                $($V: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>, )*
+            > $pest_typed::iterators::Pairs<'i, 'n, R> for $name<$V0, $($V, )* >
+            {
+                type Iter = iterators::Iter<'i, 'n, R, $V0, $($V, )*>;
+                type IntoIter = iterators::IntoIter<'i, 'n, R, $V0, $($V, )*>;
 
-            fn iter(&'n self) -> Self::Iter {
-                match self {
-                    Self::$v0($v0) => Self::Iter::$v0($v0.iter()),
-                    $(
-                        Self::$v($v) => Self::Iter::$v($v.iter()),
-                    )*
+                fn iter(&'n self) -> Self::Iter {
+                    match self {
+                        Self::$v0($v0) => Self::Iter::$v0($v0.iter()),
+                        $(
+                            Self::$v($v) => Self::Iter::$v($v.iter()),
+                        )*
+                    }
+                }
+                fn into_iter(self) -> Self::IntoIter {
+                    match self {
+                        Self::$v0($v0) => Self::IntoIter::$v0($v0.into_iter()),
+                        $(Self::$v($v) => Self::IntoIter::$v($v.into_iter()), )*
+                    }
                 }
             }
-            fn into_iter(self) -> Self::IntoIter {
-                match self {
-                    Self::$v0($v0) => Self::IntoIter::$v0($v0.into_iter()),
-                    $(Self::$v($v) => Self::IntoIter::$v($v.into_iter()), )*
+            impl<$V0: ::core::fmt::Debug, $($V: ::core::fmt::Debug, )* >
+                ::core::fmt::Debug for $name<$V0, $($V, )* >
+            {
+                fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                    match self {
+                        Self::$v0($v0) => f.debug_struct(::core::stringify!($name)).field(&::core::stringify!($v0), &$v0).finish(),
+                        $(
+                            Self::$v($v) => f.debug_struct(::core::stringify!($name)).field(&::core::stringify!($v), &$v).finish(),
+                        )*
+                    }
                 }
             }
-        }
-        impl<$V0: ::core::fmt::Debug, $($V: ::core::fmt::Debug, )* >
-            ::core::fmt::Debug for $name<$V0, $($V, )* >
-        {
-            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                match self {
-                    Self::$v0($v0) => f.debug_struct(::core::stringify!($name)).field(&::core::stringify!($v0), &$v0).finish(),
-                    $(
-                        Self::$v($v) => f.debug_struct(::core::stringify!($name)).field(&::core::stringify!($v), &$v).finish(),
-                    )*
-                }
+            mod helper {
+                $crate::choices_helper!($pest_typed, $name, ($V0, $v0, $( $V, $v, )* ), $V0, $v0, $( $V, $v, )* );
             }
-        }
-        mod $helper {
-            $crate::choices_helper!($pest_typed, $name, ($V0, $v0, $( $V, $v, )* ), $V0, $v0, $( $V, $v, )* );
-        }
-        mod $iter {
-            $crate::choices_iter!($name, $pest_typed, Iter, iter, &'n (dyn $pest_typed::iterators::Pair<'i, 'n, R>), $V0, $v0, $( $V, $v, )* );
-            $crate::choices_iter!($name, $pest_typed, IntoIter, into_iter, $pest_typed::Box<dyn $pest_typed::iterators::Pair<'i, 'n, R> + 'n>, $V0, $v0, $( $V, $v, )* );
+            mod iterators {
+                $crate::choices_iter!($name, $pest_typed, Iter, iter, &'n (dyn $pest_typed::iterators::Pair<'i, 'n, R>), $V0, $v0, $( $V, $v, )* );
+                $crate::choices_iter!($name, $pest_typed, IntoIter, into_iter, $pest_typed::Box<dyn $pest_typed::iterators::Pair<'i, 'n, R> + 'n>, $V0, $v0, $( $V, $v, )* );
+            }
         }
     };
 }
 
 // Choices helper and iterator.
 
-choices!(Choice2, crate, ch2, it2, T0, _0, T1, _1,);
-choices!(Choice3, crate, ch3, it3, T0, _0, T1, _1, T2, _2,);
-choices!(Choice4, crate, ch4, it4, T0, _0, T1, _1, T2, _2, T3, _3,);
-choices!(Choice5, crate, ch5, it5, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4,);
-choices!(Choice6, crate, ch6, it6, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5,);
-choices!(Choice7, crate, ch7, it7, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6,);
-choices!(Choice8, crate, ch8, it8, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,);
+choices!(Choice2, crate, choice2, 2, T0, _0, T1, _1,);
+choices!(Choice3, crate, choice3, 3, T0, _0, T1, _1, T2, _2,);
+choices!(Choice4, crate, choice4, 4, T0, _0, T1, _1, T2, _2, T3, _3,);
+choices!(Choice5, crate, choice5, 5, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4,);
+choices!(Choice6, crate, choice6, 6, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5,);
+choices!(Choice7, crate, choice7, 7, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6,);
 choices!(
-    Choice9, crate, ch9, it9, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7, T8,
+    Choice8, crate, choice8, 8, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
+);
+choices!(
+    Choice9, crate, choice9, 9, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7, T8,
     _8,
 );
 choices!(
-    Choice10, crate, ch10, it10, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
+    Choice10, crate, choice10, 10, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
     T8, _8, T9, _9,
 );
 choices!(
-    Choice11, crate, ch11, it11, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
+    Choice11, crate, choice11, 11, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
     T8, _8, T9, _9, T10, _10,
 );
 choices!(
-    Choice12, crate, ch12, it12, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
+    Choice12, crate, choice12, 12, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
     T8, _8, T9, _9, T10, _10, T11, _11,
 );

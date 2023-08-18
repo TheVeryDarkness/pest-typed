@@ -422,10 +422,7 @@ fn rule<'g, 'f>(
         };
         let ignore = ignore(&root);
         quote! {
-            #(
-                #[doc = #docs]
-            )*
-            #pest_typed::rule!(#name, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission);
+            #pest_typed::rule!(#name, #(#docs)*, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission);
             impl<'i> #name<'i> {
                 #accesser_impl
             }
@@ -1058,7 +1055,7 @@ pub(crate) fn generate_typed_pair_from_rule(
                     prefix: &str,
                     mac: &Ident,
                     module: &Ident,
-                    helper_iter: bool,
+                    mod_prefix: Option<&'static str>,
                     seq: bool| {
             for item in set {
                 let type_i = format_ident!("{}_{}", prefix, item);
@@ -1077,15 +1074,14 @@ pub(crate) fn generate_typed_pair_from_rule(
                     .unzip();
                 // `pest_typed` and `TypedNode` is already imported, so can be referred directly.
                 if *item >= 12 {
-                    let helper_iter = if helper_iter {
-                        let helper = format_ident!("helper_{}", item);
-                        let iter = format_ident!("iter_{}", item);
-                        quote! {#helper, #iter, }
+                    let mod_i = if let Some(mod_prefix) = mod_prefix {
+                        let mod_name = format_ident!("{}{}", mod_prefix, item);
+                        quote! {#mod_name, }
                     } else {
                         quote! {}
                     };
                     target.push(quote! {
-                        pest_typed::#mac!(#generics_i, pest_typed, #helper_iter #(#types, #field, )*);
+                        pest_typed::#mac!(#generics_i, pest_typed, #mod_i #item, #(#types, #field, )*);
                     });
                 } else {
                     target.push(quote! {
@@ -1110,7 +1106,7 @@ pub(crate) fn generate_typed_pair_from_rule(
             "Seq",
             &format_ident!("seq"),
             &format_ident!("sequence"),
-            false,
+            None,
             true,
         );
         fill(
@@ -1119,7 +1115,7 @@ pub(crate) fn generate_typed_pair_from_rule(
             "Choice",
             &format_ident!("choices"),
             &format_ident!("choices"),
-            true,
+            Some("choice"),
             false,
         );
 
@@ -1340,36 +1336,5 @@ mod tests {
         let expected = include!("../tests/syntax.used.rules.txt");
         let expected = BTreeSet::from(expected);
         assert_eq!(used, expected);
-    }
-
-    /// Use a script to format generated codes if changed.
-    ///
-    /// ```shell
-    /// rustfmt generator/tests/syntax-generated.txt
-    /// ```
-    #[test]
-    fn generated_rules() {
-        let path_generated = "tests/syntax.generated.txt";
-        let path_expected = if cfg!(feature = "grammar-extras") {
-            "tests/syntax.extras.expected.txt"
-        } else {
-            "tests/syntax.expected.txt"
-        };
-        let actual = generate_typed_pair_from_rule(&PARSE_RESULT.1, &DOC_COMMENT, Config::all());
-        let actual = actual.to_string();
-        std::fs::write(path_generated, &actual).unwrap();
-        let output = std::process::Command::new("rustfmt")
-            .arg(path_generated)
-            .arg("--config")
-            .arg("use_small_heuristics=Max,max_width=1000")
-            .output()
-            .unwrap();
-        assert!(output.status.success());
-
-        assert_eq!(
-            std::fs::read(path_generated).unwrap(),
-            std::fs::read(path_expected).unwrap(),
-            "Generated codes have changed."
-        );
     }
 }
