@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct Config {
     pub emit_rule_reference: bool,
     pub emit_tagged_node_reference: bool,
@@ -15,20 +15,6 @@ pub(crate) struct Config {
     pub truncate_accesser_at_node_tag: bool,
     pub simulate_pair_api: bool,
     pub no_warnigs: bool,
-}
-impl Config {
-    #[allow(dead_code)]
-    /// Enable as more as possible features.
-    pub fn all() -> Self {
-        Self {
-            emit_rule_reference: true,
-            emit_tagged_node_reference: true,
-            do_not_emit_span: false,
-            truncate_accesser_at_node_tag: true,
-            simulate_pair_api: true,
-            no_warnigs: false,
-        }
-    }
 }
 impl Default for Config {
     fn default() -> Self {

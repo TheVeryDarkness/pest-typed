@@ -147,3 +147,21 @@ fn generate_typed(
     };
     res
 }
+
+#[test]
+fn test_default_config() {
+    use quote::format_ident;
+
+    let ast: DeriveInput = syn::parse2(quote! {
+        #[grammar_inline = "x = { \"x\" }"]
+        struct x;
+    })
+    .unwrap();
+    let (name, _, contents, config) = parse_typed_derive(ast);
+    assert_eq!(name, format_ident!("x"));
+    assert_eq!(
+        contents,
+        vec![GrammarSource::Inline(r#"x = { "x" }"#.to_owned())]
+    );
+    assert_eq!(config, Config::default());
+}
