@@ -358,7 +358,7 @@ fn _span() -> TokenStream {
 enum Emission {
     /// Current rule will not contain a span.
     /// Current rule will not be visible in some APIs.
-    InnerExpression,
+    Expression,
     /// Current rule will only contain a span.
     /// Inner structures will not be emitted.
     Span,
@@ -368,7 +368,7 @@ enum Emission {
 impl ToTokens for Emission {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
-            Self::InnerExpression => tokens.append(format_ident!("InnerExpression")),
+            Self::Expression => tokens.append(format_ident!("Expression")),
             Self::Span => tokens.append(format_ident!("Span")),
             Self::Both => tokens.append(format_ident!("Both")),
         }
@@ -402,7 +402,7 @@ fn rule<'g, 'f>(
     };
     let accessers = match emission {
         Emission::Both => accessers.collect(&root, rule_config),
-        Emission::InnerExpression | Emission::Span => quote! {},
+        Emission::Expression | Emission::Span => quote! {},
     };
     let docs = [doc, atomicity_doc];
     fn create<'g>(
@@ -418,7 +418,7 @@ fn rule<'g, 'f>(
         let atomicity = match rule_config.atomicity {
             Some(true) => quote! {true},
             Some(false) => quote! {false},
-            None => quote! {ATOMIC},
+            None => quote! {INHERITED},
         };
         let ignore = ignore(&root);
         quote! {
@@ -950,7 +950,7 @@ fn generate_graph<'g: 'f, 'f>(
         let rule_name = rule.name.as_str();
         let (atomicity, emission) = match rule.ty {
             RuleType::Normal => (None, Emission::Both),
-            RuleType::Silent => (None, Emission::InnerExpression),
+            RuleType::Silent => (None, Emission::Expression),
             RuleType::NonAtomic => (Some(false), Emission::Both),
             RuleType::CompoundAtomic => (Some(true), Emission::Both),
             RuleType::Atomic => (Some(true), Emission::Span),
@@ -1196,7 +1196,7 @@ fn generate_unicode(
                 }
                 impl<'i> #pest_typed::TypedNode<'i, super::Rule> for #property_ident {
                     #[inline]
-                    fn try_parse_with<const ATOMIC: #bool>(
+                    fn try_parse_with<const INHERITED: #bool>(
                         mut input: #position<'i>,
                         _stack: &mut #stack<#span<'i>>,
                         tracker: &mut #tracker<'i, super::Rule>,

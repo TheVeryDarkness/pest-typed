@@ -17,6 +17,11 @@ use crate::{
 /// Implement [`Pairs`](crate::iterators::Pairs) for a struct that is a [`Pair`](crate::iterators::Pair).
 ///
 /// Normally used by non-silent rules.
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
 #[macro_export]
 macro_rules! impl_pairs_with_self {
     ($name:ident, $Rule:ty) => {
@@ -41,6 +46,12 @@ macro_rules! impl_pairs_with_self {
 /// Implement [`Pairs`](crate::iterators::Pairs) for a struct that contains [`Pair`](crate::iterators::Pair)s.
 ///
 /// Normally used by [silent_rule](crate::silent_rule!).
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$inner:ty`. Type of inner parsing expression.
 #[macro_export]
 macro_rules! impl_pairs_with_inner {
     ($name:ident, $Rule:ty, $inner:ty) => {
@@ -76,14 +87,13 @@ macro_rules! impl_pairs_with_inner {
 ///
 /// Arguments:
 ///
-/// - `$name:ident`: struct name.
-/// - `$Rule:ty`: rule type.
-/// - `$rule:expr`: rule value.
-/// - `$inner:ty`: inner type.
-/// - `InnerExpression`, `Span` or `Both`: emission.
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$emission:tt`. `Span`, `Expression` or `Both`.
 #[macro_export]
 macro_rules! impl_pairs {
-    ($name:ident, $Rule:ty, $inner:ty, InnerExpression) => {
+    ($name:ident, $Rule:ty, $inner:ty, Expression) => {
         ::pest_typed::impl_pairs_with_inner!($name, $Rule, $inner);
     };
     ($name:ident, $Rule:ty, $inner:ty, $emit:tt) => {
@@ -92,6 +102,11 @@ macro_rules! impl_pairs {
 }
 
 /// Implement [`core::ops::Deref`] for structs with content.
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$inner:ty`. Type of inner parsing expression.
 #[macro_export]
 macro_rules! impl_deref_with_content {
     ($name:ident, $inner:ty) => {
@@ -110,13 +125,16 @@ macro_rules! impl_deref_with_content {
 }
 
 /// Implement [`core::ops::Deref`] for structs if they have content.
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$emission:tt`. `Span`, `Expression` or `Both`.
 #[macro_export]
 macro_rules! impl_deref {
-    ($name:ident, $inner:ty, true) => {};
-    ($name:ident, $inner:ty, false) => {
-        ::pest_typed::impl_deref_with_content!($name, $inner);
-    };
-    ($name:ident, $inner:ty, ATOMIC) => {
+    ($name:ident, $inner:ty, Span) => {};
+    ($name:ident, $inner:ty, $emission:tt) => {
         ::pest_typed::impl_deref_with_content!($name, $inner);
     };
 }
@@ -125,7 +143,11 @@ macro_rules! impl_deref {
 ///
 /// Normally used by atomic rules.
 ///
-/// Arguments: `($name:ident, $Rule:ty, $rule:expr)`.
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$rule:expr`. Rule enumeration.
 #[macro_export]
 macro_rules! impl_pair_with_empty {
     ($name:ident, $Rule:ty, $rule:expr) => {
@@ -158,10 +180,11 @@ macro_rules! impl_pair_with_empty {
 /// Implement [`Pair`](crate::iterators::Pair) for a struct with inner [`Pair`](crate::iterators::Pair)s.
 ///
 /// Arguments:
-/// - `$name:ident`: struct name.
-/// - `$Rule:ty`: rule type.
-/// - `$rule:expr`: rule value.
-/// - `$inner:ty`: inner type.
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$rule:expr`. Rule enumeration.
+/// - `$inner:ty`. Type of inner parsing expression.
 #[macro_export]
 macro_rules! impl_pair_with_content {
     ($name:ident, $Rule:ty, $rule:expr, $inner:ty) => {
@@ -203,27 +226,38 @@ macro_rules! impl_pair_with_content {
 /// Implement [`Pair`](crate::iterators::Pair) for a struct.
 ///
 /// Arguments:
-/// - `$name:ident`: struct name.
-/// - `$Rule:ty`: rule type.
-/// - `$rule:expr`: rule value.
-/// - `$inner:ty`: inner type.
-/// - `true`, `false` or `None`: atomicity.
-/// - `InnerExpression`, `Span` or `Both`: emission.
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$rule:expr`. Rule enumeration.
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$atomicity:tt`. `true`, `false` or `INHERITED`.
+/// - `$emission:tt`. `Span`, `Expression` or `Both`.
 #[macro_export]
 macro_rules! impl_pair {
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $atomicity:expr, InnerExpression) => {};
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $atomicity:expr, Expression) => {};
     ($name:ident, $Rule:ty, $rule:expr, $inner:ty, true, $emit:tt) => {
         ::pest_typed::impl_pair_with_empty!($name, $Rule, $rule);
     };
     ($name:ident, $Rule:ty, $rule:expr, $inner:ty, false, $emit:tt) => {
         ::pest_typed::impl_pair_with_content!($name, $Rule, $rule, $inner);
     };
-    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, ATOMIC, $emit:tt) => {
+    ($name:ident, $Rule:ty, $rule:expr, $inner:ty, INHERITED, $emit:tt) => {
         ::pest_typed::impl_pair_with_content!($name, $Rule, $rule, $inner);
     };
 }
 
 /// Implement [ParsableTypedNode::parse](crate::ParsableTypedNode::parse()) for structs.
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$ignored:ty`. Type of auto-skipped parsing  expressions.
+///
+///   Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
+///
+/// - `$atomicity:tt`. `true`, `false` or `INHERITED`.
 #[macro_export]
 macro_rules! impl_parse {
     ($name:ident, $Rule:ty, $ignored:ty, true) => {
@@ -249,12 +283,20 @@ macro_rules! impl_parse {
 }
 
 /// Implement [TypedNode::try_parse_with](crate::TypedNode::try_parse_with()) for structs.
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$atomicity:tt`. `true`, `false` or `INHERITED`.
+/// - `$emission:tt`. `Span`, `Expression` or `Both`.
 #[macro_export]
 macro_rules! impl_try_parse_with {
-    ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, InnerExpression) => {
+    ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Expression) => {
         impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
             #[inline]
-            fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
+            fn try_parse_with<const INHERITED: ::core::primitive::bool>(
                 input: ::pest_typed::Position<'i>,
                 stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
                 tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
@@ -275,7 +317,7 @@ macro_rules! impl_try_parse_with {
     ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Span) => {
         impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
             #[inline]
-            fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
+            fn try_parse_with<const INHERITED: ::core::primitive::bool>(
                 input: ::pest_typed::Position<'i>,
                 stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
                 tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
@@ -292,7 +334,7 @@ macro_rules! impl_try_parse_with {
     ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Both) => {
         impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
             #[inline]
-            fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
+            fn try_parse_with<const INHERITED: ::core::primitive::bool>(
                 input: ::pest_typed::Position<'i>,
                 stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
                 tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
@@ -311,6 +353,12 @@ macro_rules! impl_try_parse_with {
 }
 
 /// Implement [RuleWrapper](crate::RuleWrapper) for the struct.
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$rule:expr`. Rule enumeration.
 #[macro_export]
 macro_rules! impl_rule_wrapper {
     ($name:ident, $Rule:ty, $rule:expr) => {
@@ -322,9 +370,16 @@ macro_rules! impl_rule_wrapper {
 }
 
 /// Declare the body of the struct.
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$($doc:literal)*`. A list of strings that is prepended to generated struct as document comments.
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$emission:tt`. `Span`, `Expression` or `Both`.
 #[macro_export]
 macro_rules! declare_rule_struct {
-    ($name:ident, $($doc:literal)*, $inner:ty, InnerExpression) => {
+    ($name:ident, $($doc:literal)*, $inner:ty, Expression) => {
         $(
             #[doc = $doc]
         )*
@@ -388,6 +443,12 @@ macro_rules! declare_rule_struct {
 }
 
 /// The start point of a node tag.
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$inner:ty`. Type of inner parsing expression.
 #[macro_export]
 macro_rules! tag {
     ($name:ident, $Rule:ty, $inner:ty) => {
@@ -400,13 +461,13 @@ macro_rules! tag {
             pub span: ::pest_typed::Span<'i>,
         }
         impl<'i> ::pest_typed::TypedNode<'i, $Rule> for $name<'i> {
-            fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
+            fn try_parse_with<const INHERITED: ::core::primitive::bool>(
                 input: ::pest_typed::Position<'i>,
                 stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
                 tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
             ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
                 let start = input;
-                match <$inner>::try_parse_with::<ATOMIC>(input, stack, tracker) {
+                match <$inner>::try_parse_with::<INHERITED>(input, stack, tracker) {
                     ::core::result::Result::Ok((input, content)) => {
                         let span = start.span(&input);
                         ::core::result::Result::Ok((input, Self { content, span }))
@@ -425,6 +486,7 @@ macro_rules! tag {
 /// Arguments:
 ///
 /// - `$name:ident`. Name of generated struct.
+/// - `$($doc:literal)*`. A list of strings that is prepended to generated struct as document comments.
 /// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
 /// - `$rule:expr`. Rule enumeration.
 /// - `$inner:ty`. Type of inner parsing expression.
@@ -433,7 +495,7 @@ macro_rules! tag {
 ///   Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
 ///
 /// - `$atomicity:tt`. `true`, `false` or `INHERITED`.
-/// - `$emission:tt`. `Span`, `InnerExpression` or `Both`.
+/// - `$emission:tt`. `Span`, `Expression` or `Both`.
 ///
 /// See the below macros that reference this:
 /// - [atomic_rule](`crate::atomic_rule!`).
@@ -448,12 +510,21 @@ macro_rules! rule {
         ::pest_typed::impl_rule_wrapper!($name, $Rule, $rule);
         ::pest_typed::impl_try_parse_with!($name, $Rule, $inner, $atomicity, $emission);
         ::pest_typed::impl_parse!($name, $Rule, $ignored, $atomicity);
-        ::pest_typed::impl_deref!($name, $inner, $atomicity);
+        ::pest_typed::impl_deref!($name, $inner, $emission);
         ::pest_typed::impl_pairs!($name, $Rule, $inner, $emission);
         ::pest_typed::impl_pair!($name, $Rule, $rule, $inner, $atomicity, $emission);
     };
 }
+
 /// Shortcut for atomic rule in [pest].
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$($doc:literal)*`. A list of strings that is prepended to generated struct as document comments.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$rule:expr`. Rule enumeration.
+/// - `$inner:ty`. Type of inner parsing expression.
 #[macro_export]
 macro_rules! atomic_rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty) => {
@@ -462,6 +533,14 @@ macro_rules! atomic_rule {
 }
 
 /// Shortcut for compound atomic rule in [pest].
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$($doc:literal)*`. A list of strings that is prepended to generated struct as document comments.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$rule:expr`. Rule enumeration.
+/// - `$inner:ty`. Type of inner parsing expression.
 #[macro_export]
 macro_rules! compound_atomic_rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty) => {
@@ -470,6 +549,17 @@ macro_rules! compound_atomic_rule {
 }
 
 /// Shortcut for non-atomic rule in [pest].
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$($doc:literal)*`. A list of strings that is prepended to generated struct as document comments.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$rule:expr`. Rule enumeration.
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$ignored:ty`. Type of auto-skipped parsing  expressions.
+///
+///   Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
 #[macro_export]
 macro_rules! non_atomic_rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
@@ -478,18 +568,40 @@ macro_rules! non_atomic_rule {
 }
 
 /// Shortcut for normal rule in [pest].
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$($doc:literal)*`. A list of strings that is prepended to generated struct as document comments.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$rule:expr`. Rule enumeration.
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$ignored:ty`. Type of auto-skipped parsing expressions.
+///
+///   Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
 #[macro_export]
 macro_rules! normal_rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, ATOMIC, Both);
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Both);
     };
 }
 
 /// Shortcut for silent rule in [pest].
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$($doc:literal)*`. A list of strings that is prepended to generated struct as document comments.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$rule:expr`. Rule enumeration.
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$ignored:ty`. Type of auto-skipped parsing expressions.
+///
+///   Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
 #[macro_export]
 macro_rules! silent_rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, ATOMIC, InnerExpression);
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Expression);
     };
 }
 
@@ -513,7 +625,7 @@ macro_rules! rule_eoi {
             $name,
             $Rule,
             ::pest_typed::predefined_node::EOI,
-            ATOMIC,
+            INHERITED,
             Both
         );
         impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i> {
@@ -524,7 +636,7 @@ macro_rules! rule_eoi {
                 ::pest_typed::rule::parse_without_ignore::<$Rule, Self>(input, <$Rule>::EOI)
             }
         }
-        ::pest_typed::impl_deref!($name, ::pest_typed::predefined_node::EOI, ATOMIC);
+        ::pest_typed::impl_deref!($name, ::pest_typed::predefined_node::EOI, Expression);
         ::pest_typed::impl_pairs_with_self!($name, $Rule);
         ::pest_typed::impl_pair_with_empty!($name, $Rule, <$Rule>::EOI);
     };
