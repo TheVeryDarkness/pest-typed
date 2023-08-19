@@ -11,23 +11,31 @@ extern crate alloc;
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::String;
     use pest_typed::{
-        atomic_rule, choices::Choice2, compound_atomic_rule, non_atomic_rule, normal_rule,
-        predefined_node::*, rule_eoi, sequence::Seq2, silent_rule, BoundWrapper, ParsableTypedNode,
-        RuleWrapper, Storage, StringArrayWrapper, StringWrapper, TypeWrapper,
+        atomic_rule,
+        choices::Choice2,
+        compound_atomic_rule,
+        iterators::{Pair, PairTree, Pairs},
+        non_atomic_rule, normal_rule,
+        predefined_node::*,
+        rule_eoi,
+        sequence::{Seq2, Seq3},
+        silent_rule, BoundWrapper, ParsableTypedNode, RuleWrapper, Storage, StringArrayWrapper,
+        StringWrapper, TypeWrapper,
     };
-    use std::ops::Deref;
+    use std::{fmt::Write, ops::Deref, string::String};
 
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     enum Rule {
         Foo,
         RepFoo,
         NotFooBar,
+        Life,
         WHITESPACE,
         COMMENT,
         EOI,
         String,
+        Quote,
     }
 
     #[derive(Clone, PartialEq)]
@@ -49,14 +57,14 @@ mod tests {
     );
     compound_atomic_rule!(
         COMMENT,
-        "Comment",
+        "Comment.",
         Rule,
         Rule::COMMENT,
         CharRange::<'\t', '\t'>
     );
     normal_rule!(
         StrFoo,
-        "String \"Foo\"",
+        "String \"Foo\".",
         Rule,
         Rule::Foo,
         Str::<Foo>,
@@ -71,7 +79,7 @@ mod tests {
         assert_eq!(s.content.get_content(), "foo");
         assert_eq!(
             format!("{:?}", s),
-            r#"Rule { name: "StrFoo", content: Str, span: Span { str: "foo", start: 0, end: 3 } }"#
+            "StrFoo { content: Str, span: Span { str: \"foo\", start: 0, end: 3 } }"
         )
     }
 
@@ -80,12 +88,12 @@ mod tests {
         let whitespace = WHITESPACE::parse(" ").unwrap();
         assert_eq!(
             format!("{:?}", whitespace),
-            "Rule { name: \"WHITESPACE\", span: Span { str: \" \", start: 0, end: 1 } }"
+            "WHITESPACE { span: Span { str: \" \", start: 0, end: 1 } }"
         );
         let comment = COMMENT::parse("\t").unwrap();
         assert_eq!(
             format!("{:?}", comment),
-            "Rule { name: \"COMMENT\", content: CharRange { content: '\\t' }, span: Span { str: \"\\t\", start: 0, end: 1 } }"
+            "COMMENT { content: CharRange { content: '\\t' }, span: Span { str: \"\\t\", start: 0, end: 1 } }"
         );
     }
 
@@ -106,7 +114,7 @@ mod tests {
 
     #[test]
     fn repetition() {
-        type REP<'i> = Rep<Str<Foo>, Ignore<'i>>;
+        type REP<'i> = Rep<StrFoo<'i>, Ignore<'i>>;
         non_atomic_rule!(
             R,
             "Repetion of [StrFoo].",
@@ -124,13 +132,27 @@ mod tests {
         assert_ne!(rep1, rep3);
 
         let format = |rep: &R<'_>| -> String {
-            rep.iter()
+            rep.iter_matched()
                 .map(|e| e.get_content())
                 .collect::<Vec<_>>()
                 .concat()
         };
         assert_eq!(format(&rep1), format(&rep2));
         assert_eq!(format(&rep1), format(&rep3));
+
+        for i in rep1.clone().into_inner() {
+            assert_eq!(i.rule(), Rule::Foo);
+        }
+
+        // White spaces and comments aren't filtered out.
+        assert_ne!(
+            rep1.iter_matched().collect::<Vec<_>>(),
+            rep2.iter_matched().collect::<Vec<_>>()
+        );
+        assert_ne!(
+            rep1.iter_matched().collect::<Vec<_>>(),
+            rep3.iter_matched().collect::<Vec<_>>()
+        );
 
         assert_eq!(REP::MIN, 0);
         assert_eq!(rep1.deref().get_min_len(), 0);
@@ -159,7 +181,7 @@ mod tests {
         assert_ne!(rep1, rep4);
 
         let collect = |r: &R<'_>| {
-            r.iter()
+            r.iter_matched()
                 .map(|r| r.get_content())
                 .collect::<Vec<_>>()
                 .concat()
@@ -167,6 +189,26 @@ mod tests {
         assert_eq!(collect(&rep1), collect(&rep2));
         assert_eq!(collect(&rep1), collect(&rep3));
         assert_eq!(collect(&rep1), collect(&rep4));
+
+        assert_eq!(rep1.clone().into_iter_pairs().count(), 1);
+        assert_eq!(
+            rep1.clone().into_iter_pairs().next().unwrap().rule(),
+            Rule::RepFoo
+        );
+
+        {
+            let mut buf = String::new();
+            rep3.iterate_level_order(|p, _depth, _queue| writeln!(buf, "{}", p.span().as_str()))
+                .unwrap();
+            assert_eq!(buf, "Foo foo\tfoo\n \n\t\n");
+            assert_eq!(
+                rep3.format_as_tree().unwrap(),
+                "RepFoo
+    WHITESPACE \" \"
+    COMMENT \"\\t\"
+"
+            );
+        }
 
         assert_eq!(REP::MIN, 1);
         assert_eq!(rep1.deref().get_min_len(), 1);
@@ -211,6 +253,44 @@ mod tests {
     }
 
     #[test]
+    fn positive_predicate() {
+        atomic_rule!(Quote,"A single `'`.", Rule,Rule::Quote,CharRange<'\'', '\''>);
+        compound_atomic_rule!(
+            Lifetime,
+            "A simplified example of rust lifetime specifier.",
+            Rule,
+            Rule::Life,
+            Seq3<
+                Quote<'i>,
+                Positive<Seq2<ANY, Negative<Quote<'i>>, Ignore<'i>>>,
+                Rep<CharRange<'a', 'z'>, Ignore<'i>>,
+                Ignore<'i>,
+            >
+        );
+
+        let l = Lifetime::parse("'i").unwrap();
+        let (quote, peeked, name) = l.as_ref();
+        assert_eq!(quote.span.as_str(), "'");
+        let (any, _) = peeked.as_ref();
+        assert_eq!(any.content, 'i');
+        assert_eq!(
+            name.iter_matched().map(|c| c.content).collect::<String>(),
+            "i"
+        );
+
+        let l = Lifetime::parse("'input").unwrap();
+        let (_, peeked, name) = l.as_ref();
+        let (any, _) = peeked.as_ref();
+        assert_eq!(any.content, 'i');
+        assert_eq!(
+            name.iter_matched().map(|c| c.content).collect::<String>(),
+            "input"
+        );
+
+        Lifetime::parse("'i'").unwrap_err();
+    }
+
+    #[test]
     fn negative_predicate() {
         #[derive(Clone, Debug, PartialEq)]
         pub struct StrFoo;
@@ -229,9 +309,87 @@ mod tests {
             Rule::NotFooBar,
             Rep<Seq2<Negative<Choice2<Str<StrFoo>, Str<StrBar>>>, ANY, Ignore<'i>>, Ignore<'i>>
         );
-        not_foo_bar::parse("").unwrap();
-        not_foo_bar::parse("baz").unwrap();
-        not_foo_bar::parse("Foofoo").unwrap_err();
-        not_foo_bar::parse("bazfoo").unwrap_err();
+        let _ = not_foo_bar::parse("").unwrap();
+        let baz = not_foo_bar::parse("baz").unwrap();
+        for i in baz.iter_matched() {
+            let (neg, any) = i.as_ref();
+            assert_eq!(
+                <Negative<_> as Pairs<'_, '_, Rule>>::into_iter_pairs(neg.clone()).count(),
+                0
+            );
+            assert_eq!(
+                <ANY as Pairs<'_, '_, Rule>>::into_iter_pairs(any.clone()).count(),
+                0
+            );
+        }
+        let _ = not_foo_bar::parse("Foofoo").unwrap_err();
+        let _ = not_foo_bar::parse("bazfoo").unwrap_err();
+    }
+
+    #[test]
+    fn peek() {
+        compound_atomic_rule!(
+            Rep_1_3,
+            "Repeat previously matched expression 1 to 3 times",
+            Rule,
+            Rule::RepFoo,
+            Seq2<Push<Insens<'i, Foo>>, RepMinMax<PEEK<'i>, Ignore<'i>, 1, 3>, Ignore<'i>>
+        );
+        let r = Rep_1_3::parse("foOfoO").unwrap();
+        assert_eq!(
+            format!("{:#?}", r),
+            "Rep_1_3 {
+    content: Seq2(
+        (
+            Skipped {
+                content: [],
+            },
+            Push {
+                content: Insens {
+                    content: \"foO\",
+                },
+            },
+        ),
+        (
+            Skipped {
+                content: [],
+            },
+            RepMinMax {
+                content: [
+                    (
+                        Skipped {
+                            content: [],
+                        },
+                        PEEK {
+                            span: Span {
+                                str: \"foO\",
+                                start: 3,
+                                end: 6,
+                            },
+                        },
+                    ),
+                ],
+            },
+        ),
+    ),
+    span: Span {
+        str: \"foOfoO\",
+        start: 0,
+        end: 6,
+    },
+}"
+        );
+        let (head, following) = r.as_ref();
+        assert_eq!(head.deref().content, "foO");
+        assert_eq!(head.get_content(), Foo::CONTENT);
+        for i in following.iter_matched() {
+            assert_eq!(i.span.as_str(), head.deref().content);
+        }
+
+        Rep_1_3::parse("fooFoo").unwrap_err();
+        Rep_1_3::parse("Foo").unwrap_err();
+        Rep_1_3::parse("FooFooFooFooFoo").unwrap_err();
+        let (pos, _) = Rep_1_3::parse_partial("FooFooFooFooFoo").unwrap();
+        assert_eq!(pos.pos(), 12);
     }
 }

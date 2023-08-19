@@ -25,8 +25,7 @@ fn tree() {
     macro_rules! test {
         ($input:literal, $tree:literal) => {
             let tree = pairs::main::parse($input).unwrap();
-            let mut string = String::from("");
-            tree.write_tree_to(&mut string).unwrap();
+            let string = tree.format_as_tree().unwrap();
             assert_eq!(string, $tree);
         };
     }
