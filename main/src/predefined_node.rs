@@ -586,7 +586,7 @@ impl<
 }
 impl<T, IGNORED, const MIN: usize> RepMin<T, IGNORED, MIN> {
     /// Returns an iterator over all matched expressions.
-    pub fn iter<'n>(
+    pub fn iter_matched<'n>(
         &'n self,
     ) -> core::iter::Map<alloc::slice::Iter<'n, (IGNORED, T)>, fn(&'n (IGNORED, T)) -> &'n T> {
         self.content.iter().map(|(_, e)| e)
@@ -653,7 +653,7 @@ impl<
 }
 impl<T, IGNORED, const MIN: usize, const MAX: usize> RepMinMax<T, IGNORED, MIN, MAX> {
     /// Returns an iterator over all matched expressions.
-    pub fn iter<'n>(
+    pub fn iter_matched<'n>(
         &'n self,
     ) -> core::iter::Map<alloc::slice::Iter<'n, (IGNORED, T)>, fn(&'n (IGNORED, T)) -> &'n T> {
         self.content.iter().map(|(_, e)| e)
