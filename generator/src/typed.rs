@@ -83,14 +83,14 @@ fn parse_typed_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>,
         } else if path.is_ident("do_not_emit_span") {
             config.do_not_emit_span = get_bool(attr);
         } else if path.is_ident("truncate_accesser_at_node_tag") {
-            if cfg!(not(feature = "grammar-extras")) && !config.no_warnigs {
+            if cfg!(not(feature = "grammar-extras")) && !config.no_warnings {
                 eprintln!("Specify `truncate_accesser_at_node_tag` does not take effect when `grammar-extras` is not enabled.");
             }
             config.truncate_accesser_at_node_tag = get_bool(attr);
         } else if path.is_ident("simulate_pair_api") {
             config.simulate_pair_api = get_bool(attr);
         } else if path.is_ident("no_warnings") {
-            config.no_warnigs = get_bool(attr);
+            config.no_warnings = get_bool(attr);
         }
     }
 
@@ -187,7 +187,7 @@ mod tests {
                 do_not_emit_span: false,
                 truncate_accesser_at_node_tag: false,
                 simulate_pair_api: false,
-                no_warnigs: true
+                no_warnings: true
             }
         );
     }
