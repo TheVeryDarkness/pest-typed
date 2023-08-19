@@ -153,7 +153,7 @@ macro_rules! seq {
             ::core::fmt::Debug for $name<T0, $($T),*, IGNORED>
         {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                f.debug_tuple("Seq")
+                f.debug_tuple(::core::stringify!($name))
                     .field(&self.content.$t0)
                     $(.field(&self.content.$t))*
                     .finish()

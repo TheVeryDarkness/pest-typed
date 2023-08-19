@@ -392,8 +392,7 @@ macro_rules! declare_rule_struct {
         }
         impl<'i> ::core::fmt::Debug for $name<'i> {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                f.debug_struct("Rule")
-                    .field("name", &::core::stringify!($name))
+                f.debug_struct(::core::stringify!($name))
                     .field("content", &self.content)
                     .finish()
             }
@@ -411,8 +410,7 @@ macro_rules! declare_rule_struct {
         }
         impl<'i> ::core::fmt::Debug for $name<'i> {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                f.debug_struct("Rule")
-                    .field("name", &::core::stringify!($name))
+                f.debug_struct(::core::stringify!($name))
                     .field("span", &self.span)
                     .finish()
             }
@@ -432,8 +430,7 @@ macro_rules! declare_rule_struct {
         }
         impl<'i> ::core::fmt::Debug for $name<'i> {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                f.debug_struct("Rule")
-                    .field("name", &::core::stringify!($name))
+                f.debug_struct(::core::stringify!($name))
                     .field("content", &self.content)
                     .field("span", &self.span)
                     .finish()
