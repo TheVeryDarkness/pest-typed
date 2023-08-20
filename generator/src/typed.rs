@@ -194,10 +194,72 @@ mod tests {
 
     #[test]
     #[should_panic]
+    fn invalid_path() {
+        let _ = derive_typed_parser(
+            quote! {
+                #[grammar = "invalid.path.pest"]
+                struct x;
+            },
+            false,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn folder_path() {
+        let _ = derive_typed_parser(
+            quote! {
+                #[grammar = "invalid/path/"]
+                struct x;
+            },
+            false,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn non_string_path() {
+        let _ = derive_typed_parser(
+            quote! {
+                #[grammar = ::core::stringify!(tests/syntax/pest)]
+                struct x;
+            },
+            false,
+        );
+    }
+
+    #[test]
+    #[should_panic]
     fn parse_failure() {
         let _ = derive_typed_parser(
             quote! {
                 #[grammar_inline = "x = { }"]
+                struct x;
+            },
+            false,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn bool_attribute_format_error() {
+        let _ = derive_typed_parser(
+            quote! {
+                #[grammar_inline = "x = { \"x\" }"]
+                #[no_warnings(true)]
+                struct x;
+            },
+            false,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn bool_attribute_value_error() {
+        let _ = derive_typed_parser(
+            quote! {
+                #[grammar_inline = "x = { \"x\" }"]
+                #[no_warnings = 1]
                 struct x;
             },
             false,

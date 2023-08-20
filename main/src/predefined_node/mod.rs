@@ -11,6 +11,8 @@
 //! The generator may use this for convenience.
 //! Normally you don't need to reference this module by yourself.
 
+mod repetition;
+
 use super::{parser_state::constrain_idxs, position::Position, stack::Stack};
 use super::{
     span::Span,
@@ -19,11 +21,11 @@ use super::{
     wrapper::{StringArrayWrapper, StringWrapper},
     RuleType, TypedNode,
 };
-use crate::wrapper::BoundWrapper;
 use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut};
 use core::{fmt::Debug, marker::PhantomData};
 use custom_debug_derive::Debug as Dbg;
+pub use repetition::{Rep, RepMin, RepMinMax, RepOnce};
 
 /// Match given string case sensitively.
 ///
@@ -46,7 +48,7 @@ impl<T: StringWrapper> From<()> for Str<T> {
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<T> {
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -86,7 +88,7 @@ impl<'i, T: StringWrapper> From<&'i str> for Insens<'i, T> {
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, T> {
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -121,7 +123,7 @@ impl<'i, Strings: StringArrayWrapper> From<Span<'i>> for Skip<'i, Strings> {
     }
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i, Strings> {
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -144,7 +146,7 @@ pub struct SkipChar<'i, const N: usize> {
     pub span: Span<'i>,
 }
 impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, N> {
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -168,7 +170,7 @@ pub struct CharRange<const MIN: char, const MAX: char> {
     pub content: char,
 }
 impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R> for CharRange<MIN, MAX> {
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -253,14 +255,14 @@ impl<N> DerefMut for Positive<N> {
     }
 }
 impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         tracker.positive_during(|tracker| {
             stack.snapshot();
-            match N::try_parse_with::<ATOMIC>(input, stack, tracker) {
+            match N::try_parse_with(input, stack, tracker) {
                 Ok((_, content)) => {
                     stack.restore();
                     Ok((input, Self::from(content)))
@@ -290,14 +292,14 @@ impl<T> From<()> for Negative<T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         tracker.negative_during(|tracker| {
             stack.snapshot();
-            match T::try_parse_with::<ATOMIC>(input, stack, tracker) {
+            match T::try_parse_with(input, stack, tracker) {
                 Ok(_) => {
                     stack.restore();
                     Err(())
@@ -319,7 +321,7 @@ pub struct ANY {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -340,7 +342,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
 pub struct SOI;
 impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -360,7 +362,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
 pub struct EOI;
 impl<'i, R: RuleType> TypedNode<'i, R> for EOI {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -393,7 +395,7 @@ pub struct NEWLINE {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -421,7 +423,7 @@ pub struct PEEK_ALL<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -447,7 +449,7 @@ impl<'i> From<Span<'i>> for PEEK<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -494,28 +496,19 @@ impl<'i, R: RuleType, WHITESPACE: TypedNode<'i, R>, COMMENT: TypedNode<'i, R>>
     NeverFailedTypedNode<'i, R> for Skipped<WHITESPACE, COMMENT>
 {
     #[inline]
-    fn parse_with<const ATOMIC: bool>(
-        mut input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-    ) -> (Position<'i>, Self) {
-        if ATOMIC {
-            return (input, Self::default());
-        }
+    fn parse_with(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
+        // return (input, Self::default());
         let mut flag = true;
         let mut vec = Vec::new();
         let mut tracker = Tracker::new(input);
         while flag {
             flag = false;
-            while let Ok((remained, ws)) =
-                WHITESPACE::try_parse_with::<true>(input, stack, &mut tracker)
-            {
+            while let Ok((remained, ws)) = WHITESPACE::try_parse_with(input, stack, &mut tracker) {
                 vec.push(Choice2::_0(ws));
                 input = remained;
                 flag = true;
             }
-            while let Ok((remained, c)) =
-                COMMENT::try_parse_with::<true>(input, stack, &mut tracker)
-            {
+            while let Ok((remained, c)) = COMMENT::try_parse_with(input, stack, &mut tracker) {
                 vec.push(Choice2::_1(c));
                 input = remained;
                 flag = true;
@@ -528,152 +521,14 @@ impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> T
     for Skipped<COMMENT, WHITESPACE>
 {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        Ok(Self::parse_with::<ATOMIC>(input, stack))
+        Ok(Self::parse_with(input, stack))
     }
 }
-
-/// Repeatably match `T` at least `MIN` times.
-#[derive(Clone, Debug, PartialEq)]
-pub struct RepMin<T, IGNORED, const MIN: usize> {
-    /// Skipped and Matched expressions.
-    pub content: Vec<(IGNORED, T)>,
-}
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-        const MIN: usize,
-    > TypedNode<'i, R> for RepMin<T, IGNORED, MIN>
-{
-    #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
-        mut input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        let mut vec = Vec::<(IGNORED, T)>::new();
-
-        {
-            for i in 0.. {
-                let (next, ignored) = IGNORED::parse_with::<ATOMIC>(input, stack);
-                input = next;
-
-                match restore_on_err(stack, |stack| {
-                    T::try_parse_with::<ATOMIC>(input, stack, tracker)
-                }) {
-                    Ok((next, matched)) => {
-                        input = next;
-                        vec.push((ignored, matched));
-                    }
-                    Err(err) => {
-                        if i < MIN {
-                            return Err(err);
-                        } else {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        Ok((input, Self { content: vec }))
-    }
-}
-impl<T, IGNORED, const MIN: usize> RepMin<T, IGNORED, MIN> {
-    /// Returns an iterator over all matched expressions.
-    pub fn iter_matched<'n>(
-        &'n self,
-    ) -> core::iter::Map<alloc::slice::Iter<'n, (IGNORED, T)>, fn(&'n (IGNORED, T)) -> &'n T> {
-        self.content.iter().map(|(_, e)| e)
-    }
-    /// Returns an iterator over all skipped or matched expressions.
-    pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, (IGNORED, T)> {
-        self.content.iter()
-    }
-}
-impl<T: Clone + PartialEq, IGNORED: Clone + PartialEq, const MIN: usize> BoundWrapper
-    for RepMin<T, IGNORED, MIN>
-{
-    const MIN: usize = MIN;
-    const MAX: usize = usize::MAX;
-}
-
-/// Repeatably match `T` at least `MIN` times and at most `MAX` times.
-#[derive(Clone, Debug, PartialEq)]
-pub struct RepMinMax<T, IGNORED, const MIN: usize, const MAX: usize> {
-    /// Skipped and Matched expressions.
-    pub content: Vec<(IGNORED, T)>,
-}
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-        const MIN: usize,
-        const MAX: usize,
-    > TypedNode<'i, R> for RepMinMax<T, IGNORED, MIN, MAX>
-{
-    #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
-        mut input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        let mut vec = Vec::<(IGNORED, T)>::new();
-
-        {
-            for i in 0..MAX {
-                let (next, ignored) = IGNORED::parse_with::<ATOMIC>(input, stack);
-                input = next;
-
-                match restore_on_err(stack, |stack| {
-                    T::try_parse_with::<ATOMIC>(input, stack, tracker)
-                }) {
-                    Ok((next, matched)) => {
-                        input = next;
-                        vec.push((ignored, matched));
-                    }
-                    Err(err) => {
-                        if i < MIN {
-                            return Err(err);
-                        } else {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        Ok((input, Self { content: vec }))
-    }
-}
-impl<T, IGNORED, const MIN: usize, const MAX: usize> RepMinMax<T, IGNORED, MIN, MAX> {
-    /// Returns an iterator over all matched expressions.
-    pub fn iter_matched<'n>(
-        &'n self,
-    ) -> core::iter::Map<alloc::slice::Iter<'n, (IGNORED, T)>, fn(&'n (IGNORED, T)) -> &'n T> {
-        self.content.iter().map(|(_, e)| e)
-    }
-    /// Returns an iterator over all skipped or matched expressions.
-    pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, (IGNORED, T)> {
-        self.content.iter()
-    }
-}
-impl<T: Clone + PartialEq, IGNORED: Clone + PartialEq, const MIN: usize, const MAX: usize>
-    BoundWrapper for RepMinMax<T, IGNORED, MIN, MAX>
-{
-    const MIN: usize = MIN;
-    const MAX: usize = MAX;
-}
-
-/// Repeat arbitrary times.
-pub type Rep<T, IGNORED> = RepMin<T, IGNORED, 0>;
-/// Repeat at least one times.
-pub type RepOnce<T, IGNORED> = RepMin<T, IGNORED, 1>;
 
 /// Drop the top of the stack.
 ///
@@ -682,7 +537,7 @@ pub type RepOnce<T, IGNORED> = RepMin<T, IGNORED, 1>;
 pub struct DROP;
 impl<'i, R: RuleType> TypedNode<'i, R> for DROP {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -711,7 +566,7 @@ impl<'i> From<Span<'i>> for POP<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
     #[inline]
-    fn try_parse_with<const _A: bool>(
+    fn try_parse_with(
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -743,12 +598,12 @@ impl<'i> From<Span<'i>> for POP_ALL<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let (input, res) = PEEK_ALL::try_parse_with::<ATOMIC>(input, stack, tracker)?;
+        let (input, res) = PEEK_ALL::try_parse_with(input, stack, tracker)?;
         while stack.pop().is_some() {}
         Ok((input, Self::from(res.span)))
     }
@@ -762,17 +617,41 @@ impl<'i> Default for AlwaysFail<'i> {
         Self(PhantomData)
     }
 }
-/// A trait that only [AlwaysFail] implements.
-pub trait AlwaysFailed: Debug + Default + Clone + PartialEq {}
-impl<'i> AlwaysFailed for AlwaysFail<'i> {}
-impl<'i, R: RuleType, T: AlwaysFailed> TypedNode<'i, R> for T {
+impl<'i, R: RuleType> TypedNode<'i, R> for AlwaysFail<'i> {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with(
         _input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         Err(())
+    }
+}
+
+/// Empty.
+#[derive(Clone, Dbg, PartialEq)]
+pub struct Empty<'i>(#[debug(skip)] PhantomData<&'i char>);
+impl<'i> Default for Empty<'i> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+impl<'i, R: RuleType> NeverFailedTypedNode<'i, R> for Empty<'i> {
+    #[inline]
+    fn parse_with(input: Position<'i>, _stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
+        (input, Self::default())
+    }
+}
+impl<'i, R: RuleType> TypedNode<'i, R> for Empty<'i> {
+    #[inline]
+    fn try_parse_with(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Result<(Position<'i>, Self), ()> {
+        Ok(<Self as NeverFailedTypedNode<'i, R>>::parse_with(
+            input, stack,
+        ))
     }
 }
 
@@ -789,13 +668,13 @@ impl<T> From<T> for Push<T> {
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<T> {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
         let start = input;
-        let (input, content) = T::try_parse_with::<ATOMIC>(input, stack, tracker)?;
+        let (input, content) = T::try_parse_with(input, stack, tracker)?;
         stack.push(start.span(&input));
         Ok((input, Self::from(content)))
     }
@@ -819,7 +698,7 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
     for PeekSlice2<START, END>
 {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -835,7 +714,7 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
 pub struct PeekSlice1<const START: i32>;
 impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<START> {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,

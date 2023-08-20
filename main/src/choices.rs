@@ -134,17 +134,17 @@ macro_rules! choices {
                 for $name<$V0, $($V, )* >
             {
                 #[inline]
-                fn try_parse_with<const ATOMIC: ::core::primitive::bool>(
+                fn try_parse_with(
                     input: $pest_typed::Position<'i>,
                     stack: &mut $pest_typed::Stack<$pest_typed::Span<'i>>,
                     tracker: &mut $pest_typed::tracker::Tracker<'i, R>,
                 ) -> ::core::result::Result<($pest_typed::Position<'i>, Self), ()> {
-                    let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V0::try_parse_with::<ATOMIC>(input, stack, tracker));
+                    let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V0::try_parse_with(input, stack, tracker));
                     if let Ok((input, res)) = res {
                         return Ok((input, Self::$v0(res)));
                     }
                     $(
-                        let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V::try_parse_with::<ATOMIC>(input, stack, tracker));
+                        let res = $pest_typed::predefined_node::restore_on_err(stack, |stack| $V::try_parse_with(input, stack, tracker));
                         if let Ok((input, res)) = res {
                             return Ok((input, Self::$v(res)));
                         }
@@ -163,18 +163,18 @@ macro_rules! choices {
                 type Iter = iterators::Iter<'i, 'n, R, $V0, $($V, )*>;
                 type IntoIter = iterators::IntoIter<'i, 'n, R, $V0, $($V, )*>;
 
-                fn iter(&'n self) -> Self::Iter {
+                fn iter_pairs(&'n self) -> Self::Iter {
                     match self {
-                        Self::$v0($v0) => Self::Iter::$v0($v0.iter()),
+                        Self::$v0($v0) => Self::Iter::$v0($v0.iter_pairs()),
                         $(
-                            Self::$v($v) => Self::Iter::$v($v.iter()),
+                            Self::$v($v) => Self::Iter::$v($v.iter_pairs()),
                         )*
                     }
                 }
-                fn into_iter(self) -> Self::IntoIter {
+                fn into_iter_pairs(self) -> Self::IntoIter {
                     match self {
-                        Self::$v0($v0) => Self::IntoIter::$v0($v0.into_iter()),
-                        $(Self::$v($v) => Self::IntoIter::$v($v.into_iter()), )*
+                        Self::$v0($v0) => Self::IntoIter::$v0($v0.into_iter_pairs()),
+                        $(Self::$v($v) => Self::IntoIter::$v($v.into_iter_pairs()), )*
                     }
                 }
             }

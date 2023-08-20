@@ -54,7 +54,11 @@ fn generics() -> TokenStream {
     }
 }
 
-fn pairs() -> TokenStream {
+fn rules_mod() -> TokenStream {
+    quote! {rules}
+}
+
+fn pairs_mod() -> TokenStream {
     quote! {pairs}
 }
 
@@ -80,7 +84,7 @@ enum Edge {
 enum Node<'g> {
     /// - Type: `&#ident`
     /// - Path: `.content.deref()`
-    Rule(&'g str),
+    Rule(&'g str, bool, bool),
     /// - Type: `&#ident`
     /// - Path: ``
     #[cfg(feature = "grammar-extras")]
@@ -110,8 +114,8 @@ enum Node<'g> {
 }
 
 impl<'g> Node<'g> {
-    fn from_rule(value: &'g str) -> Self {
-        Self::Rule(value)
+    fn from_rule(value: &'g str, has_lifetime: bool, has_skip: bool) -> Self {
+        Self::Rule(value, has_lifetime, has_skip)
     }
     #[cfg(feature = "grammar-extras")]
     fn from_tag(value: &'g str) -> Self {
@@ -119,7 +123,7 @@ impl<'g> Node<'g> {
     }
     fn flattenable(&self) -> bool {
         match self {
-            Node::Rule(_) => false,
+            Node::Rule(_, _, _) => false,
             #[cfg(feature = "grammar-extras")]
             Node::Tag(_) => false,
             Node::Content(inner) | Node::SequenceI(_, inner) => inner.flattenable(),
@@ -165,6 +169,7 @@ impl<'g> Node<'g> {
         &self,
         root: &TokenStream,
         config: &RuleConfig<'g>,
+        from: AccessFrom,
     ) -> (TokenStream, TokenStream) {
         let flat = |flatten: &bool| {
             if *flatten {
@@ -182,33 +187,43 @@ impl<'g> Node<'g> {
             }
         };
         let vec = vec_type();
+        let rules_mod = rules_mod();
         match self {
-            Node::Rule(t) => {
-                let life = if config.builtins_without_lifetime.contains(t) {
-                    quote! {}
-                } else {
-                    quote! {::<'i>}
+            Node::Rule(t, has_life_time, has_skip) => {
+                let skip = match config.atomicity {
+                    Some(true) => quote! {0},
+                    Some(false) => quote! {1},
+                    None => quote! {INHERITED},
+                };
+                let generics = match (has_life_time, has_skip) {
+                    (true, true) => quote! {::<'i, #skip>},
+                    (true, false) => quote! {::<'i>},
+                    (false, true) => quote! {::<#skip>},
+                    (false, false) => quote! {},
                 };
                 let t = ident(t);
-                (quote! {res}, quote! {&'s #root::pairs::#t #life})
+                (quote! {res}, quote! {&'s #root::#rules_mod::#t #generics})
             }
             #[cfg(feature = "grammar-extras")]
             Node::Tag(t) => {
                 let t = ident(t);
                 let rule_id = &config.rule_id;
-                (quote! {res}, quote! {&'s #root::tags::#rule_id::#t::<'i>})
+                (
+                    quote! {res},
+                    quote! {&'s #root::tags::#rule_id::#t::<'i, INHERITED>},
+                )
             }
             Node::Content(inner) => {
-                let (pa, ty) = inner.expand(root, config);
+                let (pa, ty) = inner.expand(root, config, from);
                 (quote! {{let res = &res.content; #pa}}, quote! {#ty})
             }
             Node::SequenceI(i, inner) => {
-                let (pa, ty) = inner.expand(root, config);
+                let (pa, ty) = inner.expand(root, config, from);
                 let i = Index::from(*i);
                 (quote! {{let res = &res.content.#i.1; #pa}}, quote! {#ty})
             }
             Node::Optional(flatten, inner) => {
-                let (pa, ty) = inner.expand(root, config);
+                let (pa, ty) = inner.expand(root, config, from);
                 let flat = flat(flatten);
                 (
                     quote! {{let res = res.as_ref().and_then(|res| Some(#pa)) #flat; res}},
@@ -216,7 +231,7 @@ impl<'g> Node<'g> {
                 )
             }
             Node::ChoiceI(index, flatten, inner) => {
-                let (pa, ty) = inner.expand(root, config);
+                let (pa, ty) = inner.expand(root, config, from);
                 let func = format_ident!("_{}", index);
                 let flat = flat(flatten);
                 (
@@ -225,7 +240,7 @@ impl<'g> Node<'g> {
                 )
             }
             Node::Contents(inner) => {
-                let (pa, ty) = inner.expand(root, config);
+                let (pa, ty) = inner.expand(root, config, from);
                 (
                     quote! {{let res = res.content.iter().map(|res| { let res = &res.1; #pa }).collect::<#vec<_>>(); res}},
                     quote! {#vec::<#ty>},
@@ -233,11 +248,18 @@ impl<'g> Node<'g> {
             }
             Node::Tuple(tuple) => {
                 let (pa, ty): (Vec<_>, Vec<_>) =
-                    tuple.iter().map(|e| e.expand(root, config)).unzip();
+                    tuple.iter().map(|e| e.expand(root, config, from)).unzip();
                 (quote! {{let res = (#(#pa),*); res}}, quote! {(#(#ty),*)})
             }
         }
     }
+}
+
+#[derive(Clone, Copy)]
+enum AccessFrom {
+    Rule,
+    #[cfg(feature = "grammar-extras")]
+    Tag,
 }
 
 /// `'g` stands for the lifetime of rules.
@@ -251,9 +273,9 @@ impl<'g> Accesser<'g> {
             accessers: BTreeMap::new(),
         }
     }
-    pub fn from_rule(name: &'g str, id: &'g str) -> Self {
+    pub fn from_rule(name: &'g str, id: &'g str, has_life_time: bool, has_skip: bool) -> Self {
         let mut res = BTreeMap::new();
-        res.insert(name, Node::from_rule(id));
+        res.insert(name, Node::from_rule(id, has_life_time, has_skip));
         Self { accessers: res }
     }
     #[cfg(feature = "grammar-extras")]
@@ -301,10 +323,15 @@ impl<'g> Accesser<'g> {
         });
         self
     }
-    pub fn collect(&self, root: &TokenStream, config: &RuleConfig<'g>) -> TokenStream {
+    pub fn collect(
+        &self,
+        root: &TokenStream,
+        config: &RuleConfig<'g>,
+        from: AccessFrom,
+    ) -> TokenStream {
         let accessers = self.accessers.iter().map(|(name, node)| {
             let id = ident(name);
-            let (paths, types) = node.expand(root, config);
+            let (paths, types) = node.expand(root, config, from);
             let src = quote! {
                 #[allow(non_snake_case)]
                 pub fn #id<'s>(&'s self) -> #types {
@@ -401,7 +428,7 @@ fn rule<'g, 'f>(
         None => "Normal rule.",
     };
     let accessers = match emission {
-        Emission::Both => accessers.collect(&root, rule_config),
+        Emission::Both => accessers.collect(&root, rule_config, AccessFrom::Rule),
         Emission::Expression | Emission::Span => quote! {},
     };
     let docs = [doc, atomicity_doc];
@@ -423,7 +450,7 @@ fn rule<'g, 'f>(
         let ignore = ignore(&root);
         quote! {
             #pest_typed::rule!(#name, #(#docs)*, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission);
-            impl<'i> #name<'i> {
+            impl<'i, const INHERITED: usize> #name<'i, INHERITED> {
                 #accesser_impl
             }
         }
@@ -552,6 +579,7 @@ impl Output {
         let content = &self.content;
         let wrappers = &self.wrappers;
         let wrapper_mod = constant_wrappers();
+        let rules = rules_mod();
         #[cfg(feature = "grammar-extras")]
         let tags = self.tagged_nodes.iter().map(|(name, def)| {
             quote! {
@@ -575,7 +603,7 @@ impl Output {
             }
             #mod_tags
             #[doc = "Definitions of statically typed nodes generated by pest-generator."]
-            pub mod pairs {
+            pub mod #rules {
                 #(#content)*
             }
         }
@@ -598,8 +626,8 @@ fn process_single_alias<'g>(
         let doc = format!("Corresponds to expression: `{}`.", expr);
         let def = rule(rule_config, &type_name, &doc, &accessers, emission);
         map.insert(def);
-        let pairs = pairs();
-        (quote! {#root::#pairs::#rule_id::<'i>}, accessers)
+        let rules = rules_mod();
+        (quote! {#root::#rules::#rule_id::<'i>}, accessers)
     } else {
         (type_name, accessers)
     }
@@ -617,6 +645,11 @@ fn generate_graph_node<'g>(
     root: &TokenStream,
 ) -> (TokenStream, Accesser<'g>) {
     let generics = generics();
+    let skip = match rule_config.atomicity {
+        Some(true) => quote! {0},
+        Some(false) => quote! {1},
+        None => quote! {INHERITED},
+    };
     macro_rules! walk {
         ($root:expr, $var:ident) => {{
             let mut current = $root;
@@ -727,19 +760,22 @@ fn generate_graph_node<'g>(
         }
         OptimizedExpr::Ident(id) => {
             let inner = ident(id);
-            let pairs = pairs();
+            let rules = rules_mod();
+            let has_life_time = !(!rule_config.defined.contains(id.as_str())
+                && rule_config.builtins_without_lifetime.contains(id.as_str()));
+            let has_skip = rule_config.defined.contains(id.as_str());
+            let generics = match (has_life_time, has_skip) {
+                (true, true) => quote! {::<'i, #skip>},
+                (true, false) => quote! {::<'i>},
+                (false, true) => quote! {::<#skip>},
+                (false, false) => quote! {},
+            };
             let accessers = if config.emit_rule_reference {
-                Accesser::from_rule(id, id.as_str())
+                Accesser::from_rule(id, id.as_str(), has_life_time, has_skip)
             } else {
                 Accesser::new()
             };
-            let type_name = if !rule_config.defined.contains(id.as_str())
-                && rule_config.builtins_without_lifetime.contains(id.as_str())
-            {
-                quote! {#root::#pairs::#inner}
-            } else {
-                quote! {#root::#pairs::#inner::<'i>}
-            };
+            let type_name = quote! {#root::#rules::#inner #generics};
             process_single_alias(
                 map,
                 expr,
@@ -803,7 +839,7 @@ fn generate_graph_node<'g>(
                 map,
                 expr,
                 rule_config,
-                quote! { #root::#generics::#seq::<'i, #(#types, )*> },
+                quote! { #root::#generics::#seq::<'i, #(#types, )* #skip> },
                 accesser,
                 root,
                 emission,
@@ -856,7 +892,7 @@ fn generate_graph_node<'g>(
                 map,
                 expr,
                 rule_config,
-                quote! { #root::#generics::Rep::<'i, #inner_name> },
+                quote! { #root::#generics::Rep::<'i, #skip, #inner_name> },
                 accessers.contents(),
                 root,
                 emission,
@@ -871,7 +907,7 @@ fn generate_graph_node<'g>(
                 map,
                 expr,
                 rule_config,
-                quote! { #root::#generics::RepOnce::<'i, #inner_name> },
+                quote! { #root::#generics::RepOnce::<'i, #skip, #inner_name> },
                 accessers.contents(),
                 root,
                 emission,
@@ -894,22 +930,25 @@ fn generate_graph_node<'g>(
                 );
                 let pest_typed = pest_typed();
                 let rule_id = &rule_config.rule_id;
-                let accessers_def = accesser.collect(new_root, rule_config);
+                let accessers_def = accesser.collect(new_root, rule_config, AccessFrom::Tag);
                 let comment = format!("Tag {} referenced by {}.", tag, rule_config.rule_name);
                 let def = quote! {
                     #[doc = #comment]
                     #pest_typed::tag!(#tag_id, #new_root::Rule, #inner);
-                    impl<'i> #tag_id<'i> {
+                    impl<'i, const INHERITED: usize> #tag_id<'i, INHERITED> {
                         #accessers_def
                     }
                 };
                 let tag_module = map.insert_tag(rule_id, def);
                 let new_accesser = Accesser::from_tag(tag.as_str(), tag.as_str());
                 if config.truncate_accesser_at_node_tag {
-                    (quote! {#root::#tag_module::#tag_id::<'i>}, new_accesser)
+                    (
+                        quote! {#root::#tag_module::#tag_id::<'i, #skip>},
+                        new_accesser,
+                    )
                 } else {
                     (
-                        quote! {#root::#tag_module::#tag_id::<'i>},
+                        quote! {#root::#tag_module::#tag_id::<'i, #skip>},
                         new_accesser.join(accesser),
                     )
                 }
@@ -1011,6 +1050,27 @@ fn collect_used_rules<'s>(rules: &'s [OptimizedRule]) -> BTreeSet<&'s str> {
     res
 }
 
+fn collect_reachability<'g>(rules: &'g [OptimizedRule]) -> BTreeMap<&'g str, BTreeSet<&'g str>> {
+    let mut res: BTreeMap<&'g str, BTreeSet<&'g str>> = BTreeMap::new();
+    for rule in rules {
+        let entry = res.entry(rule.name.as_str()).or_default();
+        collect_used_rule(rule, entry);
+    }
+    for _ in 0..rules.len() {
+        for rule in rules {
+            let cur = res.remove(rule.name.as_str()).unwrap_or_default();
+            let mut new = cur.clone();
+            for referenced in cur {
+                if let Some(iter) = res.get(referenced) {
+                    new.extend(iter);
+                }
+            }
+            res.insert(rule.name.as_str(), new);
+        }
+    }
+    res
+}
+
 pub(crate) fn generate_typed_pair_from_rule(
     rules: &[OptimizedRule],
     doc: &DocComment,
@@ -1047,7 +1107,7 @@ pub(crate) fn generate_typed_pair_from_rule(
     let unicode = unicode_mod();
     let generics = {
         let root = quote! {super};
-        let pairs = pairs();
+        let rules_mod = rules_mod();
         let _i32 = _i32();
         let char = _char();
         let fill = |set: &BTreeSet<usize>,
@@ -1093,8 +1153,18 @@ pub(crate) fn generate_typed_pair_from_rule(
                 } else {
                     (quote! {}, quote! {})
                 };
+                let skip_arg = if seq {
+                    quote! {const SKIP: usize,}
+                } else {
+                    quote! {}
+                };
+                let skip_param = if seq {
+                    quote! {SKIP,}
+                } else {
+                    quote! {}
+                };
                 target.push(quote! {
-                    pub type #type_i<#life #(#types, )*> = #generics_i<#(#types, )* #ign>;
+                    pub type #type_i<#life #(#types, )* #skip_arg> = #generics_i<#(#types, )* #skip_param #ign>;
                 });
             }
         };
@@ -1119,14 +1189,37 @@ pub(crate) fn generate_typed_pair_from_rule(
             false,
         );
 
+        let has_white_space = defined_rules.contains("WHITESPACE");
+        let has_comment = defined_rules.contains("COMMENT");
+        let skip = match (has_white_space, has_comment) {
+            (true, true) => quote! {
+                Rep<
+                    #pest_typed::choices::Choice2<
+                        #root::#rules_mod::WHITESPACE<'i, 0>,
+                        #root::#rules_mod::COMMENT<'i, 0>,
+                    >
+                >
+            },
+            (true, false) => quote! {
+                Rep<
+                    #root::#rules_mod::WHITESPACE<'i, 0>,
+                >
+            },
+            (false, true) => quote! {
+                Rep<
+                    #root::#rules_mod::COMMENT<'i, 0>,
+                >
+            },
+            (false, false) => quote! {
+                predefined_node::Empty<'i>
+            },
+        };
+
         quote! {
             #[doc(hidden)]
             mod generics {
                 use #pest_typed::{predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
-                pub type Skipped<'i> = predefined_node::Skipped::<
-                    #root::#pairs::WHITESPACE::<'i>,
-                    #root::#pairs::COMMENT::<'i>,
-                >;
+                pub type Skipped<'i> = #skip;
                 pub type Str<Wrapper: StringWrapper> = predefined_node::Str::<Wrapper>;
                 pub type Insens<'i, Wrapper: StringWrapper> = predefined_node::Insens::<'i, Wrapper>;
                 pub type PeekSlice2<const START: #_i32, const END: #_i32> = predefined_node::PeekSlice2::<START, END>;
@@ -1138,8 +1231,25 @@ pub(crate) fn generate_typed_pair_from_rule(
                 pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<T>;
                 #(#seq)*
                 #(#chs)*
-                pub type Rep<'i, T> = predefined_node::Rep<T, Skipped<'i>>;
-                pub type RepOnce<'i, T> = predefined_node::RepOnce<T, Skipped<'i>>;
+                pub type Rep<'i, const SKIP: usize, T> = predefined_node::Rep<T, Skipped<'i>, SKIP>;
+                pub type RepOnce<'i, const SKIP: usize, T> = predefined_node::RepOnce<T, Skipped<'i>, SKIP>;
+            }
+        }
+    };
+    let pairs = {
+        let rules_mod = rules_mod();
+        let pairs_mod = pairs_mod();
+        let pairs = defined_rules.iter().map(|pair| {
+            let pair = ident(pair);
+            quote! {
+                pub type #pair<'i> = super::#rules_mod::#pair<'i, 1>;
+            }
+        });
+        quote! {
+            pub mod #pairs_mod {
+                #(
+                    #pairs
+                )*
             }
         }
     };
@@ -1150,6 +1260,7 @@ pub(crate) fn generate_typed_pair_from_rule(
         }
         #mods
         #generics
+        #pairs
     };
     res
 }
@@ -1162,7 +1273,6 @@ fn generate_unicode(
     let mut results = vec![];
     let pest_typed = pest_typed();
     let pest_unicode = pest_unicode();
-    let bool = _bool();
     let result = result_type();
     let position = position();
     let stack = stack();
@@ -1196,7 +1306,7 @@ fn generate_unicode(
                 }
                 impl<'i> #pest_typed::TypedNode<'i, super::Rule> for #property_ident {
                     #[inline]
-                    fn try_parse_with<const INHERITED: #bool>(
+                    fn try_parse_with(
                         mut input: #position<'i>,
                         _stack: &mut #stack<#span<'i>>,
                         tracker: &mut #tracker<'i, super::Rule>,
@@ -1222,10 +1332,10 @@ fn generate_unicode(
                     type Iter = ::core::iter::Empty<&'n dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>>;
                     type IntoIter = ::core::iter::Empty<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>>;
 
-                    fn iter(&'n self) -> Self::Iter {
+                    fn iter_pairs(&'n self) -> Self::Iter {
                         ::core::iter::empty()
                     }
-                    fn into_iter(self) -> Self::IntoIter {
+                    fn into_iter_pairs(self) -> Self::IntoIter {
                         ::core::iter::empty()
                     }
                 }

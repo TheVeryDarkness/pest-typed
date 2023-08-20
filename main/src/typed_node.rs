@@ -21,10 +21,7 @@ where
 {
     /// Create typed node.
     /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
-    fn parse_with<const ATOMIC: bool>(
-        input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-    ) -> (Position<'i>, Self);
+    fn parse_with(input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self);
 }
 
 /// Node of concrete syntax tree.
@@ -34,7 +31,7 @@ where
 {
     /// Create typed node.
     /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -52,7 +49,7 @@ pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
         let mut stack = Stack::new();
         let input = Position::from_start(input);
         let mut tracker = Tracker::new(input);
-        match Self::try_parse_with::<false>(input, &mut stack, &mut tracker) {
+        match Self::try_parse_with(input, &mut stack, &mut tracker) {
             Ok((input, res)) => Ok((input, res)),
             Err(_) => Err(tracker.collect()),
         }
@@ -77,14 +74,12 @@ pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
 /// Optionally match `T`.
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Option<T> {
     #[inline]
-    fn try_parse_with<const ATOMIC: bool>(
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let res = restore_on_err(stack, |stack| {
-            T::try_parse_with::<ATOMIC>(input, stack, tracker)
-        });
+        let res = restore_on_err(stack, |stack| T::try_parse_with(input, stack, tracker));
         match res {
             Ok((input, inner)) => Ok((input, Self::from(Some(inner)))),
             Err(_) => Ok((input, Self::from(None))),

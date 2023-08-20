@@ -12,15 +12,16 @@
 use crate::{
     choices::Choice2,
     predefined_node::{
-        AlwaysFail, CharRange, Insens, Negative, PeekSlice1, PeekSlice2, Positive, Push, RepMin,
-        RepMinMax, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK, PEEK_ALL, POP, POP_ALL, SOI,
+        AlwaysFail, CharRange, Empty, Insens, Negative, PeekSlice1, PeekSlice2, Positive, Push,
+        RepMin, RepMinMax, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK, PEEK_ALL, POP, POP_ALL,
+        SOI,
     },
     typed_node::RuleStruct,
     NeverFailedTypedNode, StringArrayWrapper, StringWrapper, TypedNode,
 };
 use alloc::{boxed, collections::VecDeque, string::String, vec, vec::Vec};
 use core::{
-    iter::{empty, once, Chain, Empty, FlatMap, Iterator},
+    iter::{self, empty, once, Chain, FlatMap, Iterator},
     mem::swap,
 };
 use pest::RuleType;
@@ -45,9 +46,9 @@ pub trait Pairs<'i: 'n, 'n, R: RuleType + 'n> {
     /// Iterator type that iterate on inner pairs by value.
     type IntoIter: Iterator<Item = boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
     /// Iterate on inner pairs by reference. Returns [`Pairs::Iter`].
-    fn iter(&'n self) -> Self::Iter;
+    fn iter_pairs(&'n self) -> Self::Iter;
     /// Iterate on inner pairs by value. Returns [`Pairs::IntoIter`].
-    fn into_iter(self) -> Self::IntoIter;
+    fn into_iter_pairs(self) -> Self::IntoIter;
 }
 
 /// Simulate [`pest::iterators::Pair`].
@@ -187,13 +188,13 @@ impl<'i: 'n, 'n, R: RuleType + 'n, T: RuleStruct<'i, R> + Pairs<'i, 'n, R> + Pai
 macro_rules! impl_empty {
     ($node:ty, $($tt:tt)*) => {
         impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> Pairs<'i, 'n, R> for $node {
-            type Iter = Empty<&'n (dyn Pair<'i, 'n, R>)>;
-            type IntoIter = Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
+            type Iter = iter::Empty<&'n (dyn Pair<'i, 'n, R>)>;
+            type IntoIter = iter::Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
 
-            fn iter(&'n self) -> Self::Iter {
+            fn iter_pairs(&'n self) -> Self::Iter {
                 empty()
             }
-            fn into_iter(self) -> Self::IntoIter {
+            fn into_iter_pairs(self) -> Self::IntoIter {
                 empty()
             }
         }
@@ -208,11 +209,11 @@ macro_rules! impl_forward_inner {
             type Iter = T::Iter;
             type IntoIter = T::IntoIter;
 
-            fn iter(&'n self) -> Self::Iter {
-                self.content.iter()
+            fn iter_pairs(&'n self) -> Self::Iter {
+                self.content.iter_pairs()
             }
-            fn into_iter(self) -> Self::IntoIter {
-                self.content.into_iter()
+            fn into_iter_pairs(self) -> Self::IntoIter {
+                self.content.into_iter_pairs()
             }
         }
     };
@@ -234,11 +235,35 @@ impl<'i: 'n, 'n, R: RuleType + 'n, T1: Pairs<'i, 'n, R>, T2: Pairs<'i, 'n, R>> P
     type Iter = Chain<T1::Iter, T2::Iter>;
     type IntoIter = Chain<T1::IntoIter, T2::IntoIter>;
 
-    fn iter(&'n self) -> Self::Iter {
-        self.0.iter().chain(self.1.iter())
+    fn iter_pairs(&'n self) -> Self::Iter {
+        self.0.iter_pairs().chain(self.1.iter_pairs())
     }
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter().chain(self.1.into_iter())
+    fn into_iter_pairs(self) -> Self::IntoIter {
+        self.0.into_iter_pairs().chain(self.1.into_iter_pairs())
+    }
+}
+
+impl<'i: 'n, 'n, R: RuleType + 'n, T: Pairs<'i, 'n, R> + 'n, const N: usize> Pairs<'i, 'n, R>
+    for [T; N]
+{
+    type Iter = FlatMap<
+        core::slice::Iter<'n, T>,
+        <T as Pairs<'i, 'n, R>>::Iter,
+        fn(&'n T) -> <T as Pairs<'i, 'n, R>>::Iter,
+    >;
+    type IntoIter = FlatMap<
+        core::array::IntoIter<T, N>,
+        <T as Pairs<'i, 'n, R>>::IntoIter,
+        fn(T) -> <T as Pairs<'i, 'n, R>>::IntoIter,
+    >;
+
+    fn iter_pairs(&'n self) -> Self::Iter {
+        self.as_slice()
+            .iter()
+            .flat_map(|i| <T as Pairs<'i, 'n, R>>::iter_pairs(i))
+    }
+    fn into_iter_pairs(self) -> Self::IntoIter {
+        <Self as IntoIterator>::into_iter(self).flat_map(|i| i.into_iter_pairs())
     }
 }
 
@@ -248,15 +273,15 @@ impl<'i: 'n, 'n, R: RuleType + 'n, T: TypedNode<'i, R> + Pairs<'i, 'n, R>> Pairs
     type Iter = Maybe<&'n (dyn Pair<'i, 'n, R>), T::Iter>;
     type IntoIter = Maybe<boxed::Box<dyn Pair<'i, 'n, R> + 'n>, T::IntoIter>;
 
-    fn iter(&'n self) -> Self::Iter {
+    fn iter_pairs(&'n self) -> Self::Iter {
         match &self {
-            Some(inner) => Maybe(Some(inner.iter())),
+            Some(inner) => Maybe(Some(inner.iter_pairs())),
             None => Maybe(None),
         }
     }
-    fn into_iter(self) -> Self::IntoIter {
+    fn into_iter_pairs(self) -> Self::IntoIter {
         match self {
-            Some(inner) => Maybe(Some(inner.into_iter())),
+            Some(inner) => Maybe(Some(inner.into_iter_pairs())),
             None => Maybe(None),
         }
     }
@@ -285,11 +310,11 @@ impl<
         ) -> <Choice2<WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::IntoIter,
     >;
 
-    fn iter(&'n self) -> Self::Iter {
-        self.content.iter().flat_map(Pairs::iter)
+    fn iter_pairs(&'n self) -> Self::Iter {
+        self.content.iter().flat_map(Pairs::iter_pairs)
     }
-    fn into_iter(self) -> Self::IntoIter {
-        self.content.into_iter().flat_map(Pairs::into_iter)
+    fn into_iter_pairs(self) -> Self::IntoIter {
+        self.content.into_iter().flat_map(Pairs::into_iter_pairs)
     }
 }
 
@@ -301,29 +326,30 @@ macro_rules! impl_with_vec {
                 R: RuleType + 'n,
                 T: TypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
                 I: NeverFailedTypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
+                const SKIP: usize,
                 $(const $args: $t, )*
-            > Pairs<'i, 'n, R> for $name<T, I, $($args, )*>
+            > Pairs<'i, 'n, R> for $name<T, I, SKIP, $($args, )*>
         {
             type Iter = FlatMap<
-                core::slice::Iter<'n, (I, T)>,
-                Chain<I::Iter, T::Iter>,
-                fn(&'n (I, T)) -> Chain<I::Iter, T::Iter>,
+                core::slice::Iter<'n, ([I; SKIP], T)>,
+                Chain<<[I; SKIP] as Pairs<'i,'n,R>>::Iter, T::Iter>,
+                fn(&'n ([I; SKIP], T)) -> Chain<<[I; SKIP] as Pairs<'i,'n,R>>::Iter, T::Iter>,
             >;
             type IntoIter = FlatMap<
-                vec::IntoIter<(I, T)>,
-                Chain<I::IntoIter, T::IntoIter>,
-                fn((I, T)) -> Chain<I::IntoIter, T::IntoIter>,
+                vec::IntoIter<([I; SKIP], T)>,
+                Chain<<[I; SKIP] as Pairs<'i,'n,R>>::IntoIter, T::IntoIter>,
+                fn(([I; SKIP], T)) -> Chain<<[I; SKIP] as Pairs<'i,'n,R>>::IntoIter, T::IntoIter>,
             >;
 
-            fn iter(&'n self) -> Self::Iter {
+            fn iter_pairs(&'n self) -> Self::Iter {
                 self.content
                     .iter()
-                    .flat_map(|(i, e)| i.iter().chain(e.iter()))
+                    .flat_map(|(i, e)| i.iter_pairs().chain(e.iter_pairs()))
             }
-            fn into_iter(self) -> Self::IntoIter {
+            fn into_iter_pairs(self) -> Self::IntoIter {
                 self.content
                     .into_iter()
-                    .flat_map(|(i, e)| i.into_iter().chain(e.into_iter()))
+                    .flat_map(|(i, e)| i.into_iter_pairs().chain(e.into_iter_pairs()))
             }
         }
     };
@@ -335,13 +361,13 @@ impl_with_vec!(RepMin, const MIN: usize,);
 macro_rules! impl_without_lifetime {
     ($id: ident) => {
         impl<'i: 'n, 'n, R: RuleType + 'n> Pairs<'i, 'n, R> for $id {
-            type Iter = Empty<&'n (dyn Pair<'i, 'n, R>)>;
-            type IntoIter = Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
+            type Iter = iter::Empty<&'n (dyn Pair<'i, 'n, R>)>;
+            type IntoIter = iter::Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
 
-            fn iter(&'n self) -> Self::Iter {
+            fn iter_pairs(&'n self) -> Self::Iter {
                 empty()
             }
-            fn into_iter(self) -> Self::IntoIter {
+            fn into_iter_pairs(self) -> Self::IntoIter {
                 empty()
             }
         }
@@ -350,13 +376,13 @@ macro_rules! impl_without_lifetime {
 macro_rules! impl_with_lifetime {
     ($id: ident) => {
         impl<'i: 'n, 'n, R: RuleType + 'n> Pairs<'i, 'n, R> for $id<'i> {
-            type Iter = Empty<&'n (dyn Pair<'i, 'n, R>)>;
-            type IntoIter = Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
+            type Iter = iter::Empty<&'n (dyn Pair<'i, 'n, R>)>;
+            type IntoIter = iter::Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
 
-            fn iter(&'n self) -> Self::Iter {
+            fn iter_pairs(&'n self) -> Self::Iter {
                 empty()
             }
-            fn into_iter(self) -> Self::IntoIter {
+            fn into_iter_pairs(self) -> Self::IntoIter {
                 empty()
             }
         }
@@ -373,6 +399,7 @@ impl_with_lifetime!(POP_ALL);
 impl_without_lifetime!(DROP);
 
 impl_with_lifetime!(AlwaysFail);
+impl_with_lifetime!(Empty);
 
 /// An iterator that maybe contain another iterator.
 pub struct Maybe<Item, T: Iterator<Item = Item>>(Option<T>);
