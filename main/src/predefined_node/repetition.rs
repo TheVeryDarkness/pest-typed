@@ -19,39 +19,46 @@ use alloc::vec::Vec;
 
 /// Repeatably match `T` at least `MIN` times.
 #[derive(Clone, Debug, PartialEq)]
-pub struct RepMin<T, IGNORED, const SKIP: usize, const MIN: usize> {
+pub struct RepMin<T, const MIN: usize> {
     /// Skipped and Matched expressions.
-    pub content: Vec<([IGNORED; SKIP], T)>,
+    pub content: Vec<T>,
 }
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-        const SKIP: usize,
-        const MIN: usize,
-    > TypedNode<'i, R> for RepMin<T, IGNORED, SKIP, MIN>
-{
+impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for RepMin<T, 0> {
+    fn parse_with(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
+        let mut vec = Vec::new();
+        let mut tracker = Tracker::new(input);
+
+        {
+            for i in 0.. {
+                match restore_on_err(stack, |stack| T::try_parse_with(input, stack, &mut tracker)) {
+                    Ok((next, matched)) => {
+                        input = next;
+                        vec.push(matched);
+                    }
+                    Err(err) => {
+                        break;
+                    }
+                }
+            }
+        }
+        (input, Self { content: vec })
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>, const MIN: usize> TypedNode<'i, R> for RepMin<T, MIN> {
     #[inline]
     fn try_parse_with(
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let mut vec = Vec::<([IGNORED; SKIP], T)>::new();
+        let mut vec = Vec::new();
 
         {
             for i in 0.. {
-                let skipped = core::array::from_fn(|_| {
-                    let (next, ignored) = IGNORED::parse_with(input, stack);
-                    input = next;
-                    ignored
-                });
-
                 match restore_on_err(stack, |stack| T::try_parse_with(input, stack, tracker)) {
                     Ok((next, matched)) => {
                         input = next;
-                        vec.push((skipped, matched));
+                        vec.push(matched);
                     }
                     Err(err) => {
                         if i < MIN {
@@ -66,7 +73,7 @@ impl<
         Ok((input, Self { content: vec }))
     }
 }
-impl<T, IGNORED, const SKIP: usize, const MIN: usize> RepMin<T, IGNORED, SKIP, MIN> {
+impl<T, IGNORED, const SKIP: usize, const MIN: usize> RepMin<([IGNORED; SKIP], T), MIN> {
     /// Returns an iterator over all matched expressions.
     pub fn iter_matched<'n>(
         &'n self,
@@ -81,55 +88,39 @@ impl<T, IGNORED, const SKIP: usize, const MIN: usize> RepMin<T, IGNORED, SKIP, M
         self.content.iter()
     }
 }
-impl<T: Clone + PartialEq, IGNORED: Clone + PartialEq, const SKIP: usize, const MIN: usize>
-    BoundWrapper for RepMin<T, IGNORED, SKIP, MIN>
-{
+impl<T: Clone + PartialEq, const MIN: usize> BoundWrapper for RepMin<T, MIN> {
     const MIN: usize = MIN;
     const MAX: usize = usize::MAX;
 }
 
 /// Repeatably match `T` at least `MIN` times and at most `MAX` times.
 #[derive(Clone, Debug, PartialEq)]
-pub struct RepMinMax<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize> {
+pub struct RepMinMax<T, const MIN: usize, const MAX: usize> {
     /// Skipped and Matched expressions.
-    pub content: Vec<([IGNORED; SKIP], T)>,
+    pub content: Vec<T>,
 }
 
-impl<T, IGNORED, const SKIP: usize, const MAX: usize> Default
-    for RepMinMax<T, IGNORED, SKIP, 0, MAX>
-{
+impl<T, const MAX: usize> Default for RepMinMax<T, 0, MAX> {
     fn default() -> Self {
         Self {
             content: Vec::new(),
         }
     }
 }
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-        const SKIP: usize,
-        const MAX: usize,
-    > NeverFailedTypedNode<'i, R> for RepMinMax<T, IGNORED, SKIP, 0, MAX>
+impl<'i, R: RuleType, T: TypedNode<'i, R>, const MAX: usize> NeverFailedTypedNode<'i, R>
+    for RepMinMax<T, 0, MAX>
 {
     #[inline]
     fn parse_with(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
-        let mut vec = Vec::<([IGNORED; SKIP], T)>::new();
+        let mut vec = Vec::new();
 
         let mut tracker = Tracker::new(input);
         {
-            for i in 0..MAX {
-                let skipped = core::array::from_fn(|_| {
-                    let (next, ignored) = IGNORED::parse_with(input, stack);
-                    input = next;
-                    ignored
-                });
-
+            for _ in 0..MAX {
                 match restore_on_err(stack, |stack| T::try_parse_with(input, stack, &mut tracker)) {
                     Ok((next, matched)) => {
                         input = next;
-                        vec.push((skipped, matched));
+                        vec.push(matched);
                     }
                     Err(err) => {
                         break;
@@ -140,15 +131,8 @@ impl<
         (input, Self { content: vec })
     }
 }
-impl<
-        'i,
-        R: RuleType,
-        T: TypedNode<'i, R>,
-        IGNORED: NeverFailedTypedNode<'i, R>,
-        const SKIP: usize,
-        const MIN: usize,
-        const MAX: usize,
-    > TypedNode<'i, R> for RepMinMax<T, IGNORED, SKIP, MIN, MAX>
+impl<'i, R: RuleType, T: TypedNode<'i, R>, const MIN: usize, const MAX: usize> TypedNode<'i, R>
+    for RepMinMax<T, MIN, MAX>
 {
     #[inline]
     fn try_parse_with(
@@ -156,20 +140,14 @@ impl<
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        let mut vec = Vec::<([IGNORED; SKIP], T)>::new();
+        let mut vec = Vec::new();
 
         {
             for i in 0..MAX {
-                let skipped = core::array::from_fn(|_| {
-                    let (next, ignored) = IGNORED::parse_with(input, stack);
-                    input = next;
-                    ignored
-                });
-
                 match restore_on_err(stack, |stack| T::try_parse_with(input, stack, tracker)) {
                     Ok((next, matched)) => {
                         input = next;
-                        vec.push((skipped, matched));
+                        vec.push(matched);
                     }
                     Err(err) => {
                         if i < MIN {
@@ -185,7 +163,7 @@ impl<
     }
 }
 impl<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize>
-    RepMinMax<T, IGNORED, SKIP, MIN, MAX>
+    RepMinMax<([IGNORED; SKIP], T), MIN, MAX>
 {
     /// Returns an iterator over all matched expressions.
     pub fn iter_matched<'n>(
@@ -196,24 +174,21 @@ impl<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize>
     > {
         self.content.iter().map(|(_, e)| e)
     }
+}
+impl<T, const MIN: usize, const MAX: usize> RepMinMax<T, MIN, MAX> {
     /// Returns an iterator over all skipped or matched expressions.
-    pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, ([IGNORED; SKIP], T)> {
+    pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, T> {
         self.content.iter()
     }
 }
-impl<
-        T: Clone + PartialEq,
-        IGNORED: Clone + PartialEq,
-        const SKIP: usize,
-        const MIN: usize,
-        const MAX: usize,
-    > BoundWrapper for RepMinMax<T, IGNORED, SKIP, MIN, MAX>
+impl<T: Clone + PartialEq, const MIN: usize, const MAX: usize> BoundWrapper
+    for RepMinMax<T, MIN, MAX>
 {
     const MIN: usize = MIN;
     const MAX: usize = MAX;
 }
 
 /// Repeat arbitrary times.
-pub type Rep<T, IGNORED, const SKIP: usize> = RepMin<T, IGNORED, SKIP, 0>;
+pub type Rep<T, IGNORED, const SKIP: usize> = RepMin<([IGNORED; SKIP], T), 0>;
 /// Repeat at least one times.
-pub type RepOnce<T, IGNORED, const SKIP: usize> = RepMin<T, IGNORED, SKIP, 1>;
+pub type RepOnce<T, IGNORED, const SKIP: usize> = RepMin<([IGNORED; SKIP], T), 1>;

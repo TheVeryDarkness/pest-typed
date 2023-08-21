@@ -468,65 +468,35 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
     }
 }
 
-/// Skip single whitespace or comment.
-#[derive(Clone, Debug, PartialEq)]
-pub enum SkippedUnit<COMMENT: Clone + Debug + PartialEq, WHITESPACE: Clone + Debug + PartialEq> {
-    /// Comment.
-    Comment(COMMENT),
-    /// White space.
-    WhiteSpace(WHITESPACE),
-}
-
 /// Skip comments (by rule `COMMENT`) or white spaces (by rule `WHITESPACE`) if there is any.
-///
-/// Never fail.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Skipped<WHITESPACE, COMMENT> {
-    /// Skipped comments and white spaces.
-    pub content: Vec<Choice2<WHITESPACE, COMMENT>>,
+#[derive(Clone, PartialEq)]
+pub struct Skipped<T, Skip, const SKIP: usize> {
+    pub skipped: [Skip; SKIP],
+    pub matched: T,
 }
-impl<WHITESPACE, COMMENT> Default for Skipped<WHITESPACE, COMMENT> {
-    fn default() -> Self {
-        Self {
-            content: Vec::new(),
-        }
-    }
-}
-impl<'i, R: RuleType, WHITESPACE: TypedNode<'i, R>, COMMENT: TypedNode<'i, R>>
-    NeverFailedTypedNode<'i, R> for Skipped<WHITESPACE, COMMENT>
+impl<'i, R: RuleType, T: TypedNode<'i, R>, Skip: TypedNode<'i, R>, const SKIP: usize>
+    TypedNode<'i, R> for Skipped<T, Skip, SKIP>
 {
-    #[inline]
-    fn parse_with(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
-        // return (input, Self::default());
-        let mut flag = true;
-        let mut vec = Vec::new();
-        let mut tracker = Tracker::new(input);
-        while flag {
-            flag = false;
-            while let Ok((remained, ws)) = WHITESPACE::try_parse_with(input, stack, &mut tracker) {
-                vec.push(Choice2::_0(ws));
-                input = remained;
-                flag = true;
-            }
-            while let Ok((remained, c)) = COMMENT::try_parse_with(input, stack, &mut tracker) {
-                vec.push(Choice2::_1(c));
-                input = remained;
-                flag = true;
-            }
-        }
-        (input, Self { content: vec })
-    }
-}
-impl<'i, R: RuleType, COMMENT: TypedNode<'i, R>, WHITESPACE: TypedNode<'i, R>> TypedNode<'i, R>
-    for Skipped<COMMENT, WHITESPACE>
-{
-    #[inline]
     fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
+        tracker: &mut Tracker<'i, R>,
     ) -> Result<(Position<'i>, Self), ()> {
-        Ok(Self::parse_with(input, stack))
+        let (input, (skipped, matched)) =
+            <([Skip; SKIP], T)>::try_parse_with(input, stack, tracker)?;
+        Ok((input, Self { skipped, matched }))
+    }
+}
+impl<T: Debug, Skip: Debug, const SKIP: usize> Debug for Skipped<T, Skip, SKIP> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        if SKIP > 0 {
+            f.debug_struct("Skipped")
+                .field("skipped", &self.skipped)
+                .field("matched", &self.matched)
+                .finish()
+        } else {
+            Debug::fmt(&self.matched, f)
+        }
     }
 }
 

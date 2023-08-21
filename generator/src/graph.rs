@@ -1158,14 +1158,16 @@ pub(crate) fn generate_typed_pair_from_rule(
                 } else {
                     quote! {}
                 };
-                let skip_param = if seq {
-                    quote! {SKIP,}
+                if seq {
+                    let args = types.iter().map(|t| quote! {([Skipped::<'i>; SKIP], #t)});
+                    target.push(quote! {
+                        pub type #type_i<#life #(#types, )* #skip_arg> = #generics_i<#(#args, )*>;
+                    });
                 } else {
-                    quote! {}
+                    target.push(quote! {
+                        pub type #type_i<#life #(#types, )* #skip_arg> = #generics_i<#(#types, )*>;
+                    });
                 };
-                target.push(quote! {
-                    pub type #type_i<#life #(#types, )* #skip_arg> = #generics_i<#(#types, )* #skip_param #ign>;
-                });
             }
         };
         let mut seq = vec![];
@@ -1193,21 +1195,24 @@ pub(crate) fn generate_typed_pair_from_rule(
         let has_comment = defined_rules.contains("COMMENT");
         let skip = match (has_white_space, has_comment) {
             (true, true) => quote! {
-                Rep<
+                predefined_node::RepMin<
                     #pest_typed::choices::Choice2<
                         #root::#rules_mod::WHITESPACE<'i, 0>,
                         #root::#rules_mod::COMMENT<'i, 0>,
-                    >
+                    >,
+                    0,
                 >
             },
             (true, false) => quote! {
-                Rep<
+                predefined_node::RepMin<
                     #root::#rules_mod::WHITESPACE<'i, 0>,
+                    0,
                 >
             },
             (false, true) => quote! {
-                Rep<
+                predefined_node::RepMin<
                     #root::#rules_mod::COMMENT<'i, 0>,
+                    0,
                 >
             },
             (false, false) => quote! {

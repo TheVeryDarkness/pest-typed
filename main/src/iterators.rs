@@ -21,7 +21,7 @@ use crate::{
 };
 use alloc::{boxed, collections::VecDeque, string::String, vec, vec::Vec};
 use core::{
-    iter::{self, empty, once, Chain, FlatMap, Iterator},
+    iter::{self, empty, once, Chain, FlatMap, Iterator, Map},
     mem::swap,
 };
 use pest::RuleType;
@@ -290,31 +290,21 @@ impl<'i: 'n, 'n, R: RuleType + 'n, T: TypedNode<'i, R> + Pairs<'i, 'n, R>> Pairs
 impl<
         'i: 'n,
         'n,
-        R: RuleType + 'i,
-        WHITESPACE: TypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
-        COMMENT: TypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
-    > Pairs<'i, 'n, R> for Skipped<WHITESPACE, COMMENT>
+        R: RuleType + 'n,
+        T: Pairs<'i, 'n, R>,
+        Skip: Pairs<'i, 'n, R> + 'n,
+        const SKIP: usize,
+    > Pairs<'i, 'n, R> for Skipped<T, Skip, SKIP>
 {
-    type Iter = FlatMap<
-        core::slice::Iter<'n, Choice2<WHITESPACE, COMMENT>>,
-        <Choice2<WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::Iter,
-        fn(
-            &'n Choice2<WHITESPACE, COMMENT>,
-        ) -> <Choice2<WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::Iter,
-    >;
-    type IntoIter = FlatMap<
-        alloc::vec::IntoIter<Choice2<WHITESPACE, COMMENT>>,
-        <Choice2<WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::IntoIter,
-        fn(
-            Choice2<WHITESPACE, COMMENT>,
-        ) -> <Choice2<WHITESPACE, COMMENT> as Pairs<'i, 'n, R>>::IntoIter,
-    >;
-
+    type Iter = Chain<<[Skip; SKIP] as Pairs<'i, 'n, R>>::Iter, T::Iter>;
+    type IntoIter = Chain<<[Skip; SKIP] as Pairs<'i, 'n, R>>::IntoIter, T::IntoIter>;
     fn iter_pairs(&'n self) -> Self::Iter {
-        self.content.iter().flat_map(Pairs::iter_pairs)
+        self.skipped.iter_pairs().chain(self.matched.iter_pairs())
     }
     fn into_iter_pairs(self) -> Self::IntoIter {
-        self.content.into_iter().flat_map(Pairs::into_iter_pairs)
+        self.skipped
+            .into_iter_pairs()
+            .chain(self.matched.into_iter_pairs())
     }
 }
 
@@ -324,32 +314,30 @@ macro_rules! impl_with_vec {
                 'i: 'n,
                 'n,
                 R: RuleType + 'n,
-                T: TypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
-                I: NeverFailedTypedNode<'i, R> + Pairs<'i, 'n, R> + 'n,
-                const SKIP: usize,
+                T: Pairs<'i, 'n, R> + 'n,
                 $(const $args: $t, )*
-            > Pairs<'i, 'n, R> for $name<T, I, SKIP, $($args, )*>
+            > Pairs<'i, 'n, R> for $name<T, $($args, )*>
         {
             type Iter = FlatMap<
-                core::slice::Iter<'n, ([I; SKIP], T)>,
-                Chain<<[I; SKIP] as Pairs<'i,'n,R>>::Iter, T::Iter>,
-                fn(&'n ([I; SKIP], T)) -> Chain<<[I; SKIP] as Pairs<'i,'n,R>>::Iter, T::Iter>,
+                core::slice::Iter<'n, T>,
+                T::Iter,
+                fn(&'n T) -> T::Iter,
             >;
             type IntoIter = FlatMap<
-                vec::IntoIter<([I; SKIP], T)>,
-                Chain<<[I; SKIP] as Pairs<'i,'n,R>>::IntoIter, T::IntoIter>,
-                fn(([I; SKIP], T)) -> Chain<<[I; SKIP] as Pairs<'i,'n,R>>::IntoIter, T::IntoIter>,
+                vec::IntoIter<T>,
+                T::IntoIter,
+                fn(T) -> T::IntoIter,
             >;
 
             fn iter_pairs(&'n self) -> Self::Iter {
                 self.content
                     .iter()
-                    .flat_map(|(i, e)| i.iter_pairs().chain(e.iter_pairs()))
+                    .flat_map(|i| i.iter_pairs())
             }
             fn into_iter_pairs(self) -> Self::IntoIter {
                 self.content
                     .into_iter()
-                    .flat_map(|(i, e)| i.into_iter_pairs().chain(e.into_iter_pairs()))
+                    .flat_map(|i| i.into_iter_pairs())
             }
         }
     };

@@ -11,13 +11,14 @@ use crate::{
     error::Error, position::Position, predefined_node::restore_on_err, span::Span, stack::Stack,
     tracker::Tracker, RuleWrapper,
 };
+use alloc::vec::Vec;
 use core::fmt::Debug;
 use pest::RuleType;
 
 /// Node of concrete syntax tree that never fails.
 pub trait NeverFailedTypedNode<'i, R: RuleType>
 where
-    Self: Sized + Debug + Clone + PartialEq + Default,
+    Self: Sized + Debug + Clone + PartialEq,
 {
     /// Create typed node.
     /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
@@ -69,6 +70,41 @@ impl<R: RuleType, T: RuleWrapper<R>> RuleStorage<R> for T {
 pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
     /// The span of a matched expression by a non-silent rule.
     fn span(&self) -> Span<'i>;
+}
+
+/// Match `[T; N]`.
+impl<'i, R: RuleType, T: TypedNode<'i, R>, const N: usize> TypedNode<'i, R> for [T; N] {
+    fn try_parse_with(
+        mut input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Result<(Position<'i>, Self), ()> {
+        let mut vec = Vec::new();
+        for _ in 0..N {
+            let (next, res) = T::try_parse_with(input, stack, tracker)?;
+            input = next;
+            vec.push(res);
+        }
+        match vec.try_into() {
+            Ok(res) => Ok((input, res)),
+            // Actually impossible.
+            Err(_) => Err(()),
+        }
+    }
+}
+
+/// Match `(T1, T2)`.
+impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> TypedNode<'i, R> for (T1, T2) {
+    #[inline]
+    fn try_parse_with(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Result<(Position<'i>, Self), ()> {
+        let (input, t1) = T1::try_parse_with(input, stack, tracker)?;
+        let (input, t2) = T2::try_parse_with(input, stack, tracker)?;
+        Ok((input, (t1, t2)))
+    }
 }
 
 /// Optionally match `T`.

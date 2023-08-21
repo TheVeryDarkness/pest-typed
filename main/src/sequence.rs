@@ -27,17 +27,17 @@ macro_rules! chains {
 ///
 /// Used by [`crate::seq`].
 macro_rules! chain {
-    ($pest_typed:ident, $trait:ty, $self: ident, iter, $Skipped:ty, $T0:ty, $t0:tt, ) => {
-        <($Skipped, $T0) as $trait>::iter_pairs(&$self.content.$t0)
+    ($pest_typed:ident, $trait:ty, $self: ident, iter, $T0:ty, $t0:tt, ) => {
+        <$T0 as $trait>::iter_pairs(&$self.content.$t0)
     };
-    ($pest_typed:ident, $trait:ty, $self: ident, iter, $Skipped:ty, $T0:ty, $t0:tt, $($T:ty, $t:tt, )+) => {
-        <($Skipped, $T0) as $trait>::iter_pairs(&$self.content.$t0).chain($pest_typed::chain!($pest_typed, $trait, $self, iter, $Skipped, $($T, $t, )*))
+    ($pest_typed:ident, $trait:ty, $self: ident, iter, $T0:ty, $t0:tt, $($T:ty, $t:tt, )+) => {
+        <$T0 as $trait>::iter_pairs(&$self.content.$t0).chain($pest_typed::chain!($pest_typed, $trait, $self, iter, $($T, $t, )*))
     };
-    ($pest_typed:ident, $trait:ty, $self: ident, into_iter, $Skipped:ty, $T0:ty, $t0:tt, ) => {
-        <($Skipped, $T0) as $trait>::into_iter_pairs($self.content.$t0)
+    ($pest_typed:ident, $trait:ty, $self: ident, into_iter, $T0:ty, $t0:tt, ) => {
+        <$T0 as $trait>::into_iter_pairs($self.content.$t0)
     };
-    ($pest_typed:ident, $trait:ty, $self: ident, into_iter, $Skipped:ty, $T0:ty, $t0:tt, $($T:ty, $t:tt, )+) => {
-        <($Skipped, $T0) as $trait>::into_iter_pairs($self.content.$t0).chain($pest_typed::chain!($pest_typed, $trait, $self, into_iter, $Skipped, $($T, $t, )*))
+    ($pest_typed:ident, $trait:ty, $self: ident, into_iter, $T0:ty, $t0:tt, $($T:ty, $t:tt, )+) => {
+        <$T0 as $trait>::into_iter_pairs($self.content.$t0).chain($pest_typed::chain!($pest_typed, $trait, $self, into_iter, $($T, $t, )*))
     };
 }
 
@@ -49,14 +49,14 @@ macro_rules! seq {
     ($name:ident, $pest_typed:ident, $number:literal, $T0:ident, $t0:tt, $( $T:ident, $t:tt, )* ) => {
         #[doc = ::core::stringify!(Match a sequence with $number items.)]
         #[derive(Clone)]
-        pub struct $name<$T0, $($T),*, const SKIP: usize, IGNORED, > {
+        pub struct $name<$T0, $($T),*, > {
             #[doc = "Matched and skipped expressions."]
-            pub content: ( ([IGNORED; SKIP], $T0), $(([IGNORED; SKIP], $T), )* ),
+            pub content: ( $T0, $($T, )* ),
         }
-        impl<$T0, $($T, )* const SKIP: usize, IGNORED> ::core::convert::From<( ([IGNORED; SKIP], $T0), $(([IGNORED; SKIP], $T), )* )>
-            for $name<$T0, $($T),*, SKIP, IGNORED>
+        impl<$T0, $($T, )*> ::core::convert::From<( $T0, $($T, )* )>
+            for $name<$T0, $($T, )*>
         {
-            fn from(content: ( ([IGNORED; SKIP], $T0), $(([IGNORED; SKIP], $T), )* )) -> Self {
+            fn from(content: ( $T0, $($T, )* )) -> Self {
                 Self { content }
             }
         }
@@ -65,9 +65,7 @@ macro_rules! seq {
                 R: $pest_typed::RuleType,
                 $T0: $pest_typed::TypedNode<'i, R>,
                 $($T: $pest_typed::TypedNode<'i, R>, )*
-                const SKIP: usize,
-                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R>,
-            > $pest_typed::TypedNode<'i, R> for $name<$T0, $($T),*, SKIP, IGNORED>
+            > $pest_typed::TypedNode<'i, R> for $name<$T0, $($T, )*>
         {
             #[inline]
             fn try_parse_with(
@@ -80,18 +78,13 @@ macro_rules! seq {
                     {
                         let (next, content) = T0::try_parse_with(input, stack, tracker)?;
                         input = next;
-                        (::core::array::from_fn(|_| IGNORED::default()), content)
+                        content
                     },
                     $(
                         {
-                            let skipped = ::core::array::from_fn(|_| {
-                                let (next, skipped) = IGNORED::parse_with(input, stack);
-                                input = next;
-                                skipped
-                            });
                             let (next, content) = $T::try_parse_with(input, stack, tracker)?;
                             input = next;
-                            (skipped, content)
+                            content
                         },
                     )*
                 );
@@ -105,33 +98,31 @@ macro_rules! seq {
                 R: $pest_typed::RuleType + 'n,
                 $T0: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>,
                 $($T: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>),*,
-                const SKIP: usize,
-                IGNORED: $pest_typed::NeverFailedTypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R> + 'n,
-            > $pest_typed::iterators::Pairs<'i, 'n, R> for $name<$T0, $($T),*, SKIP, IGNORED>
+            > $pest_typed::iterators::Pairs<'i, 'n, R> for $name<$T0, $($T, )*>
         {
-            type Iter = $pest_typed::chains!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, Iter, ([IGNORED; SKIP], $T0), $(([IGNORED; SKIP], $T), )*);
-            type IntoIter = $pest_typed::chains!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, IntoIter, ([IGNORED; SKIP], $T0), $(([IGNORED; SKIP], $T), )*);
+            type Iter = $pest_typed::chains!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, Iter, $T0, $($T, )*);
+            type IntoIter = $pest_typed::chains!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, IntoIter, $T0, $($T, )*);
 
             fn iter_pairs(&'n self) -> Self::Iter {
-                $pest_typed::chain!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, self, iter, [IGNORED; SKIP], $T0, $t0, $($T, $t, )*)
+                $pest_typed::chain!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, self, iter, $T0, $t0, $($T, $t, )*)
             }
             fn into_iter_pairs(self) -> Self::IntoIter {
-                $pest_typed::chain!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, self, into_iter, [IGNORED; SKIP], $T0, $t0, $($T, $t, )*)
+                $pest_typed::chain!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, self, into_iter, $T0, $t0, $($T, $t, )*)
             }
         }
-        impl<$T0, $($T),*, const SKIP: usize, IGNORED> ::core::ops::Deref for $name<T0, $($T),*, SKIP, IGNORED> {
-            type Target = ( ([IGNORED; SKIP], T0), $(([IGNORED; SKIP], $T), )* );
+        impl<$T0, $($T, )*> ::core::ops::Deref for $name<T0, $($T, )*> {
+            type Target = ( T0, $($T, )* );
             fn deref(&self) -> &Self::Target {
                 &self.content
             }
         }
-        impl<$T0, $($T),*, const SKIP: usize, IGNORED> ::core::ops::DerefMut for $name<T0, $($T),*, SKIP, IGNORED> {
+        impl<$T0, $($T, )*> ::core::ops::DerefMut for $name<T0, $($T, )*> {
             fn deref_mut(&mut self) -> &mut Self::Target {
                 &mut self.content
             }
         }
-        impl<$T0: ::core::cmp::PartialEq, $($T: ::core::cmp::PartialEq),*, const SKIP: usize, IGNORED: ::core::cmp::PartialEq>
-            ::core::cmp::PartialEq for $name<T0, $($T),*, SKIP, IGNORED>
+        impl<$T0: ::core::cmp::PartialEq, $($T: ::core::cmp::PartialEq, )*>
+            ::core::cmp::PartialEq for $name<T0, $($T, )*>
         {
             fn eq(&self, other: &Self) -> ::core::primitive::bool {
                 self.content.$t0 == other.content.$t0
@@ -140,21 +131,33 @@ macro_rules! seq {
                 )*
             }
         }
-        impl<$T0, $($T),*, const SKIP: usize, IGNORED> $name<T0, $($T),*, SKIP, IGNORED> {
+        impl<$T0, $($T),*, const SKIP: usize, IGNORED> $name<([IGNORED; SKIP], T0), $(([IGNORED; SKIP], $T), )*> {
             /// Convert the reference of a sequence into a tuple of references of elements.
             pub fn as_ref(&self) -> ( &$T0, $(&$T, )* ) {
                 ( &self.content.$t0.1, $(&self.content.$t.1, )* )
             }
         }
-        impl<$T0, $($T),*, const SKIP: usize, IGNORED> ::core::convert::From<$name<T0, $($T),*, SKIP, IGNORED>>
+        impl<$T0, $($T, )*> ::core::convert::AsRef<( $T0, $($T, )* )> for $name<T0, $($T, )*> {
+            fn as_ref(&self) -> &( $T0, $($T, )* ) {
+                &self.content
+            }
+        }
+        impl<$T0, $($T),*, const SKIP: usize, IGNORED> ::core::convert::From<$name<([IGNORED; SKIP], T0), $(([IGNORED; SKIP], $T), )*>>
             for ( T0, $($T, )* )
         {
-            fn from(value: $name<T0, $($T),*, SKIP, IGNORED>) -> Self {
+            fn from(value: $name<([IGNORED; SKIP], T0), $(([IGNORED; SKIP], $T), )*>) -> Self {
                 ( value.content.$t0.1, $(value.content.$t.1, )* )
             }
         }
-        impl<$T0: ::core::fmt::Debug, $($T: ::core::fmt::Debug),*, const SKIP: usize, IGNORED: ::core::fmt::Debug>
-            ::core::fmt::Debug for $name<T0, $($T),*, SKIP, IGNORED>
+        impl<$T0, $($T, )*> ::core::convert::From<$name<T0, $($T, )*>>
+            for ( T0, $($T, )* )
+        {
+            fn from(value: $name<T0, $($T, )*>) -> Self {
+                ( value.content.$t0, $(value.content.$t, )* )
+            }
+        }
+        impl<$T0: ::core::fmt::Debug, $($T: ::core::fmt::Debug, )*>
+            ::core::fmt::Debug for $name<T0, $($T),*>
         {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 f.debug_tuple(::core::stringify!($name))
