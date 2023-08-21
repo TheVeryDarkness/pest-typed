@@ -21,7 +21,6 @@ use super::{
     wrapper::{StringArrayWrapper, StringWrapper},
     RuleType, TypedNode,
 };
-use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut};
 use core::{fmt::Debug, marker::PhantomData};
 use custom_debug_derive::Debug as Dbg;
@@ -471,7 +470,9 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
 /// Skip comments (by rule `COMMENT`) or white spaces (by rule `WHITESPACE`) if there is any.
 #[derive(Clone, PartialEq)]
 pub struct Skipped<T, Skip, const SKIP: usize> {
+    /// Skipped content.
     pub skipped: [Skip; SKIP],
+    /// Matched content.
     pub matched: T,
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>, Skip: TypedNode<'i, R>, const SKIP: usize>

@@ -220,7 +220,7 @@ impl<'g> Node<'g> {
             Node::SequenceI(i, inner) => {
                 let (pa, ty) = inner.expand(root, config, from);
                 let i = Index::from(*i);
-                (quote! {{let res = &res.content.#i.1; #pa}}, quote! {#ty})
+                (quote! {{let res = &res.content.#i.matched; #pa}}, quote! {#ty})
             }
             Node::Optional(flatten, inner) => {
                 let (pa, ty) = inner.expand(root, config, from);
@@ -1159,7 +1159,7 @@ pub(crate) fn generate_typed_pair_from_rule(
                     quote! {}
                 };
                 if seq {
-                    let args = types.iter().map(|t| quote! {([Skipped::<'i>; SKIP], #t)});
+                    let args = types.iter().map(|t| quote! {(#pest_typed::predefined_node::Skipped<#t, Skipped<'i>, SKIP>)});
                     target.push(quote! {
                         pub type #type_i<#life #(#types, )* #skip_arg> = #generics_i<#(#args, )*>;
                     });

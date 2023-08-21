@@ -17,6 +17,8 @@ use crate::{
 };
 use alloc::vec::Vec;
 
+use super::Skipped;
+
 /// Repeatably match `T` at least `MIN` times.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RepMin<T, const MIN: usize> {
@@ -29,16 +31,11 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for RepMi
         let mut tracker = Tracker::new(input);
 
         {
-            for i in 0.. {
-                match restore_on_err(stack, |stack| T::try_parse_with(input, stack, &mut tracker)) {
-                    Ok((next, matched)) => {
-                        input = next;
-                        vec.push(matched);
-                    }
-                    Err(err) => {
-                        break;
-                    }
-                }
+            while let Ok((next, matched)) =
+                restore_on_err(stack, |stack| T::try_parse_with(input, stack, &mut tracker))
+            {
+                input = next;
+                vec.push(matched);
             }
         }
         (input, Self { content: vec })
@@ -122,7 +119,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const MAX: usize> NeverFailedTypedNod
                         input = next;
                         vec.push(matched);
                     }
-                    Err(err) => {
+                    Err(_) => {
                         break;
                     }
                 }
@@ -163,16 +160,16 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const MIN: usize, const MAX: usize> T
     }
 }
 impl<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize>
-    RepMinMax<([IGNORED; SKIP], T), MIN, MAX>
+    RepMinMax<Skipped<T, IGNORED, SKIP>, MIN, MAX>
 {
     /// Returns an iterator over all matched expressions.
     pub fn iter_matched<'n>(
         &'n self,
     ) -> core::iter::Map<
-        alloc::slice::Iter<'n, ([IGNORED; SKIP], T)>,
-        fn(&'n ([IGNORED; SKIP], T)) -> &'n T,
+        alloc::slice::Iter<'n, Skipped<T, IGNORED, SKIP>>,
+        fn(&'n Skipped<T, IGNORED, SKIP>) -> &'n T,
     > {
-        self.content.iter().map(|(_, e)| e)
+        self.content.iter().map(|s| &s.matched)
     }
 }
 impl<T, const MIN: usize, const MAX: usize> RepMinMax<T, MIN, MAX> {

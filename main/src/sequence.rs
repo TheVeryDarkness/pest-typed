@@ -131,10 +131,10 @@ macro_rules! seq {
                 )*
             }
         }
-        impl<$T0, $($T),*, const SKIP: usize, IGNORED> $name<([IGNORED; SKIP], T0), $(([IGNORED; SKIP], $T), )*> {
+        impl<$T0, $($T),*, const SKIP: usize, IGNORED> $name<$pest_typed::predefined_node::Skipped<$T0, IGNORED, SKIP>, $($pest_typed::predefined_node::Skipped<$T, IGNORED, SKIP>, )*> {
             /// Convert the reference of a sequence into a tuple of references of elements.
             pub fn as_ref(&self) -> ( &$T0, $(&$T, )* ) {
-                ( &self.content.$t0.1, $(&self.content.$t.1, )* )
+                ( &self.content.$t0.matched, $(&self.content.$t.matched, )* )
             }
         }
         impl<$T0, $($T, )*> ::core::convert::AsRef<( $T0, $($T, )* )> for $name<T0, $($T, )*> {
@@ -142,11 +142,11 @@ macro_rules! seq {
                 &self.content
             }
         }
-        impl<$T0, $($T),*, const SKIP: usize, IGNORED> ::core::convert::From<$name<([IGNORED; SKIP], T0), $(([IGNORED; SKIP], $T), )*>>
+        impl<$T0, $($T),*, const SKIP: usize, IGNORED> ::core::convert::From<$name<$pest_typed::predefined_node::Skipped<$T0, IGNORED, SKIP>, $($pest_typed::predefined_node::Skipped<$T, IGNORED, SKIP>, )*>>
             for ( T0, $($T, )* )
         {
-            fn from(value: $name<([IGNORED; SKIP], T0), $(([IGNORED; SKIP], $T), )*>) -> Self {
-                ( value.content.$t0.1, $(value.content.$t.1, )* )
+            fn from(value: $name<$pest_typed::predefined_node::Skipped<$T0, IGNORED, SKIP>, $($pest_typed::predefined_node::Skipped<$T, IGNORED, SKIP>, )*>) -> Self {
+                ( value.content.$t0.matched, $(value.content.$t.matched, )* )
             }
         }
         impl<$T0, $($T, )*> ::core::convert::From<$name<T0, $($T, )*>>

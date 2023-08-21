@@ -10,18 +10,17 @@
 //! Simulates [`pest::iterators`].
 
 use crate::{
-    choices::Choice2,
     predefined_node::{
         AlwaysFail, CharRange, Empty, Insens, Negative, PeekSlice1, PeekSlice2, Positive, Push,
         RepMin, RepMinMax, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK, PEEK_ALL, POP, POP_ALL,
         SOI,
     },
     typed_node::RuleStruct,
-    NeverFailedTypedNode, StringArrayWrapper, StringWrapper, TypedNode,
+    StringArrayWrapper, StringWrapper, TypedNode,
 };
 use alloc::{boxed, collections::VecDeque, string::String, vec, vec::Vec};
 use core::{
-    iter::{self, empty, once, Chain, FlatMap, Iterator, Map},
+    iter::{self, empty, once, Chain, FlatMap, Iterator},
     mem::swap,
 };
 use pest::RuleType;
