@@ -220,7 +220,10 @@ impl<'g> Node<'g> {
             Node::SequenceI(i, inner) => {
                 let (pa, ty) = inner.expand(root, config, from);
                 let i = Index::from(*i);
-                (quote! {{let res = &res.content.#i.matched; #pa}}, quote! {#ty})
+                (
+                    quote! {{let res = &res.content.#i.matched; #pa}},
+                    quote! {#ty},
+                )
             }
             Node::Optional(flatten, inner) => {
                 let (pa, ty) = inner.expand(root, config, from);
@@ -1050,6 +1053,7 @@ fn collect_used_rules<'s>(rules: &'s [OptimizedRule]) -> BTreeSet<&'s str> {
     res
 }
 
+#[allow(dead_code)]
 fn collect_reachability<'g>(rules: &'g [OptimizedRule]) -> BTreeMap<&'g str, BTreeSet<&'g str>> {
     let mut res: BTreeMap<&'g str, BTreeSet<&'g str>> = BTreeMap::new();
     for rule in rules {
@@ -1148,10 +1152,10 @@ pub(crate) fn generate_typed_pair_from_rule(
                         use pest_typed::#module::#generics_i;
                     })
                 }
-                let (life, ign) = if seq {
-                    (quote! {'i,}, quote! {Skipped::<'i>,})
+                let life = if seq {
+                    quote! {'i,}
                 } else {
-                    (quote! {}, quote! {})
+                    quote! {}
                 };
                 let skip_arg = if seq {
                     quote! {const SKIP: usize,}
@@ -1159,7 +1163,9 @@ pub(crate) fn generate_typed_pair_from_rule(
                     quote! {}
                 };
                 if seq {
-                    let args = types.iter().map(|t| quote! {(#pest_typed::predefined_node::Skipped<#t, Skipped<'i>, SKIP>)});
+                    let args = types.iter().map(
+                        |t| quote! {(#pest_typed::predefined_node::Skipped<#t, Skipped<'i>, SKIP>)},
+                    );
                     target.push(quote! {
                         pub type #type_i<#life #(#types, )* #skip_arg> = #generics_i<#(#args, )*>;
                     });

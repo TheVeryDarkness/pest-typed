@@ -23,38 +23,43 @@ macro_rules! choices_helper {
         /// Choices.
         /// - `Ret`: Return value type.
         /// - `...`: Choices branches.
-        pub struct $v0<'n, Ret, $_V0, $($_V, )*> {
-            pub(super) result: ::core::result::Result<Ret, &'n super::$name<$_V0, $($_V, )*>>,
+        pub enum $v0<Ret, $V0, $V1, $($V, )*> {
+            $v0($V0),
+            $v1($V1),
+            $(
+                $v($V),
+            )*
+            Res(Ret),
         }
 
-        impl<'n, Ret, $_V0, $($_V, )*> $pest_typed::choices::NextChoice for $v0<'n, Ret, $_V0, $($_V, )* > {
-            type Next = $v1<'n, Ret, $_V0, $($_V, )* >;
+        impl<Ret, $V0, $V1, $($V, )*> $pest_typed::choices::NextChoice for $v0<Ret, $V0, $V1, $($V, )*> {
+            type Next = $v1<Ret, $V1, $($V, )*>;
         }
-        impl<'n, Ret, $_V0, $($_V, )*> $v0<'n, Ret, $_V0, $($_V, )* >
+        impl<Ret, $V0, $V1, $($V, )*> $v0<Ret, $V0, $V1, $($V, )*>
         {
-            pub fn else_if(self, f: impl FnOnce(&$V0) -> Ret) -> <Self as $pest_typed::choices::NextChoice>::Next {
-                match self.result {
-                    Err(super::$name::$v0(matched)) => {
-                        let result: Ret = f(matched);
-                        $v1 { result: Ok(result) }
-                    }
-                    Err(choices) => $v1 { result: Err(choices) },
-                    Ok(ret) => $v1 { result: Ok(ret) },
+            pub fn else_if(self, f: impl FnOnce($V0) -> Ret) -> <Self as $pest_typed::choices::NextChoice>::Next {
+                match self {
+                    Self::$v0(c) => $v1::Res(f(c)),
+                    Self::$v1(c) => $v1::$v1(c),
+                    $(
+                        Self::$v(c) => $v1::$v(c),
+                    )*
+                    Self::Res(res) => $v1::Res(res),
                 }
             }
         }
         $crate::choices_helper!($pest_typed, $name, ($_V0, $_v0, $( $_V, $_v, )* ), $V1, $v1, $( $V, $v, )* );
     };
     ($pest_typed:ident, $name:ident, ($_V0:ident, $_v0:tt, $( $_V:ident, $_v:tt, )* ), $V0:ident, $v0:tt, ) => {
-        pub struct $v0<'n, Ret, $_V0, $($_V, )*> {
-            pub(super) result: ::core::result::Result<Ret, &'n super::$name<$_V0, $($_V, )*>>,
+        pub enum $v0<Ret, $V0> {
+            $v0($V0),
+            Res(Ret),
         }
-        impl<'n, Ret, $_V0, $($_V, )*> $v0<'n, Ret, $_V0, $($_V, )* > {
-            pub fn else_then(self, f: impl FnOnce(&'n $V0) -> Ret) -> Ret {
-                match self.result {
-                    Err(super::$name::$v0(matched)) => f(matched),
-                    Err(_) => ::core::unreachable!(),
-                    Ok(ret) => ret,
+        impl<Ret, $V0> $v0<Ret, $V0> {
+            pub fn else_then(self, f: impl FnOnce($V0) -> Ret) -> Ret {
+                match self {
+                    Self::$v0(c) => f(c),
+                    Self::Res(res) => res,
                 }
             }
         }
@@ -106,10 +111,27 @@ macro_rules! choices {
                 )*
             }
             impl<$V0, $($V, )* > $name<$V0, $($V, )* > {
+                /// Traverse all branches with reference.
+                pub fn reference<'n, Ret>(&'n self) -> helper::$v0<Ret, &'n $V0, $(&'n $V, )*> {
+                    match self {
+                        Self::$v0(c) => helper::$v0::$v0(c),
+                        $(
+                            Self::$v(c) => helper::$v0::$v(c),
+                        )*
+                    }
+                }
                 /// Invoke if is not None and is the first case.
-                pub fn if_then<'n, Ret>(&'n self, f: impl FnOnce(&$V0) -> Ret) -> <helper::$v0<'n, Ret, $V0, $($V, )* > as $crate::choices::NextChoice>::Next {
-                    let helper = helper::$v0 { result: Err(self) };
-                    helper.else_if(f)
+                pub fn if_then<'n, Ret>(&'n self, f: impl FnOnce(&'n $V0) -> Ret) -> <helper::$v0<Ret, &'n $V0, $(&'n $V, )* > as $crate::choices::NextChoice>::Next {
+                    self.reference().else_if(f)
+                }
+                /// Traverse all branches with reference.
+                pub fn consume<Ret>(self) -> helper::$v0<Ret, $V0, $($V, )*> {
+                    match self {
+                        Self::$v0(c) => helper::$v0::$v0(c),
+                        $(
+                            Self::$v(c) => helper::$v0::$v(c),
+                        )*
+                    }
                 }
                 /// Access inner node if matched.
                 pub fn $v0(&self) -> ::core::option::Option<&$V0> {
