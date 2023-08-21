@@ -68,14 +68,14 @@ mod tests {
         Rule,
         Rule::Foo,
         Str::<Foo>,
-        Ignore::<'i>
+        RepMin<Choice2<WHITESPACE<'i>, COMMENT<'i>>, 0>
     );
     rule_eoi!(EOI, Rule);
 
     #[test]
     fn string() {
-        assert_eq!(<StrFoo<'_> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
-        let s = StrFoo::parse("foo").unwrap();
+        assert_eq!(<StrFoo<'_, 0> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
+        let s = StrFoo::<'static, 0>::parse("foo").unwrap();
         assert_eq!(s.content.get_content(), "foo");
         assert_eq!(
             format!("{:?}", s),
@@ -85,19 +85,18 @@ mod tests {
 
     #[test]
     fn range() {
-        let whitespace = WHITESPACE::parse(" ").unwrap();
+        let whitespace = WHITESPACE::<'_, 0>::parse(" ").unwrap();
         assert_eq!(
             format!("{:?}", whitespace),
             "WHITESPACE { span: Span { str: \" \", start: 0, end: 1 } }"
         );
-        let comment = COMMENT::parse("\t").unwrap();
+        let comment = COMMENT::<'_, 0>::parse("\t").unwrap();
         assert_eq!(
             format!("{:?}", comment),
             "COMMENT { content: CharRange { content: '\\t' }, span: Span { str: \"\\t\", start: 0, end: 1 } }"
         );
     }
-
-    type Ignore<'i> = Skipped<COMMENT<'i>, WHITESPACE<'i>>;
+    type Ignore<'i> = RepMin<Choice2<WHITESPACE<'i>, COMMENT<'i>>, 0>;
 
     #[test]
     fn ignore() {
@@ -107,14 +106,14 @@ mod tests {
             Rule,
             Rule::RepFoo,
             Ignore<'i>,
-            Ignore<'i>
+            Empty<'i>
         );
-        tmp::parse(" \t  ").unwrap();
+        tmp::<0>::parse(" \t  ").unwrap();
     }
 
     #[test]
     fn repetition() {
-        type REP<'i> = Rep<StrFoo<'i>, Ignore<'i>>;
+        type REP<'i> = Rep<StrFoo<'i, 0>, Ignore<'i>, 1>;
         non_atomic_rule!(
             R,
             "Repetion of [StrFoo].",
@@ -127,11 +126,11 @@ mod tests {
         let rep1 = R::parse("foofoofoo").unwrap();
         let rep2 = R::parse("foo foo foo").unwrap();
         let rep3 = R::parse("foo foo\tfoo").unwrap();
-        let _ = R::parse("").unwrap();
+        let _ = R::<0>::parse("").unwrap();
         assert_ne!(rep1, rep2);
         assert_ne!(rep1, rep3);
 
-        let format = |rep: &R<'_>| -> String {
+        let format = |rep: &R<'_, 1>| -> String {
             rep.iter_matched()
                 .map(|e| e.get_content())
                 .collect::<Vec<_>>()
@@ -157,12 +156,12 @@ mod tests {
         assert_eq!(REP::MIN, 0);
         assert_eq!(rep1.deref().get_min_len(), 0);
         assert_eq!(rep1.deref().get_max_len(), usize::MAX);
-        assert_eq!(<R<'_> as TypeWrapper>::Inner::MIN, 0);
+        assert_eq!(<R<'_, 0> as TypeWrapper>::Inner::MIN, 0);
     }
 
     #[test]
     fn repetition_at_least_once() {
-        type REP<'i> = RepOnce<Insens<'i, Foo>, Ignore<'i>>;
+        type REP<'i> = RepOnce<Insens<'i, Foo>, Ignore<'i>, 1>;
         non_atomic_rule!(
             R,
             "Repetion of [StrFoo].",
@@ -180,7 +179,7 @@ mod tests {
         assert_ne!(rep1, rep3);
         assert_ne!(rep1, rep4);
 
-        let collect = |r: &R<'_>| {
+        let collect = |r: &R<'_, 1>| {
             r.iter_matched()
                 .map(|r| r.get_content())
                 .collect::<Vec<_>>()
@@ -213,7 +212,7 @@ mod tests {
         assert_eq!(REP::MIN, 1);
         assert_eq!(rep1.deref().get_min_len(), 1);
         assert_eq!(rep1.deref().get_max_len(), usize::MAX);
-        assert_eq!(<R<'_> as TypeWrapper>::Inner::MIN, 1);
+        assert_eq!(<R<'_, 0> as TypeWrapper>::Inner::MIN, 1);
     }
 
     #[test]
@@ -228,11 +227,11 @@ mod tests {
             "Quoted string.",
             Rule,
             Rule::String,
-            Seq2<Skip<'i, NewLine>, NEWLINE, Ignore<'i>>
+            Seq2<Skip<'i, NewLine>, NEWLINE>
         );
 
-        let s1 = QuotedString::parse("2\r\n").unwrap();
-        let s2 = QuotedString::parse("\r\n").unwrap();
+        let s1 = QuotedString::<1>::parse("2\r\n").unwrap();
+        let s2 = QuotedString::<1>::parse("\r\n").unwrap();
         assert_ne!(s1, s2);
 
         let new_line = NewLine;
@@ -248,8 +247,8 @@ mod tests {
             Rule::Foo,
             SkipChar<'i, 3>
         );
-        three::parse("foo").unwrap();
-        three::parse("foobar").unwrap_err();
+        three::<1>::parse("foo").unwrap();
+        three::<1>::parse("foobar").unwrap_err();
     }
 
     #[test]
@@ -261,14 +260,13 @@ mod tests {
             Rule,
             Rule::Life,
             Seq3<
-                Quote<'i>,
-                Positive<Seq2<ANY, Negative<Quote<'i>>, Ignore<'i>>>,
-                Rep<CharRange<'a', 'z'>, Ignore<'i>>,
-                Ignore<'i>,
+                Quote<'i, 0>,
+                Positive<Seq2<ANY, Negative<Quote<'i, 0>>>>,
+                Rep<CharRange<'a', 'z'>, Ignore<'i>, 0>,
             >
         );
 
-        let l = Lifetime::parse("'i").unwrap();
+        let l = Lifetime::<1>::parse("'i").unwrap();
         let (quote, peeked, name) = l.as_ref();
         assert_eq!(quote.span.as_str(), "'");
         let (any, _) = peeked.as_ref();
@@ -278,7 +276,7 @@ mod tests {
             "i"
         );
 
-        let l = Lifetime::parse("'input").unwrap();
+        let l = Lifetime::<1>::parse("'input").unwrap();
         let (_, peeked, name) = l.as_ref();
         let (any, _) = peeked.as_ref();
         assert_eq!(any.content, 'i');
@@ -287,7 +285,7 @@ mod tests {
             "input"
         );
 
-        Lifetime::parse("'i'").unwrap_err();
+        Lifetime::<1>::parse("'i'").unwrap_err();
     }
 
     #[test]
@@ -307,10 +305,10 @@ mod tests {
             "Any character except \"foo\" or \"bar\".",
             Rule,
             Rule::NotFooBar,
-            Rep<Seq2<Negative<Choice2<Str<StrFoo>, Str<StrBar>>>, ANY, Ignore<'i>>, Ignore<'i>>
+            Rep<Seq2<Negative<Choice2<Str<StrFoo>, Str<StrBar>>>, ANY>, Ignore<'i>, 0>
         );
-        let _ = not_foo_bar::parse("").unwrap();
-        let baz = not_foo_bar::parse("baz").unwrap();
+        let _ = not_foo_bar::<1>::parse("").unwrap();
+        let baz = not_foo_bar::<1>::parse("baz").unwrap();
         for i in baz.iter_matched() {
             let (neg, any) = i.as_ref();
             assert_eq!(
@@ -322,8 +320,8 @@ mod tests {
                 0
             );
         }
-        let _ = not_foo_bar::parse("Foofoo").unwrap_err();
-        let _ = not_foo_bar::parse("bazfoo").unwrap_err();
+        let _ = not_foo_bar::<1>::parse("Foofoo").unwrap_err();
+        let _ = not_foo_bar::<1>::parse("bazfoo").unwrap_err();
     }
 
     #[test]
@@ -333,44 +331,29 @@ mod tests {
             "Repeat previously matched expression 1 to 3 times",
             Rule,
             Rule::RepFoo,
-            Seq2<Push<Insens<'i, Foo>>, RepMinMax<PEEK<'i>, Ignore<'i>, 1, 3>, Ignore<'i>>
+            Seq2<Push<Insens<'i, Foo>>, RepMinMax<PEEK<'i>, 1, 3>>
         );
-        let r = Rep_1_3::parse("foOfoO").unwrap();
+        let r = Rep_1_3::<1>::parse("foOfoO").unwrap();
         assert_eq!(
             format!("{:#?}", r),
             "Rep_1_3 {
     content: Seq2(
-        (
-            Skipped {
-                content: [],
+        Push {
+            content: Insens {
+                content: \"foO\",
             },
-            Push {
-                content: Insens {
-                    content: \"foO\",
+        },
+        RepMinMax {
+            content: [
+                PEEK {
+                    span: Span {
+                        str: \"foO\",
+                        start: 3,
+                        end: 6,
+                    },
                 },
-            },
-        ),
-        (
-            Skipped {
-                content: [],
-            },
-            RepMinMax {
-                content: [
-                    (
-                        Skipped {
-                            content: [],
-                        },
-                        PEEK {
-                            span: Span {
-                                str: \"foO\",
-                                start: 3,
-                                end: 6,
-                            },
-                        },
-                    ),
-                ],
-            },
-        ),
+            ],
+        },
     ),
     span: Span {
         str: \"foOfoO\",
@@ -382,14 +365,14 @@ mod tests {
         let (head, following) = r.as_ref();
         assert_eq!(head.deref().content, "foO");
         assert_eq!(head.get_content(), Foo::CONTENT);
-        for i in following.iter_matched() {
+        for i in following.iter_all() {
             assert_eq!(i.span.as_str(), head.deref().content);
         }
 
-        Rep_1_3::parse("fooFoo").unwrap_err();
-        Rep_1_3::parse("Foo").unwrap_err();
-        Rep_1_3::parse("FooFooFooFooFoo").unwrap_err();
-        let (pos, _) = Rep_1_3::parse_partial("FooFooFooFooFoo").unwrap();
+        Rep_1_3::<1>::parse("fooFoo").unwrap_err();
+        Rep_1_3::<1>::parse("Foo").unwrap_err();
+        Rep_1_3::<1>::parse("FooFooFooFooFoo").unwrap_err();
+        let (pos, _) = Rep_1_3::<1>::parse_partial("FooFooFooFooFoo").unwrap();
         assert_eq!(pos.pos(), 12);
     }
 }

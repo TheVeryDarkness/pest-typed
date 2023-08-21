@@ -41,7 +41,12 @@ fn generated_rules() {
         .arg("use_small_heuristics=Max,max_width=1000")
         .output()
         .unwrap();
-    assert!(output.status.success());
+    assert!(
+        output.status.success(),
+        "STDOUT:\n{}\nSTDERR:\n{}",
+        String::from_utf8(output.stdout).unwrap(),
+        String::from_utf8(output.stderr).unwrap(),
+    );
 
     if std::fs::read(path_generated).unwrap() != std::fs::read(path_expected).unwrap() {
         panic!("Generated codes have changed.")
