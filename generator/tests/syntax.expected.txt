@@ -210,7 +210,7 @@ pub mod rules {
                                             .content
                                             .iter()
                                             .map(|res| {
-                                                let res = &res.1;
+                                                let res = &res.matched;
                                                 res
                                             })
                                             .collect::<::pest_typed::re_exported::Vec<_>>();
@@ -232,7 +232,7 @@ pub mod rules {
                                 .content
                                 .iter()
                                 .map(|res| {
-                                    let res = &res.1;
+                                    let res = &res.matched;
                                     res
                                 })
                                 .collect::<::pest_typed::re_exported::Vec<_>>();
@@ -261,7 +261,7 @@ pub mod rules {
                         .content
                         .iter()
                         .map(|res| {
-                            let res = &res.1;
+                            let res = &res.matched;
                             {
                                 let res = &res.content.1.matched;
                                 res
@@ -291,14 +291,12 @@ pub mod rules {
             {
                 let res = &res.content.1.matched;
                 {
-                    let res = res.as_ref().and_then(|res| {
-                        Some({
-                            let res = &res.content.0.matched;
-                            {
-                                let res = &res.content;
-                                res
-                            }
-                        })
+                    let res = res.as_ref().map(|res| {
+                        let res = &res.content.0.matched;
+                        {
+                            let res = &res.content;
+                            res
+                        }
                     });
                     res
                 }
@@ -311,21 +309,19 @@ pub mod rules {
             {
                 let res = &res.content.2.matched;
                 {
-                    let res = res.as_ref().and_then(|res| {
-                        Some({
-                            let res = &res.content.0.matched;
-                            {
-                                let res = res
-                                    .content
-                                    .iter()
-                                    .map(|res| {
-                                        let res = &res.1;
-                                        res
-                                    })
-                                    .collect::<::pest_typed::re_exported::Vec<_>>();
-                                res
-                            }
-                        })
+                    let res = res.as_ref().map(|res| {
+                        let res = &res.content.0.matched;
+                        {
+                            let res = res
+                                .content
+                                .iter()
+                                .map(|res| {
+                                    let res = &res.matched;
+                                    res
+                                })
+                                .collect::<::pest_typed::re_exported::Vec<_>>();
+                            res
+                        }
                     });
                     res
                 }
@@ -338,30 +334,28 @@ pub mod rules {
             {
                 let res = &res.content.2.matched;
                 {
-                    let res = res.as_ref().and_then(|res| {
-                        Some({
-                            let res = (
+                    let res = res.as_ref().map(|res| {
+                        let res = (
+                            {
+                                let res = &res.content.1.matched;
+                                res
+                            },
+                            {
+                                let res = &res.content.2.matched;
                                 {
-                                    let res = &res.content.1.matched;
+                                    let res = res
+                                        .content
+                                        .iter()
+                                        .map(|res| {
+                                            let res = &res.matched;
+                                            res
+                                        })
+                                        .collect::<::pest_typed::re_exported::Vec<_>>();
                                     res
-                                },
-                                {
-                                    let res = &res.content.2.matched;
-                                    {
-                                        let res = res
-                                            .content
-                                            .iter()
-                                            .map(|res| {
-                                                let res = &res.1;
-                                                res
-                                            })
-                                            .collect::<::pest_typed::re_exported::Vec<_>>();
-                                        res
-                                    }
-                                },
-                            );
-                            res
-                        })
+                                }
+                            },
+                        );
+                        res
                     });
                     res
                 }
@@ -374,14 +368,12 @@ pub mod rules {
             {
                 let res = &res.content.1.matched;
                 {
-                    let res = res.as_ref().and_then(|res| {
-                        Some({
-                            let res = &res.content.1.matched;
-                            {
-                                let res = &res.content;
-                                res
-                            }
-                        })
+                    let res = res.as_ref().map(|res| {
+                        let res = &res.content.1.matched;
+                        {
+                            let res = &res.content;
+                            res
+                        }
                     });
                     res
                 }
@@ -410,7 +402,7 @@ pub mod rules {
                                 .content
                                 .iter()
                                 .map(|res| {
-                                    let res = &res.1;
+                                    let res = &res.matched;
                                     {
                                         let res = &res.content.1.matched;
                                         res
@@ -433,14 +425,12 @@ pub mod rules {
                 {
                     let res = res
                         .as_ref()
-                        .and_then(|res| {
-                            Some({
-                                let res = &res.content.0.matched;
-                                {
-                                    let res = res.as_ref().and_then(|res| Some(res));
-                                    res
-                                }
-                            })
+                        .map(|res| {
+                            let res = &res.content.0.matched;
+                            {
+                                let res = res.as_ref().map(|res| res);
+                                res
+                            }
                         })
                         .flatten();
                     res
@@ -454,33 +444,31 @@ pub mod rules {
             {
                 let res = &res.content.0.matched;
                 {
-                    let res = res.as_ref().and_then(|res| {
-                        Some({
-                            let res = &res.content.1.matched;
-                            {
-                                let res = (
+                    let res = res.as_ref().map(|res| {
+                        let res = &res.content.1.matched;
+                        {
+                            let res = (
+                                {
+                                    let res = &res.content.0.matched;
+                                    res
+                                },
+                                {
+                                    let res = &res.content.1.matched;
                                     {
-                                        let res = &res.content.0.matched;
+                                        let res = res
+                                            .content
+                                            .iter()
+                                            .map(|res| {
+                                                let res = &res.matched;
+                                                res
+                                            })
+                                            .collect::<::pest_typed::re_exported::Vec<_>>();
                                         res
-                                    },
-                                    {
-                                        let res = &res.content.1.matched;
-                                        {
-                                            let res = res
-                                                .content
-                                                .iter()
-                                                .map(|res| {
-                                                    let res = &res.1;
-                                                    res
-                                                })
-                                                .collect::<::pest_typed::re_exported::Vec<_>>();
-                                            res
-                                        }
-                                    },
-                                );
-                                res
-                            }
-                        })
+                                    }
+                                },
+                            );
+                            res
+                        }
                     });
                     res
                 }
@@ -493,21 +481,19 @@ pub mod rules {
             {
                 let res = &res.content.0.matched;
                 {
-                    let res = res.as_ref().and_then(|res| {
-                        Some({
-                            let res = &res.content.2.matched;
-                            {
-                                let res = res
-                                    .content
-                                    .iter()
-                                    .map(|res| {
-                                        let res = &res.1;
-                                        res
-                                    })
-                                    .collect::<::pest_typed::re_exported::Vec<_>>();
-                                res
-                            }
-                        })
+                    let res = res.as_ref().map(|res| {
+                        let res = &res.content.2.matched;
+                        {
+                            let res = res
+                                .content
+                                .iter()
+                                .map(|res| {
+                                    let res = &res.matched;
+                                    res
+                                })
+                                .collect::<::pest_typed::re_exported::Vec<_>>();
+                            res
+                        }
                     });
                     res
                 }
@@ -538,11 +524,9 @@ pub mod rules {
         pub fn r#Choice<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::rules::r#Choice<'i, INHERITED>> {
             let res = &self.content;
             {
-                let res = res._2().and_then(|res| {
-                    Some({
-                        let res = &res.content.1.matched;
-                        res
-                    })
+                let res = res._2().map(|res| {
+                    let res = &res.content.1.matched;
+                    res
                 });
                 res
             }
@@ -552,7 +536,7 @@ pub mod rules {
         pub fn r#Drop<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::rules::r#Drop<'i, INHERITED>> {
             let res = &self.content;
             {
-                let res = res._7().and_then(|res| Some(res));
+                let res = res._7().map(|res| res);
                 res
             }
         }
@@ -561,11 +545,9 @@ pub mod rules {
         pub fn r#Opt<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::rules::r#Opt<'i, INHERITED>> {
             let res = &self.content;
             {
-                let res = res._2().and_then(|res| {
-                    Some({
-                        let res = &res.content.3.matched;
-                        res
-                    })
+                let res = res._2().map(|res| {
+                    let res = &res.content.3.matched;
+                    res
                 });
                 res
             }
@@ -575,7 +557,7 @@ pub mod rules {
         pub fn r#Peek<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::rules::r#Peek<'i, INHERITED>> {
             let res = &self.content;
             {
-                let res = res._3().and_then(|res| Some(res));
+                let res = res._3().map(|res| res);
                 res
             }
         }
@@ -584,7 +566,7 @@ pub mod rules {
         pub fn r#PeekAll<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::rules::r#PeekAll<'i, INHERITED>> {
             let res = &self.content;
             {
-                let res = res._8().and_then(|res| Some(res));
+                let res = res._8().map(|res| res);
                 res
             }
         }
@@ -593,7 +575,7 @@ pub mod rules {
         pub fn r#PeekLeft<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::rules::r#PeekLeft<'i, INHERITED>> {
             let res = &self.content;
             {
-                let res = res._4().and_then(|res| Some(res));
+                let res = res._4().map(|res| res);
                 res
             }
         }
@@ -602,7 +584,7 @@ pub mod rules {
         pub fn r#PeekLeftRight<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::rules::r#PeekLeftRight<'i, INHERITED>> {
             let res = &self.content;
             {
-                let res = res._6().and_then(|res| Some(res));
+                let res = res._6().map(|res| res);
                 res
             }
         }
@@ -611,7 +593,7 @@ pub mod rules {
         pub fn r#PeekRight<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::rules::r#PeekRight<'i, INHERITED>> {
             let res = &self.content;
             {
-                let res = res._5().and_then(|res| Some(res));
+                let res = res._5().map(|res| res);
                 res
             }
         }
@@ -620,11 +602,9 @@ pub mod rules {
         pub fn r#Rep<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::rules::r#Rep<'i, INHERITED>> {
             let res = &self.content;
             {
-                let res = res._2().and_then(|res| {
-                    Some({
-                        let res = &res.content.2.matched;
-                        res
-                    })
+                let res = res._2().map(|res| {
+                    let res = &res.content.2.matched;
+                    res
                 });
                 res
             }
@@ -634,11 +614,9 @@ pub mod rules {
         pub fn r#RepAtLeastOnce<'s>(&'s self) -> ::pest_typed::re_exported::Option<&'s super::rules::r#RepAtLeastOnce<'i, INHERITED>> {
             let res = &self.content;
             {
-                let res = res._1().and_then(|res| {
-                    Some({
-                        let res = &res.content.1.matched;
-                        res
-                    })
+                let res = res._1().map(|res| {
+                    let res = &res.content.1.matched;
+                    res
                 });
                 res
             }
@@ -694,7 +672,7 @@ pub mod rules {
                                 .content
                                 .iter()
                                 .map(|res| {
-                                    let res = &res.1;
+                                    let res = &res.matched;
                                     res
                                 })
                                 .collect::<::pest_typed::re_exported::Vec<_>>();
@@ -717,14 +695,14 @@ pub mod rules {
                     {
                         let res = &res.content.0.matched;
                         {
-                            let res = res.as_ref().and_then(|res| Some(res));
+                            let res = res.as_ref().map(|res| res);
                             res
                         }
                     },
                     {
                         let res = &res.content.1.matched;
                         {
-                            let res = res.as_ref().and_then(|res| Some(res));
+                            let res = res.as_ref().map(|res| res);
                             res
                         }
                     },
@@ -748,7 +726,7 @@ pub mod rules {
                     {
                         let res = &res.content.1.matched;
                         {
-                            let res = res.as_ref().and_then(|res| Some(res));
+                            let res = res.as_ref().map(|res| res);
                             res
                         }
                     },
@@ -778,14 +756,14 @@ pub mod rules {
                         {
                             let res = &res.content.3.matched;
                             {
-                                let res = res.as_ref().and_then(|res| Some(res));
+                                let res = res.as_ref().map(|res| res);
                                 res
                             }
                         },
                         {
                             let res = &res.content.4.matched;
                             {
-                                let res = res.as_ref().and_then(|res| Some(res));
+                                let res = res.as_ref().map(|res| res);
                                 res
                             }
                         },
@@ -832,7 +810,7 @@ pub mod rules {
                                         .content
                                         .iter()
                                         .map(|res| {
-                                            let res = &res.1;
+                                            let res = &res.matched;
                                             res
                                         })
                                         .collect::<::pest_typed::re_exported::Vec<_>>();
@@ -915,7 +893,7 @@ pub mod rules {
                             .content
                             .iter()
                             .map(|res| {
-                                let res = &res.1;
+                                let res = &res.matched;
                                 res
                             })
                             .collect::<::pest_typed::re_exported::Vec<_>>();

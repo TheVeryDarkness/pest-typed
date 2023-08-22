@@ -103,10 +103,10 @@ macro_rules! choices {
             #[doc = ::core::stringify!(Match one of $number expressions.)]
             #[derive(Clone, PartialEq)]
             pub enum $name<$V0, $($V, )* > {
-                #[doc = ::core::stringify!(Variant $v0 for choice $V0.)]
+                #[doc = ::core::stringify!(Variant $v0.)]
                 $v0($V0),
                 $(
-                    #[doc = ::core::stringify!(Variant $v for choice $V.)]
+                    #[doc = ::core::stringify!(Variant $v.)]
                     $v($V),
                 )*
             }
@@ -132,6 +132,10 @@ macro_rules! choices {
                             Self::$v(c) => helper::$v0::$v(c),
                         )*
                     }
+                }
+                /// Invoke if is not None and is the first case.
+                pub fn consume_if_then<Ret>(self, f: impl FnOnce($V0) -> Ret) -> <helper::$v0<Ret, $V0, $($V, )* > as $crate::choices::NextChoice>::Next {
+                    self.consume().else_if(f)
                 }
                 /// Access inner node if matched.
                 pub fn $v0(&self) -> ::core::option::Option<&$V0> {

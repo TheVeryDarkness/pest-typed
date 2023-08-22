@@ -86,7 +86,7 @@ enum Node<'g> {
     /// - Path: `.content.deref()`
     Rule(&'g str, bool, bool),
     /// - Type: `&#ident`
-    /// - Path: ``
+    /// - Path: `.content`
     #[cfg(feature = "grammar-extras")]
     Tag(&'g str),
     // Type remained.
@@ -94,18 +94,18 @@ enum Node<'g> {
     /// - Path: `.content`
     Content(Box<Self>),
     /// - Type: `#inner`
-    /// - Path: `.content.#index.1`
+    /// - Path: `.content.#index.matched`
     SequenceI(usize, Box<Self>),
     // Type wrapped by Option.
     /// - Type: `#opt::<#inner>`
     /// - Path: `._#index().and_then(|res| Some(#inner)) #flat`
     ChoiceI(usize, bool, Box<Self>),
-    /// - Type: `#option::<#inner>`
+    /// - Type: `#opt::<#inner>`
     /// - Path: `.as_ref().and_then(|res| Some(#inner)) #flat`
     Optional(bool, Box<Self>),
     // Type wrapped by Vec.
     /// - Type: `#vec::<#inner>`
-    /// - Path: `.content.iter().map(|res| {let res = res.1; #inner}).collect::<#vec<_>>()`
+    /// - Path: `.content.iter().map(|res| {let res = res.matched; #inner}).collect::<#vec<_>>()`
     Contents(Box<Self>),
     // Type wrapped by tuple.
     /// - Type: `(#(#inner),*)`
@@ -229,7 +229,7 @@ impl<'g> Node<'g> {
                 let (pa, ty) = inner.expand(root, config, from);
                 let flat = flat(flatten);
                 (
-                    quote! {{let res = res.as_ref().and_then(|res| Some(#pa)) #flat; res}},
+                    quote! {{let res = res.as_ref().map(|res| #pa) #flat; res}},
                     opt(flatten, ty),
                 )
             }
@@ -238,14 +238,14 @@ impl<'g> Node<'g> {
                 let func = format_ident!("_{}", index);
                 let flat = flat(flatten);
                 (
-                    quote! {{let res = res.#func().and_then(|res| Some(#pa)) #flat; res}},
+                    quote! {{let res = res.#func().map(|res| #pa) #flat; res}},
                     opt(flatten, ty),
                 )
             }
             Node::Contents(inner) => {
                 let (pa, ty) = inner.expand(root, config, from);
                 (
-                    quote! {{let res = res.content.iter().map(|res| { let res = &res.1; #pa }).collect::<#vec<_>>(); res}},
+                    quote! {{let res = res.content.iter().map(|res| { let res = &res.matched; #pa }).collect::<#vec<_>>(); res}},
                     quote! {#vec::<#ty>},
                 )
             }

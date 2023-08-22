@@ -70,19 +70,34 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const MIN: usize> TypedNode<'i, R> fo
         Ok((input, Self { content: vec }))
     }
 }
-impl<T, IGNORED, const SKIP: usize, const MIN: usize> RepMin<([IGNORED; SKIP], T), MIN> {
-    /// Returns an iterator over all matched expressions.
+impl<T, IGNORED, const SKIP: usize, const MIN: usize> RepMin<Skipped<T, IGNORED, SKIP>, MIN> {
+    /// Returns an iterator over all matched expressions by reference.
     pub fn iter_matched<'n>(
         &'n self,
     ) -> core::iter::Map<
-        alloc::slice::Iter<'n, ([IGNORED; SKIP], T)>,
-        fn(&'n ([IGNORED; SKIP], T)) -> &'n T,
+        alloc::slice::Iter<'n, Skipped<T, IGNORED, SKIP>>,
+        fn(&'n Skipped<T, IGNORED, SKIP>) -> &'n T,
     > {
-        self.content.iter().map(|(_, e)| e)
+        self.content.iter().map(|s| &s.matched)
     }
-    /// Returns an iterator over all skipped or matched expressions.
-    pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, ([IGNORED; SKIP], T)> {
+    /// Returns an iterator over all matched expressions by value.
+    pub fn into_iter_matched<'n>(
+        self,
+    ) -> core::iter::Map<
+        alloc::vec::IntoIter<Skipped<T, IGNORED, SKIP>>,
+        fn(Skipped<T, IGNORED, SKIP>) -> T,
+    > {
+        self.content.into_iter().map(|s| s.matched)
+    }
+}
+impl<T, const MIN: usize> RepMin<T, MIN> {
+    /// Returns an iterator over all skipped or matched expressions by reference.
+    pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, T> {
         self.content.iter()
+    }
+    /// Returns an iterator over all skipped or matched expressions by value.
+    pub fn into_iter_all(self) -> alloc::vec::IntoIter<T> {
+        self.content.into_iter()
     }
 }
 impl<T: Clone + PartialEq, const MIN: usize> BoundWrapper for RepMin<T, MIN> {
@@ -162,7 +177,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const MIN: usize, const MAX: usize> T
 impl<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize>
     RepMinMax<Skipped<T, IGNORED, SKIP>, MIN, MAX>
 {
-    /// Returns an iterator over all matched expressions.
+    /// Returns an iterator over all matched expressions by reference.
     pub fn iter_matched<'n>(
         &'n self,
     ) -> core::iter::Map<
@@ -171,11 +186,24 @@ impl<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize>
     > {
         self.content.iter().map(|s| &s.matched)
     }
+    /// Returns an iterator over all matched expressions by value.
+    pub fn into_iter_matched<'n>(
+        self,
+    ) -> core::iter::Map<
+        alloc::vec::IntoIter<Skipped<T, IGNORED, SKIP>>,
+        fn(Skipped<T, IGNORED, SKIP>) -> T,
+    > {
+        self.content.into_iter().map(|s| s.matched)
+    }
 }
 impl<T, const MIN: usize, const MAX: usize> RepMinMax<T, MIN, MAX> {
-    /// Returns an iterator over all skipped or matched expressions.
+    /// Returns an iterator over all skipped or matched expressions by reference.
     pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, T> {
         self.content.iter()
+    }
+    /// Returns an iterator over all skipped or matched expressions by value.
+    pub fn into_iter_all(self) -> alloc::vec::IntoIter<T> {
+        self.content.into_iter()
     }
 }
 impl<T: Clone + PartialEq, const MIN: usize, const MAX: usize> BoundWrapper
@@ -186,6 +214,6 @@ impl<T: Clone + PartialEq, const MIN: usize, const MAX: usize> BoundWrapper
 }
 
 /// Repeat arbitrary times.
-pub type Rep<T, IGNORED, const SKIP: usize> = RepMin<([IGNORED; SKIP], T), 0>;
+pub type Rep<T, IGNORED, const SKIP: usize> = RepMin<Skipped<T, IGNORED, SKIP>, 0>;
 /// Repeat at least one times.
-pub type RepOnce<T, IGNORED, const SKIP: usize> = RepMin<([IGNORED; SKIP], T), 1>;
+pub type RepOnce<T, IGNORED, const SKIP: usize> = RepMin<Skipped<T, IGNORED, SKIP>, 1>;

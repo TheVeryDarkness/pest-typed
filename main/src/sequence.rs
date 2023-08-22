@@ -132,9 +132,27 @@ macro_rules! seq {
             }
         }
         impl<$T0, $($T),*, const SKIP: usize, IGNORED> $name<$pest_typed::predefined_node::Skipped<$T0, IGNORED, SKIP>, $($pest_typed::predefined_node::Skipped<$T, IGNORED, SKIP>, )*> {
-            /// Convert the reference of a sequence into a tuple of references of elements.
+            /// Convert the reference of a sequence into a tuple of references of matched elements.
             pub fn as_ref(&self) -> ( &$T0, $(&$T, )* ) {
+                self.get_matched()
+            }
+            /// Convert the reference of a sequence into a tuple of references of matched elements.
+            pub fn get_matched(&self) -> ( &$T0, $(&$T, )* ) {
                 ( &self.content.$t0.matched, $(&self.content.$t.matched, )* )
+            }
+            /// Convert a sequence into a tuple of matched elements.
+            pub fn into_matched(self) -> ( $T0, $($T, )* ) {
+                ( self.content.$t0.matched, $(self.content.$t.matched, )* )
+            }
+        }
+        impl<$T0, $($T, )*> $name<T0, $($T, )*> {
+            /// Convert the reference of a sequence into a tuple of references of skipped and matched elements.
+            pub fn get_all(&self) -> ( &$T0, $(&$T, )* ) {
+                ( &self.content.$t0, $(&self.content.$t, )* )
+            }
+            /// Convert a sequence into a tuple of skipped and matched elements.
+            pub fn into_all(self) -> ( $T0, $($T, )* ) {
+                ( self.content.$t0, $(self.content.$t, )* )
             }
         }
         impl<$T0, $($T, )*> ::core::convert::AsRef<( $T0, $($T, )* )> for $name<T0, $($T, )*> {
