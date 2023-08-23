@@ -75,7 +75,7 @@ mod tests {
     #[test]
     fn string() {
         assert_eq!(<StrFoo<'_, 0> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
-        let s = StrFoo::<'static, 0>::parse("foo").unwrap();
+        let s = StrFoo::parse("foo").unwrap();
         assert_eq!(s.content.get_content(), "foo");
         assert_eq!(
             format!("{:?}", s),
@@ -85,12 +85,12 @@ mod tests {
 
     #[test]
     fn range() {
-        let whitespace = WHITESPACE::<'_, 0>::parse(" ").unwrap();
+        let whitespace = WHITESPACE::parse(" ").unwrap();
         assert_eq!(
             format!("{:?}", whitespace),
             "WHITESPACE { span: Span { str: \" \", start: 0, end: 1 } }"
         );
-        let comment = COMMENT::<'_, 0>::parse("\t").unwrap();
+        let comment = COMMENT::parse("\t").unwrap();
         assert_eq!(
             format!("{:?}", comment),
             "COMMENT { content: CharRange { content: '\\t' }, span: Span { str: \"\\t\", start: 0, end: 1 } }"
@@ -108,7 +108,7 @@ mod tests {
             Ignore<'i>,
             Empty<'i>
         );
-        tmp::<0>::parse(" \t  ").unwrap();
+        tmp::parse(" \t  ").unwrap();
     }
 
     #[test]
@@ -126,7 +126,7 @@ mod tests {
         let rep1 = R::parse("foofoofoo").unwrap();
         let rep2 = R::parse("foo foo foo").unwrap();
         let rep3 = R::parse("foo foo\tfoo").unwrap();
-        let _ = R::<0>::parse("").unwrap();
+        let _ = R::parse("").unwrap();
         assert_ne!(rep1, rep2);
         assert_ne!(rep1, rep3);
 
@@ -369,10 +369,10 @@ mod tests {
             assert_eq!(i.span.as_str(), head.deref().content);
         }
 
-        Rep_1_3::<1>::parse("fooFoo").unwrap_err();
-        Rep_1_3::<1>::parse("Foo").unwrap_err();
-        Rep_1_3::<1>::parse("FooFooFooFooFoo").unwrap_err();
-        let (pos, _) = Rep_1_3::<1>::parse_partial("FooFooFooFooFoo").unwrap();
+        Rep_1_3::parse("fooFoo").unwrap_err();
+        Rep_1_3::parse("Foo").unwrap_err();
+        Rep_1_3::parse("FooFooFooFooFoo").unwrap_err();
+        let (pos, _) = Rep_1_3::parse_partial("FooFooFooFooFoo").unwrap();
         assert_eq!(pos.pos(), 12);
     }
 }

@@ -280,9 +280,7 @@ macro_rules! impl_pair {
 #[macro_export]
 macro_rules! impl_parse {
     ($name:ident, $Rule:ty, $ignored:ty, true) => {
-        impl<'i, const INHERITED: ::core::primitive::usize>
-            ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i, INHERITED>
-        {
+        impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i, 1> {
             #[inline]
             fn parse(
                 input: &'i ::core::primitive::str,
@@ -292,9 +290,7 @@ macro_rules! impl_parse {
         }
     };
     ($name:ident, $Rule:ty, $ignored:ty, $non_true:tt) => {
-        impl<'i, const INHERITED: ::core::primitive::usize>
-            ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i, INHERITED>
-        {
+        impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i, 1> {
             #[inline]
             fn parse(
                 input: &'i ::core::primitive::str,

@@ -410,37 +410,40 @@ struct RuleConfig<'g> {
     pub rule_id: Ident,
     #[allow(dead_code)]
     pub rule_name: &'g str,
+    pub rule_desc: String,
     pub rule_doc: Option<&'g str>,
     pub defined: &'g BTreeSet<&'g str>,
     pub builtins_without_lifetime: &'g BTreeSet<&'g str>,
 }
-impl<'g> RuleConfig<'g> {}
+impl<'g> RuleConfig<'g> {
+    fn get_doc<'s>(&'s self) -> impl Iterator<Item = &'s str>
+    where
+        'g: 's,
+    {
+        use core::iter::once;
+        once(self.rule_desc.as_str())
+            .chain(once(""))
+            .chain(self.rule_doc.iter().cloned())
+    }
+}
 
 fn rule<'g, 'f>(
     rule_config: &RuleConfig<'g>,
     type_name: &TokenStream,
-    doc: &String,
     accessers: &Accesser<'g>,
     emission: Emission,
 ) -> TokenStream {
     let root = quote! {super};
     let _bool = _bool();
-    let atomicity_doc = match rule_config.atomicity {
-        Some(true) => "Atomic rule.",
-        Some(false) => "Non-atomic rule.",
-        None => "Normal rule.",
-    };
     let accessers = match emission {
         Emission::Both => accessers.collect(&root, rule_config, AccessFrom::Rule),
         Emission::Expression | Emission::Span => quote! {},
     };
-    let docs = [doc, atomicity_doc];
     fn create<'g>(
         rule_config: &RuleConfig<'g>,
         accesser_impl: TokenStream,
         inner_type: &TokenStream,
         emission: Emission,
-        docs: impl Iterator<Item = &'g str>,
     ) -> TokenStream {
         let root = quote! {super};
         let pest_typed = pest_typed();
@@ -450,6 +453,7 @@ fn rule<'g, 'f>(
             Some(false) => quote! {false},
             None => quote! {INHERITED},
         };
+        let docs = rule_config.get_doc();
         let ignore = ignore(&root);
         quote! {
             #pest_typed::rule!(#name, #(#docs)*, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission);
@@ -458,24 +462,7 @@ fn rule<'g, 'f>(
             }
         }
     }
-    match rule_config.rule_doc {
-        Some(rule_doc) => create(
-            rule_config,
-            accessers,
-            type_name,
-            emission,
-            docs.into_iter()
-                .chain(std::iter::once(""))
-                .chain(std::iter::once(rule_doc)),
-        ),
-        None => create(
-            rule_config,
-            accessers,
-            type_name,
-            emission,
-            docs.into_iter(),
-        ),
-    }
+    create(rule_config, accessers, type_name, emission)
 }
 
 struct Output {
@@ -600,7 +587,6 @@ impl Output {
         #[cfg(not(feature = "grammar-extras"))]
         let mod_tags = quote! {};
         quote! {
-            #[doc(hidden)]
             mod #wrapper_mod {
                 #(#wrappers)*
             }
@@ -616,7 +602,6 @@ impl Output {
 /// Returns (type name, accesser).
 fn process_single_alias<'g>(
     map: &mut Output,
-    expr: &OptimizedExpr,
     rule_config: &RuleConfig<'g>,
     type_name: TokenStream,
     accessers: Accesser<'g>,
@@ -626,8 +611,7 @@ fn process_single_alias<'g>(
 ) -> (TokenStream, Accesser<'g>) {
     if explicit {
         let rule_id = &rule_config.rule_id;
-        let doc = format!("Corresponds to expression: `{}`.", expr);
-        let def = rule(rule_config, &type_name, &doc, &accessers, emission);
+        let def = rule(rule_config, &type_name, &accessers, emission);
         map.insert(def);
         let rules = rules_mod();
         (quote! {#root::#rules::#rule_id::<'i>}, accessers)
@@ -671,7 +655,6 @@ fn generate_graph_node<'g>(
             let wrapper = map.insert_string_wrapper(content.as_str());
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! {
                     #root::#generics::Str::<#root::#wrapper>
@@ -686,7 +669,6 @@ fn generate_graph_node<'g>(
             let wrapper = map.insert_string_wrapper(content.as_str());
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! {
                     #root::#generics::Insens::<'i, #root::#wrapper>
@@ -699,7 +681,6 @@ fn generate_graph_node<'g>(
         }
         OptimizedExpr::PeekSlice(start, end) => process_single_alias(
             map,
-            expr,
             rule_config,
             match end {
                 Some(end) => quote! {
@@ -719,7 +700,6 @@ fn generate_graph_node<'g>(
                 generate_graph_node(expr, rule_config, map, false, emission, config, root);
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! {
                     #root::#generics::Push::<'i, #inner>
@@ -734,7 +714,6 @@ fn generate_graph_node<'g>(
             let wrapper = map.insert_string_array_wrapper(strings);
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! {
                     #root::#generics::Skip::<'i, #root::#wrapper>
@@ -750,7 +729,6 @@ fn generate_graph_node<'g>(
             let end = end.chars().next().unwrap();
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! {
                     #root::#generics::CharRange::<#start, #end>
@@ -781,7 +759,6 @@ fn generate_graph_node<'g>(
             let type_name = quote! {#root::#rules::#inner #generics};
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 type_name,
                 accessers,
@@ -795,7 +772,6 @@ fn generate_graph_node<'g>(
                 generate_graph_node(expr, rule_config, map, false, emission, config, root);
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! {
                     #root::#generics::Positive::<'i, #inner>
@@ -812,7 +788,6 @@ fn generate_graph_node<'g>(
                 generate_graph_node(expr, rule_config, map, false, emission, config, root);
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! {
                     #root::#generics::Negative::<'i, #inner>
@@ -840,7 +815,6 @@ fn generate_graph_node<'g>(
             map.record_seq(types.len());
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! { #root::#generics::#seq::<'i, #(#types, )* #skip> },
                 accesser,
@@ -863,7 +837,6 @@ fn generate_graph_node<'g>(
             map.record_choice(types.len());
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! { #root::#generics::#choice::<#(#types, )*> },
                 accesser,
@@ -879,7 +852,6 @@ fn generate_graph_node<'g>(
             let option = option_type();
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! {#option::<#inner_name>},
                 accessers,
@@ -893,7 +865,6 @@ fn generate_graph_node<'g>(
                 generate_graph_node(inner, rule_config, map, false, emission, config, root);
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! { #root::#generics::Rep::<'i, #skip, #inner_name> },
                 accessers.contents(),
@@ -908,7 +879,6 @@ fn generate_graph_node<'g>(
                 generate_graph_node(inner, rule_config, map, false, emission, config, root);
             process_single_alias(
                 map,
-                expr,
                 rule_config,
                 quote! { #root::#generics::RepOnce::<'i, #skip, #inner_name> },
                 accessers.contents(),
@@ -965,16 +935,7 @@ fn generate_graph_node<'g>(
                     config,
                     root,
                 );
-                process_single_alias(
-                    map,
-                    expr,
-                    rule_config,
-                    inner,
-                    accesser,
-                    root,
-                    emission,
-                    false,
-                )
+                process_single_alias(map, rule_config, inner, accesser, root, emission, false)
             }
         }
     }
@@ -997,11 +958,21 @@ fn generate_graph<'g: 'f, 'f>(
             RuleType::CompoundAtomic => (Some(true), Emission::Both),
             RuleType::Atomic => (Some(true), Emission::Span),
         };
+        let atomicity_doc = match atomicity {
+            Some(true) => "Atomic rule.",
+            Some(false) => "Non-atomic rule.",
+            None => "Normal rule.",
+        };
+        let rule_desc = format!(
+            "Corresponds to expression: `{}`. {}",
+            rule.expr, atomicity_doc
+        );
         let rule_doc = doc.line_docs.get(rule_name).map(|s| s.as_str());
         let rule_config = RuleConfig {
             atomicity,
             rule_id: ident(rule_name),
             rule_name,
+            rule_desc,
             rule_doc,
             defined,
             builtins_without_lifetime,
@@ -1227,7 +1198,6 @@ pub(crate) fn generate_typed_pair_from_rule(
         };
 
         quote! {
-            #[doc(hidden)]
             mod generics {
                 use #pest_typed::{predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
                 pub type Skipped<'i> = #skip;
@@ -1250,22 +1220,14 @@ pub(crate) fn generate_typed_pair_from_rule(
     let pairs = {
         let rules_mod = rules_mod();
         let pairs_mod = pairs_mod();
-        let pairs = defined_rules.iter().map(|pair| {
-            let pair = ident(pair);
-            quote! {
-                pub type #pair<'i> = super::#rules_mod::#pair<'i, 1>;
-            }
-        });
+        let doc =
+            format! {"Re-export some types from {} to simplify the usage.", rules_mod.to_string()};
         quote! {
-            pub mod #pairs_mod {
-                #(
-                    #pairs
-                )*
-            }
+            #[doc = #doc]
+            pub use #rules_mod as #pairs_mod;
         }
     };
     let res = quote! {
-        #[doc(hidden)]
         mod #unicode {
             #unicode_rule
         }
@@ -1375,7 +1337,7 @@ fn generate_builtin(
                 builtins_without_lifetime.insert($name);
                 results.push(quote! {
                     #[allow(non_camel_case_types)]
-                    pub type #id = #pest_typed::predefined_node::$def;
+                    pub use #pest_typed::predefined_node::$def as #id;
                 });
             }
         };
@@ -1386,7 +1348,7 @@ fn generate_builtin(
                 let id = ident($name);
                 results.push(quote! {
                     #[allow(non_camel_case_types)]
-                    pub type #id<'i> = #pest_typed::predefined_node::$def;
+                    pub use #pest_typed::predefined_node::$def as #id;
                 });
             }
         };
@@ -1398,10 +1360,10 @@ fn generate_builtin(
 
     insert_builtin!("ANY", ANY);
     insert_builtin!("SOI", SOI);
-    insert_builtin_with_lifetime!("PEEK", PEEK::<'i>);
-    insert_builtin_with_lifetime!("PEEK_ALL", PEEK_ALL::<'i>);
-    insert_builtin_with_lifetime!("POP", POP::<'i>);
-    insert_builtin_with_lifetime!("POP_ALL", POP_ALL::<'i>);
+    insert_builtin_with_lifetime!("PEEK", PEEK);
+    insert_builtin_with_lifetime!("PEEK_ALL", PEEK_ALL);
+    insert_builtin_with_lifetime!("POP", POP);
+    insert_builtin_with_lifetime!("POP_ALL", POP_ALL);
     insert_builtin!("DROP", DROP);
 
     insert_builtin!("ASCII_DIGIT", ASCII_DIGIT);
@@ -1416,8 +1378,8 @@ fn generate_builtin(
     insert_builtin!("ASCII", ASCII);
     insert_builtin!("NEWLINE", NEWLINE);
 
-    insert_builtin_with_lifetime!("WHITESPACE", AlwaysFail::<'i>);
-    insert_builtin_with_lifetime!("COMMENT", AlwaysFail::<'i>);
+    insert_builtin_with_lifetime!("WHITESPACE", AlwaysFail);
+    insert_builtin_with_lifetime!("COMMENT", AlwaysFail);
 
     (quote! { #(#results)*}, builtins_without_lifetime)
 }
