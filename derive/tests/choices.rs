@@ -49,11 +49,10 @@ macro_rules! test {
                 Ok(())
             }
             #[test]
-            #[should_panic]
             fn failed() {
                 let mut buf = String::from($input);
                 buf.pop();
-                pairs::$name::parse(buf.as_str()).unwrap();
+                pairs::$name::parse(buf.as_str()).unwrap_err();
             }
         }
     };

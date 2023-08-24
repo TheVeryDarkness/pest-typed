@@ -68,7 +68,7 @@ mod tests {
         Rule,
         Rule::Foo,
         Str::<Foo>,
-        RepMin<Choice2<WHITESPACE<'i>, COMMENT<'i>>, 0>
+        AtomicRep<Choice2<WHITESPACE<'i>, COMMENT<'i>>>
     );
     rule_eoi!(EOI, Rule);
 
@@ -96,7 +96,7 @@ mod tests {
             "COMMENT { content: CharRange { content: '\\t' }, span: Span { str: \"\\t\", start: 0, end: 1 } }"
         );
     }
-    type Ignore<'i> = RepMin<Choice2<WHITESPACE<'i>, COMMENT<'i>>, 0>;
+    type Ignore<'i> = AtomicRep<Choice2<WHITESPACE<'i>, COMMENT<'i>>>;
 
     #[test]
     fn ignore() {
@@ -227,7 +227,7 @@ mod tests {
             "Quoted string.",
             Rule,
             Rule::String,
-            Seq2<Skip<'i, NewLine>, NEWLINE>
+            Seq2<Skipped<Skip<'i, NewLine>, Ignore<'i>, 0>, Skipped<NEWLINE, Ignore<'i>, 0>>
         );
 
         let s1 = QuotedString::<1>::parse("2\r\n").unwrap();
@@ -260,9 +260,18 @@ mod tests {
             Rule,
             Rule::Life,
             Seq3<
-                Quote<'i, 0>,
-                Positive<Seq2<ANY, Negative<Quote<'i, 0>>>>,
-                Rep<CharRange<'a', 'z'>, Ignore<'i>, 0>,
+                Skipped<Quote<'i, 0>, Ignore<'i>, 0>,
+                Skipped<
+                    Positive<
+                        Seq2<
+                            Skipped<ANY, Ignore<'i>, 0>,
+                            Skipped<Negative<Quote<'i, 0>>, Ignore<'i>, 0>,
+                        >,
+                    >,
+                    Ignore<'i>,
+                    0,
+                >,
+                Skipped<AtomicRep<CharRange<'a', 'z'>>, Ignore<'i>, 0>,
             >
         );
 
@@ -271,19 +280,13 @@ mod tests {
         assert_eq!(quote.span.as_str(), "'");
         let (any, _) = peeked.as_ref();
         assert_eq!(any.content, 'i');
-        assert_eq!(
-            name.iter_matched().map(|c| c.content).collect::<String>(),
-            "i"
-        );
+        assert_eq!(name.iter().map(|c| c.content).collect::<String>(), "i");
 
         let l = Lifetime::<1>::parse("'input").unwrap();
         let (_, peeked, name) = l.as_ref();
         let (any, _) = peeked.as_ref();
         assert_eq!(any.content, 'i');
-        assert_eq!(
-            name.iter_matched().map(|c| c.content).collect::<String>(),
-            "input"
-        );
+        assert_eq!(name.iter().map(|c| c.content).collect::<String>(), "input");
 
         Lifetime::<1>::parse("'i'").unwrap_err();
     }
@@ -305,12 +308,12 @@ mod tests {
             "Any character except \"foo\" or \"bar\".",
             Rule,
             Rule::NotFooBar,
-            Rep<Seq2<Negative<Choice2<Str<StrFoo>, Str<StrBar>>>, ANY>, Ignore<'i>, 0>
+            AtomicRep<(Negative<Choice2<Str<StrFoo>, Str<StrBar>>>, ANY)>
         );
         let _ = not_foo_bar::<1>::parse("").unwrap();
         let baz = not_foo_bar::<1>::parse("baz").unwrap();
-        for i in baz.iter_matched() {
-            let (neg, any) = i.as_ref();
+        for i in baz.iter() {
+            let (neg, any) = i;
             assert_eq!(
                 <Negative<_> as Pairs<'_, '_, Rule>>::into_iter_pairs(neg.clone()).count(),
                 0
@@ -331,7 +334,10 @@ mod tests {
             "Repeat previously matched expression 1 to 3 times",
             Rule,
             Rule::RepFoo,
-            Seq2<Push<Insens<'i, Foo>>, RepMinMax<PEEK<'i>, 1, 3>>
+            Seq2<
+                Skipped<Push<Insens<'i, Foo>>, Ignore<'i>, 0>,
+                Skipped<RepMinMax<Skipped<PEEK<'i>, Ignore<'i>, 0>, 1, 3>, Ignore<'i>, 0>,
+            >
         );
         let r = Rep_1_3::<1>::parse("foOfoO").unwrap();
         assert_eq!(
@@ -365,7 +371,7 @@ mod tests {
         let (head, following) = r.as_ref();
         assert_eq!(head.deref().content, "foO");
         assert_eq!(head.get_content(), Foo::CONTENT);
-        for i in following.iter_all() {
+        for i in following.iter_matched() {
             assert_eq!(i.span.as_str(), head.deref().content);
         }
 

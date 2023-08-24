@@ -44,14 +44,12 @@ macro_rules! test {
                 Ok(())
             }
             #[test]
-            #[should_panic]
             fn unmatched() {
-                pairs::$name::parse(concat!("_", $input)).unwrap();
+                pairs::$name::parse(concat!("_", $input)).unwrap_err();
             }
             #[test]
-            #[should_panic]
             fn incomplete() {
-                pairs::$name::parse(concat!($input, "_")).unwrap();
+                pairs::$name::parse(concat!($input, "_")).unwrap_err();
             }
         }
     };
