@@ -1172,24 +1172,21 @@ pub(crate) fn generate_typed_pair_from_rule(
         let has_comment = defined_rules.contains("COMMENT");
         let skip = match (has_white_space, has_comment) {
             (true, true) => quote! {
-                predefined_node::RepMin<
+                predefined_node::AtomicRep<
                     #pest_typed::choices::Choice2<
                         #root::#rules_mod::WHITESPACE<'i, 0>,
                         #root::#rules_mod::COMMENT<'i, 0>,
                     >,
-                    0,
                 >
             },
             (true, false) => quote! {
-                predefined_node::RepMin<
+                predefined_node::AtomicRep<
                     #root::#rules_mod::WHITESPACE<'i, 0>,
-                    0,
                 >
             },
             (false, true) => quote! {
-                predefined_node::RepMin<
+                predefined_node::AtomicRep<
                     #root::#rules_mod::COMMENT<'i, 0>,
-                    0,
                 >
             },
             (false, false) => quote! {

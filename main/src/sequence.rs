@@ -65,7 +65,14 @@ macro_rules! seq {
                 R: $pest_typed::RuleType,
                 $T0: $pest_typed::TypedNode<'i, R>,
                 $($T: $pest_typed::TypedNode<'i, R>, )*
-            > $pest_typed::TypedNode<'i, R> for $name<$T0, $($T, )*>
+                Skip: $pest_typed::NeverFailedTypedNode<'i, R> + ::core::default::Default,
+                const SKIP: ::core::primitive::usize,
+            > $pest_typed::TypedNode<'i, R> for $name<
+                $pest_typed::predefined_node::Skipped<$T0, Skip, SKIP>,
+                $(
+                    $pest_typed::predefined_node::Skipped<$T, Skip, SKIP>,
+                )*
+            >
         {
             #[inline]
             fn try_parse_with(
@@ -76,15 +83,21 @@ macro_rules! seq {
                 let content =
                 (
                     {
-                        let (next, content) = T0::try_parse_with(input, stack, tracker)?;
+                        let skipped = ::core::array::from_fn(|_| Skip::default());
+                        let (next, matched) = T0::try_parse_with(input, stack, tracker)?;
                         input = next;
-                        content
+                        $pest_typed::predefined_node::Skipped { skipped, matched }
                     },
                     $(
                         {
-                            let (next, content) = $T::try_parse_with(input, stack, tracker)?;
+                            let skipped = ::core::array::from_fn(|_| {
+                                let (next, skipped) = Skip::parse_with(input, stack);
+                                input = next;
+                                skipped
+                            });
+                            let (next, matched) = $T::try_parse_with(input, stack, tracker)?;
                             input = next;
-                            content
+                            $pest_typed::predefined_node::Skipped { skipped, matched }
                         },
                     )*
                 );
@@ -96,8 +109,8 @@ macro_rules! seq {
                 'i: 'n,
                 'n,
                 R: $pest_typed::RuleType + 'n,
-                $T0: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>,
-                $($T: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>),*,
+                $T0: $pest_typed::iterators::Pairs<'i, 'n, R>,
+                $($T: $pest_typed::iterators::Pairs<'i, 'n, R>),*,
             > $pest_typed::iterators::Pairs<'i, 'n, R> for $name<$T0, $($T, )*>
         {
             type Iter = $pest_typed::chains!($pest_typed, $pest_typed::iterators::Pairs<'i, 'n, R>, Iter, $T0, $($T, )*);

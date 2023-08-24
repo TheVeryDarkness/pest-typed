@@ -11,13 +11,70 @@
 //! The generator may use this for convenience.
 //! Normally you don't need to reference this module by yourself.
 
+use core::ops::{Deref, DerefMut};
+
 use crate::{
-    predefined_node::restore_on_err, tracker::Tracker, wrapper::BoundWrapper, NeverFailedTypedNode,
-    Position, RuleType, Span, Stack, TypedNode,
+    predefined_node::{restore_on_err, Skipped},
+    tracker::Tracker,
+    wrapper::BoundWrapper,
+    NeverFailedTypedNode, Position, RuleType, Span, Stack, TypedNode,
 };
 use alloc::vec::Vec;
 
-use super::Skipped;
+/// Repeatably match `T` at least `MIN` times.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AtomicRep<T> {
+    /// Skipped and Matched expressions.
+    pub content: Vec<T>,
+}
+impl<T> Default for AtomicRep<T> {
+    fn default() -> Self {
+        let content = Vec::new();
+        Self { content }
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for AtomicRep<T> {
+    fn parse_with(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
+        let mut vec = Vec::new();
+        let mut tracker = Tracker::new(input);
+
+        for _ in 0usize.. {
+            match restore_on_err(stack, |stack| T::try_parse_with(input, stack, &mut tracker)) {
+                Ok((next, matched)) => {
+                    input = next;
+                    vec.push(matched);
+                }
+                Err(_) => break,
+            }
+        }
+        (input, Self { content: vec })
+    }
+}
+impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for AtomicRep<T> {
+    #[inline]
+    fn try_parse_with(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Result<(Position<'i>, Self), ()> {
+        Ok(Self::parse_with(input, stack))
+    }
+}
+impl<T> Deref for AtomicRep<T> {
+    type Target = Vec<T>;
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
+}
+impl<T> DerefMut for AtomicRep<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.content
+    }
+}
+impl<T: Clone + PartialEq> BoundWrapper for AtomicRep<T> {
+    const MIN: usize = 0;
+    const MAX: usize = usize::MAX;
+}
 
 /// Repeatably match `T` at least `MIN` times.
 #[derive(Clone, Debug, PartialEq)]
@@ -25,23 +82,45 @@ pub struct RepMin<T, const MIN: usize> {
     /// Skipped and Matched expressions.
     pub content: Vec<T>,
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for RepMin<T, 0> {
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        Skip: NeverFailedTypedNode<'i, R>,
+        const SKIP: usize,
+    > NeverFailedTypedNode<'i, R> for RepMin<Skipped<T, Skip, SKIP>, 0>
+{
     fn parse_with(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
         let mut vec = Vec::new();
         let mut tracker = Tracker::new(input);
 
-        {
-            while let Ok((next, matched)) =
-                restore_on_err(stack, |stack| T::try_parse_with(input, stack, &mut tracker))
-            {
-                input = next;
-                vec.push(matched);
+        for i in 0usize.. {
+            match restore_on_err(stack, |stack| try_parse_unit(input, stack, &mut tracker, i)) {
+                Ok((next, matched)) => {
+                    input = next;
+                    vec.push(matched);
+                }
+                Err(_) => break,
             }
         }
         (input, Self { content: vec })
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>, const MIN: usize> TypedNode<'i, R> for RepMin<T, MIN> {
+impl<T> Default for RepMin<T, 0> {
+    fn default() -> Self {
+        let content = Vec::new();
+        Self { content }
+    }
+}
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        Skip: NeverFailedTypedNode<'i, R>,
+        const SKIP: usize,
+        const MIN: usize,
+    > TypedNode<'i, R> for RepMin<Skipped<T, Skip, SKIP>, MIN>
+{
     #[inline]
     fn try_parse_with(
         mut input: Position<'i>,
@@ -50,23 +129,22 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const MIN: usize> TypedNode<'i, R> fo
     ) -> Result<(Position<'i>, Self), ()> {
         let mut vec = Vec::new();
 
-        {
-            for i in 0.. {
-                match restore_on_err(stack, |stack| T::try_parse_with(input, stack, tracker)) {
-                    Ok((next, matched)) => {
-                        input = next;
-                        vec.push(matched);
-                    }
-                    Err(err) => {
-                        if i < MIN {
-                            return Err(err);
-                        } else {
-                            break;
-                        }
+        for i in 0usize.. {
+            match restore_on_err(stack, |stack| try_parse_unit(input, stack, tracker, i)) {
+                Ok((next, matched)) => {
+                    input = next;
+                    vec.push(matched);
+                }
+                Err(err) => {
+                    if i < MIN {
+                        return Err(err);
+                    } else {
+                        break;
                     }
                 }
             }
         }
+
         Ok((input, Self { content: vec }))
     }
 }
@@ -119,32 +197,45 @@ impl<T, const MAX: usize> Default for RepMinMax<T, 0, MAX> {
         }
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>, const MAX: usize> NeverFailedTypedNode<'i, R>
-    for RepMinMax<T, 0, MAX>
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        Skip: NeverFailedTypedNode<'i, R>,
+        const SKIP: usize,
+        const MAX: usize,
+    > NeverFailedTypedNode<'i, R> for RepMinMax<Skipped<T, Skip, SKIP>, 0, MAX>
 {
     #[inline]
     fn parse_with(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
         let mut vec = Vec::new();
 
         let mut tracker = Tracker::new(input);
-        {
-            for _ in 0..MAX {
-                match restore_on_err(stack, |stack| T::try_parse_with(input, stack, &mut tracker)) {
-                    Ok((next, matched)) => {
-                        input = next;
-                        vec.push(matched);
-                    }
-                    Err(_) => {
-                        break;
-                    }
+
+        for i in 0..MAX {
+            match restore_on_err(stack, |stack| try_parse_unit(input, stack, &mut tracker, i)) {
+                Ok((next, matched)) => {
+                    input = next;
+                    vec.push(matched);
+                }
+                Err(_) => {
+                    break;
                 }
             }
         }
+
         (input, Self { content: vec })
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>, const MIN: usize, const MAX: usize> TypedNode<'i, R>
-    for RepMinMax<T, MIN, MAX>
+impl<
+        'i,
+        R: RuleType,
+        T: TypedNode<'i, R>,
+        Skip: NeverFailedTypedNode<'i, R>,
+        const SKIP: usize,
+        const MIN: usize,
+        const MAX: usize,
+    > TypedNode<'i, R> for RepMinMax<Skipped<T, Skip, SKIP>, MIN, MAX>
 {
     #[inline]
     fn try_parse_with(
@@ -154,23 +245,22 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const MIN: usize, const MAX: usize> T
     ) -> Result<(Position<'i>, Self), ()> {
         let mut vec = Vec::new();
 
-        {
-            for i in 0..MAX {
-                match restore_on_err(stack, |stack| T::try_parse_with(input, stack, tracker)) {
-                    Ok((next, matched)) => {
-                        input = next;
-                        vec.push(matched);
-                    }
-                    Err(err) => {
-                        if i < MIN {
-                            return Err(err);
-                        } else {
-                            break;
-                        }
+        for i in 0..MAX {
+            match restore_on_err(stack, |stack| try_parse_unit(input, stack, tracker, i)) {
+                Ok((next, matched)) => {
+                    input = next;
+                    vec.push(matched);
+                }
+                Err(err) => {
+                    if i < MIN {
+                        return Err(err);
+                    } else {
+                        break;
                     }
                 }
             }
         }
+
         Ok((input, Self { content: vec }))
     }
 }
@@ -217,3 +307,30 @@ impl<T: Clone + PartialEq, const MIN: usize, const MAX: usize> BoundWrapper
 pub type Rep<T, IGNORED, const SKIP: usize> = RepMin<Skipped<T, IGNORED, SKIP>, 0>;
 /// Repeat at least one times.
 pub type RepOnce<T, IGNORED, const SKIP: usize> = RepMin<Skipped<T, IGNORED, SKIP>, 1>;
+
+fn try_parse_unit<
+    'i,
+    R: RuleType,
+    T: TypedNode<'i, R>,
+    Skip: NeverFailedTypedNode<'i, R>,
+    const SKIP: usize,
+>(
+    mut input: Position<'i>,
+    stack: &mut Stack<Span<'i>>,
+    tracker: &mut Tracker<'i, R>,
+    i: usize,
+) -> Result<(Position<'i>, Skipped<T, Skip, SKIP>), ()> {
+    let skipped = core::array::from_fn(|_| {
+        if i == 0 {
+            Skip::default()
+        } else {
+            let (next, skipped) = Skip::parse_with(input, stack);
+            input = next;
+            skipped
+        }
+    });
+    let (next, matched) = T::try_parse_with(input, stack, tracker)?;
+    input = next;
+    let res = Skipped { skipped, matched };
+    Ok((input, res))
+}

@@ -24,7 +24,7 @@ use super::{
 use core::ops::{Deref, DerefMut};
 use core::{fmt::Debug, marker::PhantomData};
 use custom_debug_derive::Debug as Dbg;
-pub use repetition::{Rep, RepMin, RepMinMax, RepOnce};
+pub use repetition::{AtomicRep, Rep, RepMin, RepMinMax, RepOnce};
 
 /// Match given string case sensitively.
 ///
@@ -474,19 +474,6 @@ pub struct Skipped<T, Skip, const SKIP: usize> {
     pub skipped: [Skip; SKIP],
     /// Matched content.
     pub matched: T,
-}
-impl<'i, R: RuleType, T: TypedNode<'i, R>, Skip: TypedNode<'i, R>, const SKIP: usize>
-    TypedNode<'i, R> for Skipped<T, Skip, SKIP>
-{
-    fn try_parse_with(
-        input: Position<'i>,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        let (input, (skipped, matched)) =
-            <([Skip; SKIP], T)>::try_parse_with(input, stack, tracker)?;
-        Ok((input, Self { skipped, matched }))
-    }
 }
 impl<T: Debug, Skip: Debug, const SKIP: usize> Debug for Skipped<T, Skip, SKIP> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

@@ -18,7 +18,7 @@ use pest::RuleType;
 /// Node of concrete syntax tree that never fails.
 pub trait NeverFailedTypedNode<'i, R: RuleType>
 where
-    Self: Sized + Debug + Clone + PartialEq,
+    Self: Sized + Debug + Clone + PartialEq + Default,
 {
     /// Create typed node.
     /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.

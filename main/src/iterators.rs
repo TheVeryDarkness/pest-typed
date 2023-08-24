@@ -11,9 +11,9 @@
 
 use crate::{
     predefined_node::{
-        AlwaysFail, CharRange, Empty, Insens, Negative, PeekSlice1, PeekSlice2, Positive, Push,
-        RepMin, RepMinMax, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK, PEEK_ALL, POP, POP_ALL,
-        SOI,
+        AlwaysFail, AtomicRep, CharRange, Empty, Insens, Negative, PeekSlice1, PeekSlice2,
+        Positive, Push, RepMin, RepMinMax, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK, PEEK_ALL,
+        POP, POP_ALL, SOI,
     },
     typed_node::RuleStruct,
     StringArrayWrapper, StringWrapper, TypedNode,
@@ -342,8 +342,9 @@ macro_rules! impl_with_vec {
     };
 }
 
-impl_with_vec!(RepMinMax, const MIN: usize, const MAX: usize, );
+impl_with_vec!(RepMinMax, const MIN: usize, const MAX: usize,);
 impl_with_vec!(RepMin, const MIN: usize,);
+impl_with_vec!(AtomicRep,);
 
 macro_rules! impl_without_lifetime {
     ($id: ident) => {
