@@ -40,7 +40,8 @@ pub enum Rule {
     r#Drop,
     r#PeekAll,
 }
-mod unicode {}
+#[doc = "Unicode rules."]
+pub mod unicode {}
 mod constant_wrappers {
     #[doc = "A wrapper for `\"+\"`."]
     #[allow(non_camel_case_types)]
@@ -964,7 +965,8 @@ pub mod rules {
     #[allow(non_camel_case_types)]
     pub use pest_typed::predefined_node::SOI;
 }
-mod generics {
+#[doc = "Used generics."]
+pub mod generics {
     use pest_typed::{predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
     pub type Skipped<'i> = predefined_node::Empty<'i>;
     pub type Str<Wrapper: StringWrapper> = predefined_node::Str<Wrapper>;

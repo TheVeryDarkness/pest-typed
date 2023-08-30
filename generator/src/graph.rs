@@ -572,7 +572,9 @@ impl Output {
         let rules = rules_mod();
         #[cfg(feature = "grammar-extras")]
         let tags = self.tagged_nodes.iter().map(|(name, def)| {
+            let doc = format!("Tags inside rule [super::super::rules::{}].", name);
             quote! {
+                #[doc = #doc]
                 pub mod #name {
                     #(#def)*
                 }
@@ -580,7 +582,8 @@ impl Output {
         });
         #[cfg(feature = "grammar-extras")]
         let mod_tags = quote! {
-            mod tags {
+            #[doc = "Generated structs for tags."]
+            pub mod tags {
                 #(#tags)*
             }
         };
@@ -1120,7 +1123,7 @@ pub(crate) fn generate_typed_pair_from_rule(
                     });
                 } else {
                     target.push(quote! {
-                        use pest_typed::#module::#generics_i;
+                        pub use pest_typed::#module::#generics_i;
                     })
                 }
                 let life = if seq {
@@ -1195,7 +1198,8 @@ pub(crate) fn generate_typed_pair_from_rule(
         };
 
         quote! {
-            mod generics {
+            #[doc = "Used generics."]
+            pub mod generics {
                 use #pest_typed::{predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
                 pub type Skipped<'i> = #skip;
                 pub type Str<Wrapper: StringWrapper> = predefined_node::Str::<Wrapper>;
@@ -1225,7 +1229,8 @@ pub(crate) fn generate_typed_pair_from_rule(
         }
     };
     let res = quote! {
-        mod #unicode {
+        #[doc = "Unicode rules."]
+        pub mod #unicode {
             #unicode_rule
         }
         #mods

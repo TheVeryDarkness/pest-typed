@@ -130,15 +130,23 @@
 //!
 //! #### Choices
 //!
-//! We provide several functions that simulate control structure like `if` (`if_then(f)`), `else-if` (`else_if(f)`) and `else` (`else_then(f)`).
+//! We provide several functions that simulate control structure
+//! like `if` (`if_then(f)`), `else-if` (`else_if(f)`) and `else` (`else_then(f)`).
 //!
-//! Each of those functions accept a function `f` as argument, if and only if the branch is the actual case, `f` is called.
+//! Each of those functions accept a function `f` as argument,
+//! if and only if the branch is the actual case, `f` is called.
 //!
-//! The structure must start with `if_then(f)`. And `else_if` is only available when there are at least two cases that haven't been handled, so if it's the last case, use `else_then(f)` instead.
+//! The structure must start with `if_then(f)`.
+//! And `else_if` is only available when there are at least two cases that haven't been handled,
+//! so if it's the last case, use `else_then(f)` instead.
 //!
-//! Except that `else_then(f)` returns the final result, `if_then(f)` and `else_if(f)` will return a temporary helper object.
+//! Except that `else_then(f)` returns the final result,
+//! `if_then(f)` and `else_if(f)` will return a temporary helper object.
 //!
 //! Using these functions, one can handle those cases one by one in order.
+//!
+//! But as sometimes captured values may be consumed,
+//! We provide a proc macro `match_choices` to handle choices.
 //!
 //! #### Example
 //!
@@ -156,7 +164,7 @@
 
 use proc_macro::TokenStream;
 
-/// The main method that's called by the proc macro [`pest_typed_generator::derive_typed_parser`].
+/// The main method that's called by the proc macro is [`pest_typed_generator::derive_typed_parser()`].
 ///
 /// See [`pest_typed_generator`] for more information.
 #[proc_macro_derive(
@@ -173,4 +181,14 @@ use proc_macro::TokenStream;
 )]
 pub fn derive_typed_parser(input: TokenStream) -> TokenStream {
     pest_typed_generator::derive_typed_parser(input.into(), true).into()
+}
+
+/// The main method that's called by the proc macro is [`pest_typed_generator::match_choices()`].
+///
+/// Please imports generated module `generics` so that the macro can use it.
+///
+/// See [`pest_typed_generator`] for more information.
+#[proc_macro]
+pub fn match_choices(input: TokenStream) -> TokenStream {
+    pest_typed_generator::match_choices(input.into()).into()
 }

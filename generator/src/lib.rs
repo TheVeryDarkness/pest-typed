@@ -24,7 +24,9 @@
 mod config;
 mod graph;
 mod typed;
+mod match_choices;
 pub use typed::derive_typed_parser;
+pub use match_choices::match_choices;
 
 // Below modules are copied from pest and modified.
 mod docs;

@@ -40,7 +40,8 @@ pub enum Rule {
     r#Drop,
     r#PeekAll,
 }
-mod unicode {}
+#[doc = "Unicode rules."]
+pub mod unicode {}
 mod constant_wrappers {
     #[doc = "A wrapper for `\"+\"`."]
     #[allow(non_camel_case_types)]
@@ -176,7 +177,9 @@ mod constant_wrappers {
         const CONTENT: &'static ::core::primitive::str = "?";
     }
 }
-mod tags {
+#[doc = "Generated structs for tags."]
+pub mod tags {
+    #[doc = "Tags inside rule [super::super::rules::r#Tag]."]
     pub mod r#Tag {
         #[doc = "Tag Second referenced by Tag."]
         ::pest_typed::tag!(r#Second, super::super::Rule, super::super::generics::Seq_3::<'i, super::super::generics::Push::<'i, super::super::rules::r#CompoundAtomic::<'i, INHERITED>>, super::super::generics::Positive::<'i, super::super::rules::r#Silent::<'i, INHERITED>>, super::super::generics::Negative::<'i, super::super::rules::r#Atomic::<'i, INHERITED>>, INHERITED>);
@@ -914,7 +917,8 @@ pub mod rules {
     #[allow(non_camel_case_types)]
     pub use pest_typed::predefined_node::SOI;
 }
-mod generics {
+#[doc = "Used generics."]
+pub mod generics {
     use pest_typed::{predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
     pub type Skipped<'i> = predefined_node::Empty<'i>;
     pub type Str<Wrapper: StringWrapper> = predefined_node::Str<Wrapper>;

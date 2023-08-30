@@ -8,7 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use pest_typed::{ParsableTypedNode, Storage};
-use pest_typed_derive::TypedParser;
+use pest_typed_derive::{match_choices, TypedParser};
 
 #[derive(TypedParser)]
 #[grammar_inline = r#"
@@ -27,18 +27,33 @@ c12 = { ("a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l"){
 "#]
 struct Parser;
 
+macro_rules! matching {
+    ($res:expr, $input:literal) => {};
+    ($res:expr, $($input:literal)*) => {
+        match_choices!{
+            $res.get_matched().0 {
+                $(
+                    s => assert_eq!(s.get_content(), $input)
+                )*
+            }
+        }
+    };
+}
 macro_rules! test {
-    ($name:ident, $input:literal) => {
+    ($name:ident, $($input:literal)*) => {
         mod $name {
-            use super::{pairs, Rule};
+            #[allow(unused_imports)]
+            use super::{pairs, Rule, generics, match_choices};
+            #[allow(unused_imports)]
             use pest_typed::{
                 error::Error,
                 iterators::{Pair, Pairs},
-                ParsableTypedNode,
+                ParsableTypedNode, Storage,
             };
+            const INPUT : &'static str = concat!($($input,)*);
             #[test]
             fn success() -> Result<(), Error<Rule>> {
-                let res = pairs::$name::parse($input)?;
+                let res = pairs::$name::parse(INPUT)?;
                 let span = res.span;
                 assert_eq!(span, res.iter_pairs().next().unwrap().span());
                 assert_eq!(span, res.clone().into_iter_pairs().next().unwrap().span());
@@ -46,11 +61,13 @@ macro_rules! test {
                 assert!(res.clone().into_inner().next().is_none());
                 assert_eq!(res, res.clone());
 
+                matching!(res, $($input)*);
+
                 Ok(())
             }
             #[test]
             fn failed() {
-                let mut buf = String::from($input);
+                let mut buf = String::from(INPUT);
                 buf.pop();
                 pairs::$name::parse(buf.as_str()).unwrap_err();
             }
@@ -58,17 +75,17 @@ macro_rules! test {
     };
 }
 test!(c1, "a");
-test!(c2, "ab");
-test!(c3, "abc");
-test!(c4, "abcd");
-test!(c5, "abcde");
-test!(c6, "abcdef");
-test!(c7, "abcdefg");
-test!(c8, "abcdefgh");
-test!(c9, "abcdefghi");
-test!(c10, "abcdefghij");
-test!(c11, "abcdefghijk");
-test!(c12, "abcdefghijkl");
+test!(c2, "a""b");
+test!(c3, "a""b""c");
+test!(c4, "a""b""c""d");
+test!(c5, "a""b""c""d""e");
+test!(c6, "a""b""c""d""e""f");
+test!(c7, "a""b""c""d""e""f""g");
+test!(c8, "a""b""c""d""e""f""g""h");
+test!(c9, "a""b""c""d""e""f""g""h""i");
+test!(c10, "a""b""c""d""e""f""g""h""i""j");
+test!(c11, "a""b""c""d""e""f""g""h""i""j""k");
+test!(c12, "a""b""c""d""e""f""g""h""i""j""k""l");
 
 #[test]
 fn choices() {
