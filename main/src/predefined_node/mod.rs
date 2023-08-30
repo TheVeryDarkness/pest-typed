@@ -13,7 +13,7 @@
 
 mod repetition;
 
-use super::{parser_state::constrain_idxs, position::Position, stack::Stack};
+use super::{parser_state::constrain_idxs, position::Position, Stack};
 use super::{
     span::Span,
     tracker::Tracker,

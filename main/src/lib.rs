@@ -50,12 +50,11 @@ pub use alloc::boxed::Box;
 mod parser_state;
 mod position;
 mod span;
-mod stack;
 
 pub use pest::error;
 pub use position::Position;
 pub use span::{merge_spans, Span};
-pub use stack::Stack;
+pub use pest::Stack;
 
 // Re-export unicode.
 pub use pest::unicode;

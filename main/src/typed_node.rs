@@ -8,8 +8,8 @@
 // modified, or distributed except according to those terms.
 
 use crate::{
-    error::Error, position::Position, predefined_node::restore_on_err, span::Span, stack::Stack,
-    tracker::Tracker, RuleWrapper,
+    error::Error, position::Position, predefined_node::restore_on_err, span::Span,
+    tracker::Tracker, RuleWrapper, Stack,
 };
 use alloc::vec::Vec;
 use core::fmt::Debug;
