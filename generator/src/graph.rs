@@ -705,7 +705,7 @@ fn generate_graph_node<'g>(
                 map,
                 rule_config,
                 quote! {
-                    #root::#generics::Push::<'i, #inner>
+                    #root::#generics::Push::<#inner>
                 },
                 accesser.content(),
                 root,
@@ -719,7 +719,7 @@ fn generate_graph_node<'g>(
                 map,
                 rule_config,
                 quote! {
-                    #root::#generics::Skip::<'i, #root::#wrapper>
+                    #root::#generics::Skip::<#root::#wrapper>
                 },
                 Accesser::new(),
                 root,
@@ -777,7 +777,7 @@ fn generate_graph_node<'g>(
                 map,
                 rule_config,
                 quote! {
-                    #root::#generics::Positive::<'i, #inner>
+                    #root::#generics::Positive::<#inner>
                 },
                 accessers.content(),
                 root,
@@ -793,7 +793,7 @@ fn generate_graph_node<'g>(
                 map,
                 rule_config,
                 quote! {
-                    #root::#generics::Negative::<'i, #inner>
+                    #root::#generics::Negative::<#inner>
                 },
                 Accesser::new(),
                 root,
@@ -814,12 +814,17 @@ fn generate_graph_node<'g>(
                 types.push(child);
                 accesser = accesser.join(acc.content_i(i));
             }
-            let seq = format_ident!("Seq_{}", types.len());
+            let seq = format_ident!("Seq{}", types.len());
             map.record_seq(types.len());
+
+            let pest_typed = pest_typed();
+            let args = types.iter().map(
+                |t| quote! {(#pest_typed::predefined_node::Skipped<#t, #root::generics::Skipped<'i>, #skip>)},
+            );
             process_single_alias(
                 map,
                 rule_config,
-                quote! { #root::#generics::#seq::<'i, #(#types, )* #skip> },
+                quote! { #root::#generics::#seq::<#(#args, )*> },
                 accesser,
                 root,
                 emission,
@@ -836,7 +841,7 @@ fn generate_graph_node<'g>(
                 types.push(child);
                 accesser = accesser.join(acc.choice(i));
             }
-            let choice = format_ident!("Choice_{}", types.len());
+            let choice = format_ident!("Choice{}", types.len());
             map.record_choice(types.len());
             process_single_alias(
                 map,
@@ -1087,7 +1092,6 @@ pub(crate) fn generate_typed_pair_from_rule(
         let root = quote! {super};
         let rules_mod = rules_mod();
         let _i32 = _i32();
-        let char = _char();
         let fill = |set: &BTreeSet<usize>,
                     target: &mut Vec<TokenStream>,
                     prefix: &str,
@@ -1096,7 +1100,6 @@ pub(crate) fn generate_typed_pair_from_rule(
                     mod_prefix: Option<&'static str>,
                     seq: bool| {
             for item in set {
-                let type_i = format_ident!("{}_{}", prefix, item);
                 let generics_i = format_ident!("{}{}", prefix, item);
                 let (types, field): (Vec<_>, Vec<_>) = (0..*item)
                     .map(|i| {
@@ -1126,28 +1129,6 @@ pub(crate) fn generate_typed_pair_from_rule(
                         pub use pest_typed::#module::#generics_i;
                     })
                 }
-                let life = if seq {
-                    quote! {'i,}
-                } else {
-                    quote! {}
-                };
-                let skip_arg = if seq {
-                    quote! {const SKIP: usize,}
-                } else {
-                    quote! {}
-                };
-                if seq {
-                    let args = types.iter().map(
-                        |t| quote! {(#pest_typed::predefined_node::Skipped<#t, Skipped<'i>, SKIP>)},
-                    );
-                    target.push(quote! {
-                        pub type #type_i<#life #(#types, )* #skip_arg> = #generics_i<#(#args, )*>;
-                    });
-                } else {
-                    target.push(quote! {
-                        pub type #type_i<#life #(#types, )* #skip_arg> = #generics_i<#(#types, )*>;
-                    });
-                };
             }
         };
         let mut seq = vec![];
@@ -1201,19 +1182,14 @@ pub(crate) fn generate_typed_pair_from_rule(
             #[doc = "Used generics."]
             pub mod generics {
                 use #pest_typed::{predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
+                /// Skipped content.
                 pub type Skipped<'i> = #skip;
-                pub type Str<Wrapper: StringWrapper> = predefined_node::Str::<Wrapper>;
-                pub type Insens<'i, Wrapper: StringWrapper> = predefined_node::Insens::<'i, Wrapper>;
-                pub type PeekSlice2<const START: #_i32, const END: #_i32> = predefined_node::PeekSlice2::<START, END>;
-                pub type PeekSlice1<const START: #_i32> = predefined_node::PeekSlice1::<START>;
-                pub type Push<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Push<T>;
-                pub type Skip<'i, Strings: StringArrayWrapper> = predefined_node::Skip::<'i, Strings>;
-                pub type CharRange<const START: #char, const END: #char> = predefined_node::CharRange::<START, END>;
-                pub type Positive<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Positive<T>;
-                pub type Negative<'i, T: TypedNode<'i, #root::Rule>> = predefined_node::Negative<T>;
+                pub use predefined_node::{Str, Insens, PeekSlice1, PeekSlice2, Push, Skip, CharRange, Positive, Negative};
                 #(#seq)*
                 #(#chs)*
+                /// Repeat arbitrary times.
                 pub type Rep<'i, const SKIP: usize, T> = predefined_node::Rep<T, Skipped<'i>, SKIP>;
+                /// Repeat at least once.
                 pub type RepOnce<'i, const SKIP: usize, T> = predefined_node::RepOnce<T, Skipped<'i>, SKIP>;
             }
         }
