@@ -436,8 +436,10 @@ fn rule<'g, 'f>(
     let root = quote! {super};
     let _bool = _bool();
     let accessers = match emission {
-        Emission::Both => accessers.collect(&root, rule_config, AccessFrom::Rule),
-        Emission::Expression | Emission::Span => quote! {},
+        Emission::Both | Emission::Expression => {
+            accessers.collect(&root, rule_config, AccessFrom::Rule)
+        }
+        Emission::Span => quote! {},
     };
     fn create<'g>(
         rule_config: &RuleConfig<'g>,
