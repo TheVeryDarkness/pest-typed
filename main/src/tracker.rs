@@ -178,16 +178,12 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             .nth(col.saturating_sub(1))
             .unwrap_or_else(|| (line_string.len(), '\0'))
             .0;
-        let line_remained = &line_string[line_remained_index..];
+        let line_matched = &line_string[..line_remained_index];
 
         use core::fmt::Write;
         let mut message = String::new();
 
-        let _ = write!(
-            message,
-            "Remained part of current line: {:?}.",
-            line_remained
-        );
+        let _ = write!(message, "{}^---", line_matched);
 
         let mut write_message = |(rule, (mut positives, mut negatives, special)): (
             Option<R>,
@@ -300,7 +296,7 @@ mod tests {
 1 | abc
   | ^---
   |
-  = Remained part of current line: "abc\n".
+  = ^---
     Unexpected [Main], by Program."#
         );
         Ok(())
@@ -334,7 +330,7 @@ mod tests {
 1 | abc
   | ^---
   |
-  = Remained part of current line: "abc\n".
+  = ^---
     Expected [SOI], by Program."#
         );
         Ok(())
@@ -362,7 +358,7 @@ mod tests {
 1 | αβψ
   |  ^---
   |
-  = Remained part of current line: "βψ\n".
+  = α^---
     Unexpected [Main], by Program."#
         );
         Ok(())
