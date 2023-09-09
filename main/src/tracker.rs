@@ -52,7 +52,7 @@ pub struct Tracker<'i, R: RuleType> {
     positive: bool,
     /// upper rule -> (positives, negatives)
     attempts: BTreeMap<Option<R>, (Vec<R>, Vec<R>, Vec<SpecialError>)>,
-    stack: Vec<R>,
+    stack: Vec<(R, bool)>,
 }
 impl<'i, R: RuleType> Tracker<'i, R> {
     /// Create an empty tracker for attempts.
@@ -94,7 +94,9 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         self.during::<Ret, false>(f)
     }
     fn get_entry<'s>(&'s mut self) -> &'s mut (Vec<R>, Vec<R>, Vec<SpecialError>) {
-        self.attempts.entry(self.stack.last().cloned()).or_default()
+        self.attempts
+            .entry(self.stack.last().cloned().map(|(r, _)| r))
+            .or_default()
     }
     /// Report a repetition that exceeds the limit.
     pub fn repeat_too_many_times(&mut self, pos: Position<'i>) {
@@ -135,6 +137,11 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             }
         }
     }
+    fn mark_parent(&mut self) {
+        if let Some((_, upper)) = self.stack.last_mut() {
+            *upper = true;
+        }
+    }
     /// Record if the result doesn't match the state during calling `f`.
     #[inline]
     pub(crate) fn record_during_with<T, E>(
@@ -143,11 +150,14 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         f: impl FnOnce(&mut Self) -> Result<(Position<'i>, T), E>,
         rule: R,
     ) -> Result<(Position<'i>, T), E> {
-        self.stack.push(rule);
+        self.mark_parent();
+        self.stack.push((rule, false));
         let res = f(self);
         let succeeded = res.is_ok();
-        let upper = self.stack.pop().unwrap();
-        self.record(upper, pos, succeeded);
+        let (upper, has_children) = self.stack.pop().unwrap();
+        if !has_children {
+            self.record(upper, pos, succeeded);
+        }
         res
     }
     /// Record if the result doesn't match the state during calling `f`.
@@ -157,12 +167,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         pos: Position<'i>,
         f: impl FnOnce(&mut Self) -> Result<(Position<'i>, T), E>,
     ) -> Result<(Position<'i>, T), E> {
-        self.stack.push(T::RULE);
-        let res = f(self);
-        let succeeded = res.is_ok();
-        let rule = self.stack.pop().unwrap();
-        self.record(rule, pos, succeeded);
-        res
+        self.record_during_with(pos, f, T::RULE)
     }
     fn collect_to_message(self) -> String {
         let pos = self.position;
@@ -254,6 +259,7 @@ mod tests {
         Program,
         SOI,
         Main,
+        Body,
         EOI,
     }
     mod rule_wrappers {
@@ -273,6 +279,7 @@ mod tests {
         wrap!(Program);
         wrap!(SOI);
         wrap!(Main);
+        wrap!(Body);
         wrap!(EOI);
     }
     #[test]
@@ -360,6 +367,36 @@ mod tests {
   |
   = α^---
     Unexpected [Main], by Program."#
+        );
+        Ok(())
+    }
+    #[test]
+    fn nested() -> Result<(), ()> {
+        let mut pos = Position::from_start("αβψ\nδεφ\nγηι");
+        let mut tracker = Tracker::<'_, Rule>::new(pos);
+        let _ = tracker.record_during(pos, |tracker| {
+            let suc = pos.match_string("α");
+            assert!(suc);
+            tracker.negative_during(|tracker| {
+                tracker.record_during(pos, |tracker| {
+                    tracker.negative_during(|tracker| {
+                        tracker.record_during(pos, |_| Ok((pos, rule_wrappers::Body)))
+                    })?;
+                    Ok((pos, rule_wrappers::Main))
+                })
+            })?;
+            Ok((pos, rule_wrappers::Program))
+        })?;
+
+        assert_eq!(
+            format!("{}", tracker.collect()),
+            r#" --> 1:2
+  |
+1 | αβψ
+  |  ^---
+  |
+  = α^---
+    Unexpected [Body], by Main."#
         );
         Ok(())
     }
