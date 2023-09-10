@@ -52,7 +52,7 @@ pub struct Tracker<'i, R: RuleType> {
     positive: bool,
     /// upper rule -> (positives, negatives)
     attempts: BTreeMap<Option<R>, (Vec<R>, Vec<R>, Vec<SpecialError>)>,
-    stack: Vec<(R, bool)>,
+    stack: Vec<(R, Position<'i>, bool)>,
 }
 impl<'i, R: RuleType> Tracker<'i, R> {
     /// Create an empty tracker for attempts.
@@ -93,21 +93,32 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     pub fn negative_during<Ret>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
         self.during::<Ret, false>(f)
     }
-    fn get_entry<'s>(&'s mut self) -> &'s mut (Vec<R>, Vec<R>, Vec<SpecialError>) {
-        self.attempts
-            .entry(self.stack.last().cloned().map(|(r, _)| r))
-            .or_default()
+    fn get_entry<'s>(
+        &'s mut self,
+        pos: &Position<'_>,
+    ) -> &'s mut (Vec<R>, Vec<R>, Vec<SpecialError>) {
+        // Find lowest rule with the different position.
+        let mut upper = None;
+        for (upper_rule, upper_pos, _) in self.stack.iter() {
+            if upper_pos != pos {
+                upper = Some(upper_rule.clone());
+                break;
+            }
+        }
+        self.attempts.entry(upper).or_default()
     }
     /// Report a repetition that exceeds the limit.
     pub fn repeat_too_many_times(&mut self, pos: Position<'i>) {
         if self.prepare(pos) {
-            self.get_entry().2.push(SpecialError::RepeatTooManyTimes);
+            self.get_entry(&pos)
+                .2
+                .push(SpecialError::RepeatTooManyTimes);
         }
     }
     /// Reports a stack slice operation that is out of bound.
     pub fn out_of_bound(&mut self, pos: Position<'i>, start: i32, end: Option<i32>) {
         if self.prepare(pos) {
-            self.get_entry()
+            self.get_entry(&pos)
                 .2
                 .push(SpecialError::SliceOutOfBound(start, end));
         }
@@ -115,7 +126,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     /// Reports accessing operations on empty stack.
     pub fn empty_stack(&mut self, pos: Position<'i>) {
         if self.prepare(pos) {
-            self.get_entry().2.push(SpecialError::EmptyStack);
+            self.get_entry(&pos).2.push(SpecialError::EmptyStack);
         }
     }
     fn same_with_last(vec: &[R], rule: R) -> bool {
@@ -129,17 +140,12 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         if self.prepare(pos) {
             if succeeded != self.positive {
                 let positive = self.positive;
-                let value = self.get_entry();
+                let value = self.get_entry(&pos);
                 let vec = if positive { &mut value.0 } else { &mut value.1 };
                 if !Self::same_with_last(vec, rule) {
                     vec.push(rule);
                 }
             }
-        }
-    }
-    fn mark_parent(&mut self) {
-        if let Some((_, upper)) = self.stack.last_mut() {
-            *upper = true;
         }
     }
     /// Record if the result doesn't match the state during calling `f`.
@@ -150,13 +156,15 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         f: impl FnOnce(&mut Self) -> Result<(Position<'i>, T), E>,
         rule: R,
     ) -> Result<(Position<'i>, T), E> {
-        self.mark_parent();
-        self.stack.push((rule, false));
+        if let Some((_, _, has_children)) = self.stack.last_mut() {
+            *has_children = true;
+        }
+        self.stack.push((rule, pos, false));
         let res = f(self);
         let succeeded = res.is_ok();
-        let (upper, has_children) = self.stack.pop().unwrap();
+        let (_r, _pos, has_children) = self.stack.pop().unwrap();
         if !has_children {
-            self.record(upper, pos, succeeded);
+            self.record(rule, pos, succeeded);
         }
         res
     }
@@ -304,7 +312,7 @@ mod tests {
   | ^---
   |
   = ^---
-    Unexpected [Main], by Program."#
+    Unexpected [Main]."#
         );
         Ok(())
     }
@@ -338,7 +346,7 @@ mod tests {
   | ^---
   |
   = ^---
-    Expected [SOI], by Program."#
+    Expected [SOI]."#
         );
         Ok(())
     }
@@ -396,7 +404,7 @@ mod tests {
   |  ^---
   |
   = α^---
-    Unexpected [Body], by Main."#
+    Unexpected [Body], by Program."#
         );
         Ok(())
     }
