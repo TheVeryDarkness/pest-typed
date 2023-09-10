@@ -99,7 +99,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     ) -> &'s mut (Vec<R>, Vec<R>, Vec<SpecialError>) {
         // Find lowest rule with the different position.
         let mut upper = None;
-        for (upper_rule, upper_pos, _) in self.stack.iter() {
+        for (upper_rule, upper_pos, _) in self.stack.iter().rev() {
             if upper_pos != pos {
                 upper = Some(upper_rule.clone());
                 break;
