@@ -5,6 +5,7 @@ version = "0.9.6"
 edition = "2021"
 documentation = "https://docs.rs/pest_typed_generator"
 homepage = "https://github.com/theverydarkness/pest-typed"
+readme.workspace = true
 keywords = ["pest", "generator"]
 categories = ["parsing"]
 license = "MIT/Apache-2.0"
