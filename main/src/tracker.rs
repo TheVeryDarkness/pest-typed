@@ -24,7 +24,8 @@ use alloc::{
 };
 use core::cmp::Ordering;
 
-enum SpecialError {
+/// Some special errors that are not matching failures.
+pub enum SpecialError {
     /// Peek slice out of bound.
     SliceOutOfBound(i32, Option<i32>),
     /// Repeat too many times.
@@ -178,10 +179,10 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         self.record_during_with(pos, f, T::RULE)
     }
     fn collect_to_message(self) -> String {
-        let pos = self.position;
+        let (pos, attempts) = self.finish();
         // "{} | "
         // "{} = "
-        let (line, col) = self.position.line_col();
+        let (line, col) = pos.line_col();
         let spacing = format!("{}", line).len() + 3;
         let spacing = "\n".to_owned() + &" ".repeat(spacing);
         // Will not remove trailing CR or LF.
@@ -234,7 +235,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
                 };
             }
         };
-        for attempt in self.attempts {
+        for attempt in attempts {
             write_message(attempt);
         }
         message
@@ -256,6 +257,22 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             }
             Err(err) => err,
         }
+    }
+    /// Finish matching and convert the tracker into recorded information.
+    ///
+    /// Returned value is:
+    ///
+    /// - Current position.
+    /// - Attempts on current position.
+    ///
+    /// This information is all you need to generate an [Error].
+    pub fn finish(
+        self,
+    ) -> (
+        Position<'i>,
+        BTreeMap<Option<R>, (Vec<R>, Vec<R>, Vec<SpecialError>)>,
+    ) {
+        (self.position, self.attempts)
     }
 }
 
