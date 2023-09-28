@@ -1,2 +1,6 @@
 [workspace]
 members = ["derive", "generator", "main"]
+
+[workspace.dependencies]
+pest = { version = "2.7.3" }
+pest_meta = { version = "2.7.3" }

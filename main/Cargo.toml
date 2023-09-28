@@ -14,5 +14,5 @@ default = ["std"]
 std = ["pest/std"]
 
 [dependencies]
-pest = { version = "2.7.3" }
+pest.workspace = true
 custom_debug_derive = { version = "0.5.1" }
