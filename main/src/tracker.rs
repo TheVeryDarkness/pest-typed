@@ -47,12 +47,14 @@ impl ToString for SpecialError {
     }
 }
 
+type Tracked<R> = (Vec<R>, Vec<R>, Vec<SpecialError>);
+
 /// Error tracker.
 pub struct Tracker<'i, R: RuleType> {
     position: Position<'i>,
     positive: bool,
     /// upper rule -> (positives, negatives)
-    attempts: BTreeMap<Option<R>, (Vec<R>, Vec<R>, Vec<SpecialError>)>,
+    attempts: BTreeMap<Option<R>, Tracked<R>>,
     stack: Vec<(R, Position<'i>, bool)>,
 }
 impl<'i, R: RuleType> Tracker<'i, R> {
@@ -199,42 +201,40 @@ impl<'i, R: RuleType> Tracker<'i, R> {
 
         let _ = write!(message, "{}^---", line_matched);
 
-        let mut write_message = |(rule, (mut positives, mut negatives, special)): (
-            Option<R>,
-            (Vec<R>, Vec<R>, Vec<SpecialError>),
-        )| {
-            positives.sort();
-            positives.dedup();
-            negatives.sort();
-            negatives.dedup();
-            fn collect_rules<R: RuleType>(vec: Vec<R>) -> String {
-                format!("{:?}", vec)
-            }
-            let _ = message.write_str(&spacing);
-            let _ = match (positives.is_empty(), negatives.is_empty()) {
-                (true, true) => write!(message, "Unknown error (no rule tracked)"),
-                (false, true) => write!(message, "Expected {}", collect_rules(positives)),
-                (true, false) => write!(message, "Unexpected {}", collect_rules(negatives),),
-                (false, false) => write!(
-                    message,
-                    "Unexpected {}, expected {}",
-                    collect_rules(negatives),
-                    collect_rules(positives),
-                ),
-            };
-            if let Some(upper_rule) = rule {
-                let _ = write!(message, ", by {:?}", upper_rule);
-            };
-            let _ = write!(message, ".");
-
-            for special in special {
+        let mut write_message =
+            |(rule, (mut positives, mut negatives, special)): (Option<R>, Tracked<R>)| {
+                positives.sort();
+                positives.dedup();
+                negatives.sort();
+                negatives.dedup();
+                fn collect_rules<R: RuleType>(vec: Vec<R>) -> String {
+                    format!("{:?}", vec)
+                }
                 let _ = message.write_str(&spacing);
-                let _ = write!(message, "{}", special.to_string());
-                if let Some(upper_rule) = rule {
-                    let _ = write!(message, " (By {:?})", upper_rule);
+                let _ = match (positives.is_empty(), negatives.is_empty()) {
+                    (true, true) => write!(message, "Unknown error (no rule tracked)"),
+                    (false, true) => write!(message, "Expected {}", collect_rules(positives)),
+                    (true, false) => write!(message, "Unexpected {}", collect_rules(negatives),),
+                    (false, false) => write!(
+                        message,
+                        "Unexpected {}, expected {}",
+                        collect_rules(negatives),
+                        collect_rules(positives),
+                    ),
                 };
-            }
-        };
+                if let Some(upper_rule) = rule {
+                    let _ = write!(message, ", by {:?}", upper_rule);
+                };
+                let _ = write!(message, ".");
+
+                for special in special {
+                    let _ = message.write_str(&spacing);
+                    let _ = write!(message, "{}", special.to_string());
+                    if let Some(upper_rule) = rule {
+                        let _ = write!(message, " (By {:?})", upper_rule);
+                    };
+                }
+            };
         for attempt in attempts {
             write_message(attempt);
         }
@@ -246,7 +246,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         match pest::Position::new(pos.input, pos.pos()).ok_or_else(|| {
             Error::new_from_pos(
                 ErrorVariant::CustomError {
-                    message: format!("Internal error (invalid character index)."),
+                    message: format!("Internal error (invalid character index {}).", pos.pos()),
                 },
                 pest::Position::from_start(pos.input),
             )
@@ -266,12 +266,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     /// - Attempts on current position.
     ///
     /// This information is all you need to generate an [Error].
-    pub fn finish(
-        self,
-    ) -> (
-        Position<'i>,
-        BTreeMap<Option<R>, (Vec<R>, Vec<R>, Vec<SpecialError>)>,
-    ) {
+    pub fn finish(self) -> (Position<'i>, BTreeMap<Option<R>, Tracked<R>>) {
         (self.position, self.attempts)
     }
 }

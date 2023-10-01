@@ -43,9 +43,11 @@ where
 pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
     /// Parse the whole input into given typed node.
     /// A rule is not atomic by default.
+    #[allow(clippy:perf)]
     fn parse(input: &'i str) -> Result<Self, Error<R>>;
     /// Parse the whole input into given typed node.
     /// A rule is not atomic by default.
+    #[allow(clippy:perf)]
     fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {
         let mut stack = Stack::new();
         let input = Position::from_start(input);
@@ -117,8 +119,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Option<T> {
     ) -> Result<(Position<'i>, Self), ()> {
         let res = restore_on_err(stack, |stack| T::try_parse_with(input, stack, tracker));
         match res {
-            Ok((input, inner)) => Ok((input, Self::from(Some(inner)))),
-            Err(_) => Ok((input, Self::from(None))),
+            Ok((input, inner)) => Ok((input, Some(inner))),
+            Err(_) => Ok((input, None)),
         }
     }
 }

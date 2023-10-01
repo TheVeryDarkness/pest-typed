@@ -101,6 +101,7 @@ macro_rules! choices {
         #[doc = ::core::stringify!(Types for choices type [$name].)]
         pub mod $mod {
             #[doc = ::core::stringify!(Match one of $number expressions.)]
+            #[allow(clippy::style)]
             #[derive(Clone, PartialEq)]
             pub enum $name<$V0, $($V, )* > {
                 #[doc = ::core::stringify!(Variant $v0.)]

@@ -86,16 +86,13 @@ impl ToTokens for MatchChoices {
                 }
             })
             .collect::<Vec<_>>();
-        tokens.extend(
-            quote! {
-                match #expr {
-                    #(
-                        #arms
-                    )*
-                }
+        tokens.extend(quote! {
+            match #expr {
+                #(
+                    #arms
+                )*
             }
-            .into_iter(),
-        );
+        });
     }
 }
 
@@ -104,7 +101,7 @@ impl ToTokens for MatchChoices {
 /// Please imports generated module `generics` so that the macro can use it.
 pub fn match_choices(input: TokenStream) -> TokenStream {
     let mc: MatchChoices = syn::parse2(input).unwrap();
-    quote! {#mc}.into()
+    quote! {#mc}
 }
 
 #[cfg(test)]

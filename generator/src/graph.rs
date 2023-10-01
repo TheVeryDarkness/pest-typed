@@ -427,7 +427,7 @@ impl<'g> RuleConfig<'g> {
     }
 }
 
-fn rule<'g, 'f>(
+fn rule<'g>(
     rule_config: &RuleConfig<'g>,
     type_name: &TokenStream,
     accessers: &Accesser<'g>,
@@ -747,8 +747,8 @@ fn generate_graph_node<'g>(
         OptimizedExpr::Ident(id) => {
             let inner = ident(id);
             let rules = rules_mod();
-            let has_life_time = !(!rule_config.defined.contains(id.as_str())
-                && rule_config.builtins_without_lifetime.contains(id.as_str()));
+            let has_life_time = rule_config.defined.contains(id.as_str())
+                && !rule_config.builtins_without_lifetime.contains(id.as_str());
             let has_skip = rule_config.defined.contains(id.as_str());
             let generics = match (has_life_time, has_skip) {
                 (true, true) => quote! {::<'i, #skip>},
@@ -1199,8 +1199,7 @@ pub(crate) fn generate_typed_pair_from_rule(
     let pairs = {
         let rules_mod = rules_mod();
         let pairs_mod = pairs_mod();
-        let doc =
-            format! {"Re-export some types from {} to simplify the usage.", rules_mod.to_string()};
+        let doc = format! {"Re-export some types from {} to simplify the usage.", rules_mod};
         quote! {
             #[doc = #doc]
             pub use #rules_mod as #pairs_mod;
