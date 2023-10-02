@@ -169,7 +169,6 @@ impl<'g> Node<'g> {
         &self,
         root: &TokenStream,
         config: &RuleConfig<'g>,
-        from: AccessFrom,
     ) -> (TokenStream, TokenStream) {
         let flat = |flatten: &bool| {
             if *flatten {
@@ -214,11 +213,11 @@ impl<'g> Node<'g> {
                 )
             }
             Node::Content(inner) => {
-                let (pa, ty) = inner.expand(root, config, from);
+                let (pa, ty) = inner.expand(root, config);
                 (quote! {{let res = &res.content; #pa}}, quote! {#ty})
             }
             Node::SequenceI(i, inner) => {
-                let (pa, ty) = inner.expand(root, config, from);
+                let (pa, ty) = inner.expand(root, config);
                 let i = Index::from(*i);
                 (
                     quote! {{let res = &res.content.#i.matched; #pa}},
@@ -226,7 +225,7 @@ impl<'g> Node<'g> {
                 )
             }
             Node::Optional(flatten, inner) => {
-                let (pa, ty) = inner.expand(root, config, from);
+                let (pa, ty) = inner.expand(root, config);
                 let flat = flat(flatten);
                 (
                     quote! {{let res = res.as_ref().map(|res| #pa) #flat; res}},
@@ -234,7 +233,7 @@ impl<'g> Node<'g> {
                 )
             }
             Node::ChoiceI(index, flatten, inner) => {
-                let (pa, ty) = inner.expand(root, config, from);
+                let (pa, ty) = inner.expand(root, config);
                 let func = format_ident!("_{}", index);
                 let flat = flat(flatten);
                 (
@@ -243,7 +242,7 @@ impl<'g> Node<'g> {
                 )
             }
             Node::Contents(inner) => {
-                let (pa, ty) = inner.expand(root, config, from);
+                let (pa, ty) = inner.expand(root, config);
                 (
                     quote! {{let res = res.content.iter().map(|res| { let res = &res.matched; #pa }).collect::<#vec<_>>(); res}},
                     quote! {#vec::<#ty>},
@@ -251,18 +250,11 @@ impl<'g> Node<'g> {
             }
             Node::Tuple(tuple) => {
                 let (pa, ty): (Vec<_>, Vec<_>) =
-                    tuple.iter().map(|e| e.expand(root, config, from)).unzip();
+                    tuple.iter().map(|e| e.expand(root, config)).unzip();
                 (quote! {{let res = (#(#pa),*); res}}, quote! {(#(#ty),*)})
             }
         }
     }
-}
-
-#[derive(Clone, Copy)]
-enum AccessFrom {
-    Rule,
-    #[cfg(feature = "grammar-extras")]
-    Tag,
 }
 
 /// `'g` stands for the lifetime of rules.
@@ -326,15 +318,10 @@ impl<'g> Accesser<'g> {
         });
         self
     }
-    pub fn collect(
-        &self,
-        root: &TokenStream,
-        config: &RuleConfig<'g>,
-        from: AccessFrom,
-    ) -> TokenStream {
+    pub fn collect(&self, root: &TokenStream, config: &RuleConfig<'g>) -> TokenStream {
         let accessers = self.accessers.iter().map(|(name, node)| {
             let id = ident(name);
-            let (paths, types) = node.expand(root, config, from);
+            let (paths, types) = node.expand(root, config);
             let src = quote! {
                 #[allow(non_snake_case)]
                 pub fn #id<'s>(&'s self) -> #types {
@@ -436,11 +423,10 @@ fn rule<'g>(
     let root = quote! {super};
     let _bool = _bool();
     let accessers = match emission {
-        Emission::Both | Emission::Expression => {
-            accessers.collect(&root, rule_config, AccessFrom::Rule)
-        }
+        Emission::Both | Emission::Expression => accessers.collect(&root, rule_config),
         Emission::Span => quote! {},
     };
+    #[allow(clippy::needless_lifetimes)]
     fn create<'g>(
         rule_config: &RuleConfig<'g>,
         accesser_impl: TokenStream,
@@ -913,7 +899,7 @@ fn generate_graph_node<'g>(
                 );
                 let pest_typed = pest_typed();
                 let rule_id = &rule_config.rule_id;
-                let accessers_def = accesser.collect(new_root, rule_config, AccessFrom::Tag);
+                let accessers_def = accesser.collect(new_root, rule_config);
                 let comment = format!("Tag {} referenced by {}.", tag, rule_config.rule_name);
                 let def = quote! {
                     #[doc = #comment]
