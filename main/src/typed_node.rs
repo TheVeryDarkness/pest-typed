@@ -31,7 +31,6 @@ where
     Self: Sized + Debug + Clone + PartialEq,
 {
     /// Create typed node.
-    /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
     fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
@@ -42,9 +41,23 @@ where
 /// Node of concrete syntax tree.
 #[allow(clippy::perf)]
 pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
+    /// Create typed node.
+    fn try_parse_with_until_end(
+        input: Position<'i>,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Result<Self, ()>;
     /// Parse the whole input into given typed node.
     /// A rule is not atomic by default.
-    fn parse(input: &'i str) -> Result<Self, Error<R>>;
+    fn parse(input: &'i str) -> Result<Self, Error<R>> {
+        let mut stack = Stack::new();
+        let input = Position::from_start(input);
+        let mut tracker = Tracker::new(input);
+        match Self::try_parse_with_until_end(input, &mut stack, &mut tracker) {
+            Ok(res) => Ok(res),
+            Err(_) => Err(tracker.collect()),
+        }
+    }
     /// Parse the whole input into given typed node.
     /// A rule is not atomic by default.
     fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {

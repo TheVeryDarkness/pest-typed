@@ -10,8 +10,8 @@
 //! Macros and functions for defining structs, most of which are [RuleStruct](crate::RuleStruct).
 
 use crate::{
-    error::Error, predefined_node::EOI, tracker::Tracker, NeverFailedTypedNode, Position, RuleType,
-    Stack, TypedNode,
+    predefined_node::EOI, tracker::Tracker, NeverFailedTypedNode, Position, RuleType, Span, Stack,
+    TypedNode,
 };
 
 /// Implement [`Pairs`](crate::iterators::Pairs) for a struct that is a [`Pair`](crate::iterators::Pair).
@@ -282,20 +282,34 @@ macro_rules! impl_parse {
     ($name:ident, $Rule:ty, $ignored:ty, true) => {
         impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i, 1> {
             #[inline]
-            fn parse(
-                input: &'i ::core::primitive::str,
-            ) -> ::core::result::Result<Self, ::pest_typed::error::Error<$Rule>> {
-                ::pest_typed::rule::parse_without_ignore::<$Rule, Self>(input, <$Rule>::EOI)
+            fn try_parse_with_until_end(
+                input: $crate::Position<'i>,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::result::Result<Self, ()> {
+                ::pest_typed::rule::parse_without_ignore::<$Rule, Self>(
+                    input,
+                    stack,
+                    tracker,
+                    <$Rule>::EOI,
+                )
             }
         }
     };
     ($name:ident, $Rule:ty, $ignored:ty, $non_true:tt) => {
         impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i, 1> {
             #[inline]
-            fn parse(
-                input: &'i ::core::primitive::str,
-            ) -> ::core::result::Result<Self, ::pest_typed::error::Error<$Rule>> {
-                ::pest_typed::rule::parse::<$Rule, Self, $ignored>(input, <$Rule>::EOI)
+            fn try_parse_with_until_end(
+                input: $crate::Position<'i>,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::result::Result<Self, ()> {
+                ::pest_typed::rule::parse::<$Rule, Self, $ignored>(
+                    input,
+                    stack,
+                    tracker,
+                    <$Rule>::EOI,
+                )
             }
         }
     };
@@ -656,10 +670,17 @@ macro_rules! rule_eoi {
             for $name<'i, INHERITED>
         {
             #[inline]
-            fn parse(
-                input: &'i ::core::primitive::str,
-            ) -> ::core::result::Result<Self, ::pest_typed::error::Error<$Rule>> {
-                ::pest_typed::rule::parse_without_ignore::<$Rule, Self>(input, <$Rule>::EOI)
+            fn try_parse_with_until_end(
+                input: $crate::Position<'i>,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::result::Result<Self, ()> {
+                ::pest_typed::rule::parse_without_ignore::<$Rule, Self>(
+                    input,
+                    stack,
+                    tracker,
+                    <$Rule>::EOI,
+                )
             }
         }
         ::pest_typed::impl_deref!($name, ::pest_typed::predefined_node::EOI, Expression);
@@ -677,24 +698,23 @@ pub fn parse<
     _Self: TypedNode<'i, R>,
     IGNORED: NeverFailedTypedNode<'i, R>,
 >(
-    input: &'i str,
+    input: Position<'i>,
+    stack: &mut Stack<Span<'i>>,
+    tracker: &mut Tracker<'i, R>,
     rule_eoi: R,
-) -> Result<_Self, Error<R>> {
-    let mut stack = Stack::new();
-    let input = Position::from_start(input);
-    let mut tracker = Tracker::new(input);
-    let (input, res) = match _Self::try_parse_with(input, &mut stack, &mut tracker) {
+) -> Result<_Self, ()> {
+    let (input, res) = match _Self::try_parse_with(input, stack, tracker) {
         Ok((input, res)) => (input, res),
-        Err(_) => return Err(tracker.collect()),
+        Err(_) => return Err(()),
     };
-    let (input, _) = IGNORED::parse_with(input, &mut stack);
+    let (input, _) = IGNORED::parse_with(input, stack);
     let (_, _) = match tracker.record_during_with(
         input,
-        |tracker| EOI::try_parse_with(input, &mut stack, tracker),
+        |tracker| EOI::try_parse_with(input, stack, tracker),
         rule_eoi,
     ) {
         Ok((input, res)) => (input, res),
-        Err(_) => return Err(tracker.collect()),
+        Err(_) => return Err(()),
     };
     Ok(res)
 }
@@ -703,23 +723,22 @@ pub fn parse<
 ///
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
 pub fn parse_without_ignore<'i, R: RuleType + 'i, _Self: TypedNode<'i, R>>(
-    input: &'i str,
+    input: Position<'i>,
+    stack: &mut Stack<Span<'i>>,
+    tracker: &mut Tracker<'i, R>,
     rule_eoi: R,
-) -> Result<_Self, Error<R>> {
-    let mut stack = Stack::new();
-    let input = Position::from_start(input);
-    let mut tracker = Tracker::new(input);
-    let (input, res) = match _Self::try_parse_with(input, &mut stack, &mut tracker) {
+) -> Result<_Self, ()> {
+    let (input, res) = match _Self::try_parse_with(input, stack, tracker) {
         Ok((input, res)) => (input, res),
-        Err(_) => return Err(tracker.collect()),
+        Err(_) => return Err(()),
     };
     let (_, _) = match tracker.record_during_with(
         input,
-        |tracker| EOI::try_parse_with(input, &mut stack, tracker),
+        |tracker| EOI::try_parse_with(input, stack, tracker),
         rule_eoi,
     ) {
         Ok((input, res)) => (input, res),
-        Err(_) => return Err(tracker.collect()),
+        Err(_) => return Err(()),
     };
     Ok(res)
 }
