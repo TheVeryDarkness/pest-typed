@@ -734,7 +734,7 @@ fn generate_graph_node<'g>(
             let inner = ident(id);
             let rules = rules_mod();
             let has_life_time = rule_config.defined.contains(id.as_str())
-                && !rule_config.builtins_without_lifetime.contains(id.as_str());
+                || !rule_config.builtins_without_lifetime.contains(id.as_str());
             let has_skip = rule_config.defined.contains(id.as_str());
             let generics = match (has_life_time, has_skip) {
                 (true, true) => quote! {::<'i, #skip>},
