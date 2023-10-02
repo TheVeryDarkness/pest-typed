@@ -40,14 +40,13 @@ where
 }
 
 /// Node of concrete syntax tree.
+#[allow(clippy::perf)]
 pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
     /// Parse the whole input into given typed node.
     /// A rule is not atomic by default.
-    #[allow(clippy:perf)]
     fn parse(input: &'i str) -> Result<Self, Error<R>>;
     /// Parse the whole input into given typed node.
     /// A rule is not atomic by default.
-    #[allow(clippy:perf)]
     fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {
         let mut stack = Stack::new();
         let input = Position::from_start(input);

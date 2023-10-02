@@ -104,7 +104,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         let mut upper = None;
         for (upper_rule, upper_pos, _) in self.stack.iter().rev() {
             if upper_pos != pos {
-                upper = Some(upper_rule.clone());
+                upper = Some(*upper_rule);
                 break;
             }
         }
@@ -140,14 +140,12 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     #[inline]
     fn record(&mut self, rule: R, pos: Position<'i>, succeeded: bool) {
-        if self.prepare(pos) {
-            if succeeded != self.positive {
-                let positive = self.positive;
-                let value = self.get_entry(&pos);
-                let vec = if positive { &mut value.0 } else { &mut value.1 };
-                if !Self::same_with_last(vec, rule) {
-                    vec.push(rule);
-                }
+        if self.prepare(pos) && succeeded != self.positive {
+            let positive = self.positive;
+            let value = self.get_entry(&pos);
+            let vec = if positive { &mut value.0 } else { &mut value.1 };
+            if !Self::same_with_last(vec, rule) {
+                vec.push(rule);
             }
         }
     }
