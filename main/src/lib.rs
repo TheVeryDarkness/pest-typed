@@ -44,6 +44,7 @@ pub mod sequence;
 pub mod tracker;
 mod typed_node;
 mod wrapper;
+mod formatter;
 pub use alloc::boxed::Box;
 
 // Below modules are copied from pest.
