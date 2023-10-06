@@ -7,12 +7,14 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use core::fmt::{self, Write};
+use core::fmt::{self};
 use core::hash::{Hash, Hasher};
+use core::marker::PhantomData;
 use core::ops::{Bound, RangeBounds};
 use core::ptr;
 use core::str;
 
+use alloc::format;
 use alloc::string::String;
 
 use crate::position;
@@ -323,48 +325,106 @@ struct PosSpan {
     col_end: usize,
 }
 
-impl<'i> Span<'i> {
+pub struct FormatOption<Writer, SpanFormatter, MarkerFormatter, NumberFormatter>
+where
+    Writer: fmt::Write,
+    SpanFormatter: FnMut(&str, &mut Writer) -> fmt::Result,
+    MarkerFormatter: FnMut(&str, &mut Writer) -> fmt::Result,
+    NumberFormatter: FnMut(&str, &mut Writer) -> fmt::Result,
+{
+    span_formatter: SpanFormatter,
+    marker_formatter: MarkerFormatter,
+    number_formatter: NumberFormatter,
+    _phantom: PhantomData<Writer>,
+}
+
+impl<Writer, SF, MF, NF> FormatOption<Writer, SF, MF, NF>
+where
+    Writer: fmt::Write,
+    SF: FnMut(&str, &mut Writer) -> fmt::Result,
+    MF: FnMut(&str, &mut Writer) -> fmt::Result,
+    NF: FnMut(&str, &mut Writer) -> fmt::Result,
+{
     fn visualize_white_space(line: &str) -> String {
         // \r ␍
         // \n ␊
         line.replace('\n', "␊").replace('\r', "␍")
     }
     fn display_snippet_single_line(
-        f: &mut impl Write,
+        mut self,
+        f: &mut Writer,
         index_digit: usize,
         line: (&str, PosSpan),
     ) -> fmt::Result {
         let spacing = " ".repeat(index_digit);
-        writeln!(f, "{} | {}v", spacing, &line.0[..line.1.col_start])?;
-        writeln!(f, "{:w$} | {}", line.1.line + 1, line.0, w = index_digit)?;
-        writeln!(f, "{} | {}^", spacing, &line.0[..line.1.col_end - 1])?;
+        write!(f, "{} ", spacing)?;
+        (self.number_formatter)("|", f)?;
+        writeln!(f)?;
+
+        let number = format!("{:w$}", line.1.line + 1, w = index_digit);
+        (self.number_formatter)(&number, f)?;
+        write!(f, " ")?;
+        (self.number_formatter)("|", f)?;
+        write!(f, " {}", &line.0[..line.1.col_start],)?;
+        (self.span_formatter)(&line.0[line.1.col_start..line.1.col_end], f)?;
+        write!(f, "{}", &line.0[line.1.col_end..])?;
+        writeln!(f)?;
+
+        write!(f, "{} ", spacing)?;
+        (self.number_formatter)("|", f)?;
+        write!(f, " {}", &line.0[..line.1.col_start])?;
+        (self.marker_formatter)(&"^".repeat(line.1.col_end - line.1.col_start), f)?;
+        writeln!(f)?;
+
         Ok(())
     }
     fn display_snippet_multi_line(
-        f: &mut impl Write,
+        mut self,
+        f: &mut Writer,
         index_digit: usize,
         start: (&str, Pos),
         end: (&str, Pos),
     ) -> fmt::Result {
         let spacing = " ".repeat(index_digit);
-        writeln!(f, "{} | {}v", spacing, &start.0[..start.1.col])?;
-        writeln!(f, "{:w$} | {}", start.1.line + 1, start.0, w = index_digit)?;
-        writeln!(f, "{} | ...", spacing)?;
-        writeln!(f, "{:w$} | {}", end.1.line + 1, end.0, w = index_digit)?;
-        writeln!(f, "{} | {}^", spacing, &end.0[..end.1.col - 1])?;
+        write!(f, "{} ", spacing)?;
+        (self.number_formatter)("|", f)?;
+        write!(f, " {}", &start.0[..start.1.col])?;
+        (self.marker_formatter)("v", f)?;
+        writeln!(f)?;
+
+        write!(f, "{:w$} ", start.1.line + 1, w = index_digit)?;
+        (self.number_formatter)("|", f)?;
+        writeln!(f, " {}", start.0)?;
+
+        if start.1.line.abs_diff(end.1.line) > 1 {
+            write!(f, "{} ", spacing)?;
+            (self.number_formatter)("|", f)?;
+            writeln!(f, " ...")?;
+        }
+
+        write!(f, "{:w$} ", end.1.line + 1, w = index_digit)?;
+        (self.number_formatter)("|", f)?;
+        writeln!(f, " {}", end.0)?;
+
+        write!(f, "{} ", spacing)?;
+        (self.number_formatter)("|", f)?;
+        write!(f, " {}", &end.0[..end.1.col - 1])?;
+        (self.marker_formatter)("^", f)?;
+        writeln!(f)?;
+
         Ok(())
     }
-    fn display_snippet(&self, f: &mut impl Write) -> fmt::Result {
+    fn display_snippet<'i>(self, span: &Span<'i>, f: &mut Writer) -> fmt::Result {
         let mut start = None;
         let mut end = None;
         let mut pos = 0usize;
-        let input = Self::new(self.input, 0, self.input.len()).unwrap();
+        let input = Span::new(span.input, 0, span.input.len()).unwrap();
         let mut iter = input.lines().enumerate().peekable();
         while let Some((index, line)) = iter.peek() {
-            if pos + line.len() >= self.start {
+            if pos + line.len() >= span.start {
                 start = Some(Pos {
                     line: index.clone(),
-                    col: self.start - pos,
+                    col: span.start - pos,
                 });
                 break;
             }
@@ -372,10 +432,10 @@ impl<'i> Span<'i> {
             iter.next();
         }
         for (index, line) in iter {
-            if pos + line.len() >= self.end {
+            if pos + line.len() >= span.end {
                 end = Some(Pos {
                     line: index,
-                    col: self.end - pos,
+                    col: span.end - pos,
                 });
                 break;
             }
@@ -405,21 +465,44 @@ impl<'i> Span<'i> {
                 col_end: end.col,
             };
             let line = (cur_line.as_str(), span);
-            Self::display_snippet_single_line(f, index_digit, line)?;
+            self.display_snippet_single_line(f, index_digit, line)?;
         } else {
             let start_line = Self::visualize_white_space(lines.next().unwrap());
             let end_line = Self::visualize_white_space(lines.last().unwrap());
             let start = (start_line.as_str(), start);
             let end = (end_line.as_str(), end);
-            Self::display_snippet_multi_line(f, index_digit, start, end)?;
+            self.display_snippet_multi_line(f, index_digit, start, end)?;
         }
         Ok(())
     }
 }
 
+impl<'i> Span<'i> {
+    /// Format span with given option.
+    pub fn display<Writer, SF, MF, NF>(
+        &self,
+        f: &mut Writer,
+        opt: FormatOption<Writer, SF, MF, NF>,
+    ) -> fmt::Result
+    where
+        Writer: fmt::Write,
+        SF: FnMut(&str, &mut Writer) -> fmt::Result,
+        MF: FnMut(&str, &mut Writer) -> fmt::Result,
+        NF: FnMut(&str, &mut Writer) -> fmt::Result,
+    {
+        opt.display_snippet(self, f)
+    }
+}
+
 impl<'i> fmt::Display for Span<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.display_snippet(f)
+        let opt: FormatOption<fmt::Formatter<'_>, _, _, _> = FormatOption {
+            span_formatter: |s, f| write!(f, "{s}"),
+            marker_formatter: |m, f| write!(f, "{m}"),
+            number_formatter: |n, f| write!(f, "{n}"),
+            _phantom: PhantomData,
+        };
+        opt.display_snippet(self, f)
     }
 }
 
@@ -683,7 +766,7 @@ mod tests {
         assert_eq!(
             msg,
             "  \
-  | 1v
+  |
 1 | 123␊
   | 1^
 "
@@ -696,7 +779,7 @@ mod tests {
         assert_eq!(
             msg,
             "  \
-  | 45v
+  |
 2 | 456␊
   | 45^
 "
@@ -709,7 +792,7 @@ mod tests {
         assert_eq!(
             msg,
             "  \
-  | 7v
+  |
 3 | 789␊
   | 7^
 "
