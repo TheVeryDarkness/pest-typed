@@ -1,7 +1,7 @@
 [package]
 name = "pest_typed_derive"
 description = "pest-typed's derive macro."
-version = "0.10.0"
+version = "0.10.1"
 edition = "2021"
 documentation = "https://docs.rs/pest_typed_derive"
 homepage = "https://github.com/theverydarkness/pest-typed"
@@ -20,9 +20,9 @@ grammar-extras = ["pest_typed_generator/grammar-extras"]
 all-features = true
 
 [dependencies]
-pest_typed_generator = { path = "../generator", version = "0.10.0", default-features = false }
+pest_typed_generator = { path = "../generator", version = "0.10.1", default-features = false }
 
 [dev-dependencies]
-pest_typed = { path = "../main", version = "0.10.0", default-features = false }
+pest_typed = { path = "../main", version = "0.10.1", default-features = false }
 indoc = { version = "2.0" }
 anyhow = { version = "1.0" }
