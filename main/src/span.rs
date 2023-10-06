@@ -9,7 +9,6 @@
 
 use core::fmt::{self};
 use core::hash::{Hash, Hasher};
-use core::marker::PhantomData;
 use core::ops::{Bound, RangeBounds};
 use core::ptr;
 use core::str;
@@ -325,37 +324,41 @@ struct PosSpan {
     col_end: usize,
 }
 
-pub struct FormatOption<Writer, SpanFormatter, MarkerFormatter, NumberFormatter>
-where
-    Writer: fmt::Write,
-    SpanFormatter: FnMut(&str, &mut Writer) -> fmt::Result,
-    MarkerFormatter: FnMut(&str, &mut Writer) -> fmt::Result,
-    NumberFormatter: FnMut(&str, &mut Writer) -> fmt::Result,
-{
-    span_formatter: SpanFormatter,
-    marker_formatter: MarkerFormatter,
-    number_formatter: NumberFormatter,
-    _phantom: PhantomData<Writer>,
+pub struct FormatOption<SpanFormatter, MarkerFormatter, NumberFormatter> {
+    pub span_formatter: SpanFormatter,
+    pub marker_formatter: MarkerFormatter,
+    pub number_formatter: NumberFormatter,
 }
 
-impl<Writer, SF, MF, NF> FormatOption<Writer, SF, MF, NF>
-where
-    Writer: fmt::Write,
-    SF: FnMut(&str, &mut Writer) -> fmt::Result,
-    MF: FnMut(&str, &mut Writer) -> fmt::Result,
-    NF: FnMut(&str, &mut Writer) -> fmt::Result,
-{
+type FmtPtr<Writer> = fn(&str, &mut Writer) -> fmt::Result;
+impl<Writer: fmt::Write> Default for FormatOption<FmtPtr<Writer>, FmtPtr<Writer>, FmtPtr<Writer>> {
+    fn default() -> Self {
+        Self {
+            span_formatter: |s, f| write!(f, "{s}"),
+            marker_formatter: |m, f| write!(f, "{m}"),
+            number_formatter: |n, f| write!(f, "{n}"),
+        }
+    }
+}
+
+impl<SF, MF, NF> FormatOption<SF, MF, NF> {
     fn visualize_white_space(line: &str) -> String {
         // \r ␍
         // \n ␊
         line.replace('\n', "␊").replace('\r', "␍")
     }
-    fn display_snippet_single_line(
+    fn display_snippet_single_line<Writer>(
         mut self,
         f: &mut Writer,
         index_digit: usize,
         line: (&str, PosSpan),
-    ) -> fmt::Result {
+    ) -> fmt::Result
+    where
+        Writer: fmt::Write,
+        SF: FnMut(&str, &mut Writer) -> fmt::Result,
+        MF: FnMut(&str, &mut Writer) -> fmt::Result,
+        NF: FnMut(&str, &mut Writer) -> fmt::Result,
+    {
         let spacing = " ".repeat(index_digit);
         write!(f, "{} ", spacing)?;
         (self.number_formatter)("|", f)?;
@@ -378,13 +381,19 @@ where
 
         Ok(())
     }
-    fn display_snippet_multi_line(
+    fn display_snippet_multi_line<Writer>(
         mut self,
         f: &mut Writer,
         index_digit: usize,
         start: (&str, Pos),
         end: (&str, Pos),
-    ) -> fmt::Result {
+    ) -> fmt::Result
+    where
+        Writer: fmt::Write,
+        SF: FnMut(&str, &mut Writer) -> fmt::Result,
+        MF: FnMut(&str, &mut Writer) -> fmt::Result,
+        NF: FnMut(&str, &mut Writer) -> fmt::Result,
+    {
         let spacing = " ".repeat(index_digit);
         write!(f, "{} ", spacing)?;
         (self.number_formatter)("|", f)?;
@@ -414,7 +423,13 @@ where
 
         Ok(())
     }
-    fn display_snippet<'i>(self, span: &Span<'i>, f: &mut Writer) -> fmt::Result {
+    fn display_snippet<'i, Writer>(self, span: &Span<'i>, f: &mut Writer) -> fmt::Result
+    where
+        Writer: fmt::Write,
+        SF: FnMut(&str, &mut Writer) -> fmt::Result,
+        MF: FnMut(&str, &mut Writer) -> fmt::Result,
+        NF: FnMut(&str, &mut Writer) -> fmt::Result,
+    {
         let mut start = None;
         let mut end = None;
         let mut pos = 0usize;
@@ -482,7 +497,7 @@ impl<'i> Span<'i> {
     pub fn display<Writer, SF, MF, NF>(
         &self,
         f: &mut Writer,
-        opt: FormatOption<Writer, SF, MF, NF>,
+        opt: FormatOption<SF, MF, NF>,
     ) -> fmt::Result
     where
         Writer: fmt::Write,
@@ -496,12 +511,7 @@ impl<'i> Span<'i> {
 
 impl<'i> fmt::Display for Span<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let opt: FormatOption<fmt::Formatter<'_>, _, _, _> = FormatOption {
-            span_formatter: |s, f| write!(f, "{s}"),
-            marker_formatter: |m, f| write!(f, "{m}"),
-            number_formatter: |n, f| write!(f, "{n}"),
-            _phantom: PhantomData,
-        };
+        let opt = FormatOption::default();
         opt.display_snippet(self, f)
     }
 }
