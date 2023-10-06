@@ -7,11 +7,13 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use core::fmt;
+use core::fmt::{self, Write};
 use core::hash::{Hash, Hasher};
 use core::ops::{Bound, RangeBounds};
 use core::ptr;
 use core::str;
+
+use alloc::string::String;
 
 use crate::position;
 
@@ -309,6 +311,118 @@ impl<'i> Hash for Span<'i> {
     }
 }
 
+#[derive(Debug)]
+struct Pos {
+    line: usize,
+    col: usize,
+}
+#[derive(Debug)]
+struct PosSpan {
+    line: usize,
+    col_start: usize,
+    col_end: usize,
+}
+
+impl<'i> Span<'i> {
+    fn visualize_white_space(line: &str) -> String {
+        // \r ␍
+        // \n ␊
+        line.replace('\n', "␊").replace('\r', "␍")
+    }
+    fn display_snippet_single_line(
+        f: &mut impl Write,
+        index_digit: usize,
+        line: (&str, PosSpan),
+    ) -> fmt::Result {
+        let spacing = " ".repeat(index_digit);
+        writeln!(f, "{} | {}v", spacing, &line.0[..line.1.col_start])?;
+        writeln!(f, "{:w$} | {}", line.1.line + 1, line.0, w = index_digit)?;
+        writeln!(f, "{} | {}^", spacing, &line.0[..line.1.col_end - 1])?;
+        Ok(())
+    }
+    fn display_snippet_multi_line(
+        f: &mut impl Write,
+        index_digit: usize,
+        start: (&str, Pos),
+        end: (&str, Pos),
+    ) -> fmt::Result {
+        let spacing = " ".repeat(index_digit);
+        writeln!(f, "{} | {}v", spacing, &start.0[..start.1.col])?;
+        writeln!(f, "{:w$} | {}", start.1.line + 1, start.0, w = index_digit)?;
+        writeln!(f, "{} | ...", spacing)?;
+        writeln!(f, "{:w$} | {}", end.1.line + 1, end.0, w = index_digit)?;
+        writeln!(f, "{} | {}^", spacing, &end.0[..end.1.col - 1])?;
+        Ok(())
+    }
+    fn display_snippet(&self, f: &mut impl Write) -> fmt::Result {
+        let mut start = None;
+        let mut end = None;
+        let mut pos = 0usize;
+        let input = Self::new(self.input, 0, self.input.len()).unwrap();
+        let mut iter = input.lines().enumerate().peekable();
+        while let Some((index, line)) = iter.peek() {
+            if pos + line.len() >= self.start {
+                start = Some(Pos {
+                    line: index.clone(),
+                    col: self.start - pos,
+                });
+                break;
+            }
+            pos += line.len();
+            iter.next();
+        }
+        for (index, line) in iter {
+            if pos + line.len() >= self.end {
+                end = Some(Pos {
+                    line: index,
+                    col: self.end - pos,
+                });
+                break;
+            }
+            pos += line.len();
+        }
+        let start = start.unwrap();
+        let end = end.unwrap();
+        let mut lines = input
+            .lines()
+            .skip(start.line)
+            .take(end.line - start.line + 1)
+            .peekable();
+        let index_digit = {
+            let mut digit = 1usize;
+            let mut i = end.line + 1;
+            while i >= 10 {
+                digit += 1;
+                i /= 10;
+            }
+            digit
+        };
+        if start.line == end.line {
+            let cur_line = Self::visualize_white_space(lines.next().unwrap());
+            let span = PosSpan {
+                line: start.line,
+                col_start: start.col,
+                col_end: end.col,
+            };
+            let line = (cur_line.as_str(), span);
+            Self::display_snippet_single_line(f, index_digit, line)?;
+        } else {
+            let start_line = Self::visualize_white_space(lines.next().unwrap());
+            let end_line = Self::visualize_white_space(lines.last().unwrap());
+            let start = (start_line.as_str(), start);
+            let end = (end_line.as_str(), end);
+            Self::display_snippet_multi_line(f, index_digit, start, end)?;
+        }
+        Ok(())
+    }
+}
+
+impl<'i> fmt::Display for Span<'i> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.display_snippet(f)
+    }
+}
+
 /// Merges two spans into one.
 ///
 /// This function merges two spans that are contiguous or overlapping into a single span
@@ -412,6 +526,7 @@ impl<'i> Iterator for Lines<'i> {
 mod tests {
     use super::*;
     use alloc::borrow::ToOwned;
+    use alloc::string::ToString;
     use alloc::vec::Vec;
 
     #[test]
@@ -560,5 +675,59 @@ mod tests {
         let merged = merge_spans(&span1, &span2);
 
         assert!(merged.is_none());
+    }
+
+    #[test]
+    fn display_span_first_line() {
+        let msg = Span::new("123\n456\n789\n", 1, 2).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  | 1v
+1 | 123␊
+  | 1^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_mid_line() {
+        let msg = Span::new("123\n456\n789\n", 6, 7).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  | 45v
+2 | 456␊
+  | 45^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_last_line() {
+        let msg = Span::new("123\n456\n789\n", 9, 10).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  | 7v
+3 | 789␊
+  | 7^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_all_line() {
+        let msg = Span::new("123\n456\n789\n", 2, 11).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  | 12v
+1 | 123␊
+  | ...
+3 | 789␊
+  | 78^
+"
+        );
     }
 }
