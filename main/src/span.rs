@@ -633,11 +633,26 @@ mod tests {
         assert_eq!(
             msg,
             "  \
-  | 12v
+  |   v
 1 | 123␊
   | ...
 3 | 789␊
-  | 78^
+  |   ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_unicode() {
+        let msg = Span::new("ß\n∆\n中\n", 2, 10).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |   v
+1 | ß␊
+  | ...
+3 | 中␊
+  |  ^
 "
         );
     }
@@ -659,11 +674,11 @@ mod tests {
         assert_eq!(
             msg,
             "  \
-  <|> 12[v]
+  <|>   [v]
 <1> <|> 12{3␊}
   <|> ...
 <3> <|> {789}␊
-  <|> 78[^]
+  <|>   [^]
 "
         );
     }

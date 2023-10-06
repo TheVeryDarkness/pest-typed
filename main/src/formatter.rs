@@ -1,6 +1,7 @@
 use crate::Span;
 use alloc::{format, string::String};
 use core::fmt;
+use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug)]
 struct Pos {
@@ -102,7 +103,11 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         let spacing = " ".repeat(index_digit);
         write!(f, "{} ", spacing)?;
         (self.number_formatter)("|", f)?;
-        write!(f, " {}", &start.0[..start.1.col])?;
+        write!(
+            f,
+            " {}",
+            " ".repeat(UnicodeWidthStr::width_cjk(&start.0[..start.1.col]))
+        )?;
         (self.marker_formatter)("v", f)?;
         writeln!(f)?;
 
@@ -130,7 +135,11 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
 
         write!(f, "{} ", spacing)?;
         (self.number_formatter)("|", f)?;
-        write!(f, " {}", &end.0[..end.1.col - 1])?;
+        write!(
+            f,
+            " {}",
+            " ".repeat(UnicodeWidthStr::width_cjk(&end.0[..end.1.col]).saturating_sub(1))
+        )?;
         (self.marker_formatter)("^", f)?;
         writeln!(f)?;
 
