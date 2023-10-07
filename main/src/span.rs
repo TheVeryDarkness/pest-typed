@@ -596,7 +596,7 @@ mod tests {
             "  \
   |
 1 | 123␊
-  | 1^
+  |  ^
 "
         );
     }
@@ -609,7 +609,7 @@ mod tests {
             "  \
   |
 2 | 456␊
-  | 45^
+  |   ^
 "
         );
     }
@@ -622,7 +622,20 @@ mod tests {
             "  \
   |
 3 | 789␊
-  | 7^
+  |  ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_same_pos() {
+        let msg = Span::new("123\n456\n789\n", 9, 9).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+3 | 789␊
+  |  
 "
         );
     }

@@ -81,7 +81,11 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
 
         write!(f, "{} ", spacing)?;
         (self.number_formatter)("|", f)?;
-        write!(f, " {}", &line.0[..line.1.col_start])?;
+        write!(
+            f,
+            " {}",
+            " ".repeat(UnicodeWidthStr::width_cjk(&line.0[..line.1.col_start])),
+        )?;
         (self.marker_formatter)(&"^".repeat(line.1.col_end - line.1.col_start), f)?;
         writeln!(f)?;
 
