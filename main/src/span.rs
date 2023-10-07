@@ -641,6 +641,36 @@ mod tests {
     }
 
     #[test]
+    fn display_span_cr_lf_single_line() {
+        let msg = Span::new("123\r\n", 4, 5).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+1 | 123␍␊
+  |     ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_cr_lf_multi_line() {
+        let msg = Span::new("123\r\n456\r\n789\r\n", 4, 14)
+            .unwrap()
+            .to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |     v
+1 | 123␍␊
+2 | 456␍␊
+3 | 789␍␊
+  |    ^
+"
+        );
+    }
+
+    #[test]
     fn display_span_all_line() {
         let msg = Span::new("123\n456\n789\n", 2, 11).unwrap().to_string();
         assert_eq!(

@@ -1,6 +1,6 @@
 use crate::Span;
 use alloc::{format, string::String, vec::Vec};
-use core::{fmt, ops::Deref};
+use core::{fmt, marker::PhantomData, ops::Deref};
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug)]
@@ -8,11 +8,59 @@ struct Pos {
     line: usize,
     col: usize,
 }
+
+fn visualize_white_space(line: &str) -> String {
+    // \r ␍
+    // \n ␊
+    line.replace('\n', "␊").replace('\r', "␍")
+}
+
 #[derive(Debug)]
-struct PosSpan {
+struct Partition2<'i> {
     line: usize,
-    col_start: usize,
-    col_end: usize,
+    former: String,
+    middle: String,
+    latter: String,
+    _p: PhantomData<&'i str>,
+}
+impl<'i> Partition2<'i> {
+    fn new<'s: 'i>(line: usize, s: &'s str, col_start: usize, col_end: usize) -> Self {
+        let (former, latter) = s.split_at(col_end);
+        let (former, middle) = former.split_at(col_start);
+        let former = visualize_white_space(former);
+        let middle = visualize_white_space(middle);
+        let latter = visualize_white_space(latter);
+        let _p = PhantomData;
+        Self {
+            line,
+            former,
+            middle,
+            latter,
+            _p,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Partition<'i> {
+    line: usize,
+    former: String,
+    latter: String,
+    _p: PhantomData<&'i str>,
+}
+impl<'i> Partition<'i> {
+    fn new<'s: 'i>(line: usize, s: &'s str, col: usize) -> Self {
+        let (former, latter) = s.split_at(col);
+        let former = visualize_white_space(former);
+        let latter = visualize_white_space(latter);
+        let _p = PhantomData;
+        Self {
+            line,
+            former,
+            latter,
+            _p,
+        }
+    }
 }
 
 /// Formatter options for [Span](crate::Span).
@@ -48,16 +96,11 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             number_formatter,
         }
     }
-    fn visualize_white_space(line: &str) -> String {
-        // \r ␍
-        // \n ␊
-        line.replace('\n', "␊").replace('\r', "␍")
-    }
     fn display_snippet_single_line<Writer>(
         mut self,
         f: &mut Writer,
         index_digit: usize,
-        line: (&str, PosSpan),
+        line: Partition2<'_>,
     ) -> fmt::Result
     where
         Writer: fmt::Write,
@@ -70,13 +113,13 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         (self.number_formatter)("|", f)?;
         writeln!(f)?;
 
-        let number = format!("{:w$}", line.1.line + 1, w = index_digit);
+        let number = format!("{:w$}", line.line + 1, w = index_digit);
         (self.number_formatter)(&number, f)?;
         write!(f, " ")?;
         (self.number_formatter)("|", f)?;
-        write!(f, " {}", &line.0[..line.1.col_start],)?;
-        (self.span_formatter)(&line.0[line.1.col_start..line.1.col_end], f)?;
-        write!(f, "{}", &line.0[line.1.col_end..])?;
+        write!(f, " {}", line.former)?;
+        (self.span_formatter)(&line.middle, f)?;
+        write!(f, "{}", line.latter)?;
         writeln!(f)?;
 
         write!(f, "{} ", spacing)?;
@@ -84,9 +127,12 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         write!(
             f,
             " {}",
-            " ".repeat(UnicodeWidthStr::width_cjk(&line.0[..line.1.col_start])),
+            " ".repeat(UnicodeWidthStr::width_cjk(line.former.as_str())),
         )?;
-        (self.marker_formatter)(&"^".repeat(line.1.col_end - line.1.col_start), f)?;
+        (self.marker_formatter)(
+            &"^".repeat(UnicodeWidthStr::width_cjk(line.middle.as_str())),
+            f,
+        )?;
         writeln!(f)?;
 
         Ok(())
@@ -117,8 +163,8 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         mut self,
         f: &mut Writer,
         index_digit: usize,
-        start: (&str, Pos),
-        end: (&str, Pos),
+        start: Partition<'_>,
+        end: Partition<'_>,
         // 100
         // 101
         // 111
@@ -137,26 +183,26 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         write!(
             f,
             " {}",
-            " ".repeat(UnicodeWidthStr::width_cjk(&start.0[..start.1.col]))
+            " ".repeat(UnicodeWidthStr::width_cjk(start.former.as_str()))
         )?;
         (self.marker_formatter)("v", f)?;
         writeln!(f)?;
 
-        let number = format!("{:w$}", start.1.line + 1, w = index_digit);
+        let number = format!("{:w$}", start.line + 1, w = index_digit);
         (self.number_formatter)(&number, f)?;
         write!(f, " ")?;
         (self.number_formatter)("|", f)?;
-        write!(f, " {}", &start.0[..start.1.col])?;
-        (self.span_formatter)(&start.0[start.1.col..], f)?;
+        write!(f, " {}", start.former)?;
+        (self.span_formatter)(&start.latter, f)?;
         writeln!(f)?;
 
         {
             let line = inner.0;
-            self.display_full_covered_snippet(f, index_digit, start.1.line + 2, line)?;
+            self.display_full_covered_snippet(f, index_digit, start.line + 2, line)?;
         }
 
         if let Some(line) = inner.1 {
-            self.display_full_covered_snippet(f, index_digit, start.1.line + 3, line)?;
+            self.display_full_covered_snippet(f, index_digit, start.line + 3, line)?;
         } else if inner.2 {
             write!(f, "{} ", spacing)?;
             (self.number_formatter)("|", f)?;
@@ -164,23 +210,23 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         }
 
         if let Some(line) = inner.3 {
-            self.display_full_covered_snippet(f, index_digit, end.1.line, line)?;
+            self.display_full_covered_snippet(f, index_digit, end.line, line)?;
         }
 
-        let number = format!("{:w$}", end.1.line + 1, w = index_digit);
+        let number = format!("{:w$}", end.line + 1, w = index_digit);
         (self.number_formatter)(&number, f)?;
         write!(f, " ")?;
         (self.number_formatter)("|", f)?;
         write!(f, " ")?;
-        (self.span_formatter)(&end.0[..end.1.col], f)?;
-        writeln!(f, "{}", &end.0[end.1.col..])?;
+        (self.span_formatter)(&end.former, f)?;
+        writeln!(f, "{}", end.latter)?;
 
         write!(f, "{} ", spacing)?;
         (self.number_formatter)("|", f)?;
         write!(
             f,
             " {}",
-            " ".repeat(UnicodeWidthStr::width_cjk(&end.0[..end.1.col]).saturating_sub(1))
+            " ".repeat(UnicodeWidthStr::width_cjk(end.former.as_str()).saturating_sub(1))
         )?;
         (self.marker_formatter)("^", f)?;
         writeln!(f)?;
@@ -237,30 +283,25 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             digit
         };
         if start.line == end.line {
-            let cur_line = Self::visualize_white_space(lines.next().unwrap());
-            let span = PosSpan {
-                line: start.line,
-                col_start: start.col,
-                col_end: end.col,
-            };
-            let line = (cur_line.as_str(), span);
+            let cur_line = lines.next().unwrap();
+            let line = Partition2::new(start.line, &cur_line, start.col, end.col);
             self.display_snippet_single_line(f, index_digit, line)?;
         } else {
             let lines: Vec<_> = lines.collect();
-            let start_line = Self::visualize_white_space(lines.first().unwrap());
-            let end_line = Self::visualize_white_space(lines.last().unwrap());
-            let start = (start_line.as_str(), start);
-            let end = (end_line.as_str(), end);
-            let inner_first = Self::visualize_white_space(lines[1]);
+            let start_line = lines.first().unwrap();
+            let end_line = lines.last().unwrap();
+            let start = Partition::new(start.line, &start_line, start.col);
+            let end = Partition::new(end.line, &end_line, end.col);
+            let inner_first = visualize_white_space(lines[1]);
             let inner_mid = if lines.len() > 5 {
                 (None, true)
             } else if lines.len() == 5 {
-                (Some(Self::visualize_white_space(lines[2])), false)
+                (Some(visualize_white_space(lines[2])), false)
             } else {
                 (None, false)
             };
             let inner_last = if lines.len() >= 4 {
-                Some(Self::visualize_white_space(lines[lines.len() - 2]))
+                Some(visualize_white_space(lines[lines.len() - 2]))
             } else {
                 None
             };
