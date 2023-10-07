@@ -1,6 +1,6 @@
 use crate::Span;
 use alloc::{format, string::String, vec::Vec};
-use core::{fmt, marker::PhantomData, ops::Deref};
+use core::{fmt, marker::PhantomData};
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug)]
@@ -169,7 +169,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         // 101
         // 111
         // 101
-        inner: (&str, Option<&str>, bool, Option<&str>),
+        inner: (Option<&str>, Option<&str>, bool, Option<&str>),
     ) -> fmt::Result
     where
         Writer: fmt::Write,
@@ -196,8 +196,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         (self.span_formatter)(&start.latter, f)?;
         writeln!(f)?;
 
-        {
-            let line = inner.0;
+        if let Some(line) = inner.0 {
             self.display_full_covered_snippet(f, index_digit, start.line + 2, line)?;
         }
 
@@ -292,7 +291,11 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             let end_line = lines.last().unwrap();
             let start = Partition::new(start.line, &start_line, start.col);
             let end = Partition::new(end.line, &end_line, end.col);
-            let inner_first = visualize_white_space(lines[1]);
+            let inner_first = if lines.len() >= 3 {
+                Some(visualize_white_space(lines[1]))
+            } else {
+                None
+            };
             let inner_mid = if lines.len() > 5 {
                 (None, true)
             } else if lines.len() == 5 {
@@ -306,7 +309,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
                 None
             };
             let inner = (
-                inner_first.deref(),
+                inner_first.as_deref(),
                 inner_mid.0.as_deref(),
                 inner_mid.1,
                 inner_last.as_deref(),

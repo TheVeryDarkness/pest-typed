@@ -654,7 +654,7 @@ mod tests {
     }
 
     #[test]
-    fn display_span_cr_lf_multi_line() {
+    fn display_span_cr_lf_three_line() {
         let msg = Span::new("123\r\n456\r\n789\r\n", 4, 14)
             .unwrap()
             .to_string();
@@ -671,7 +671,21 @@ mod tests {
     }
 
     #[test]
-    fn display_span_all_line() {
+    fn display_span_two_lines() {
+        let msg = Span::new("123\n456\n", 2, 5).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |   v
+1 | 123␊
+2 | 456␊
+  | ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_three_lines() {
         let msg = Span::new("123\n456\n789\n", 2, 11).unwrap().to_string();
         assert_eq!(
             msg,
@@ -680,6 +694,62 @@ mod tests {
 1 | 123␊
 2 | 456␊
 3 | 789␊
+  |   ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_four_lines() {
+        let msg = Span::new("123\n456\n789\nabc\n", 2, 14)
+            .unwrap()
+            .to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |   v
+1 | 123␊
+2 | 456␊
+3 | 789␊
+4 | abc␊
+  |  ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_five_lines() {
+        let msg = Span::new("123\n456\n789\nabc\ndef\n", 2, 20)
+            .unwrap()
+            .to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |   v
+1 | 123␊
+2 | 456␊
+3 | 789␊
+4 | abc␊
+5 | def␊
+  |    ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_six_lines() {
+        let msg = Span::new("123\n456\n789\nabc\ndef\nghi\n", 2, 23)
+            .unwrap()
+            .to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |   v
+1 | 123␊
+2 | 456␊
+  | ...
+5 | def␊
+6 | ghi␊
   |   ^
 "
         );
