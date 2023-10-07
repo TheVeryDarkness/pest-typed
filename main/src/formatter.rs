@@ -1,6 +1,6 @@
 use crate::Span;
-use alloc::{format, string::String};
-use core::fmt;
+use alloc::{format, string::String, vec::Vec};
+use core::{fmt, ops::Deref};
 use unicode_width::UnicodeWidthStr;
 
 #[derive(Debug)]
@@ -87,12 +87,39 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
 
         Ok(())
     }
+    fn display_full_covered_snippet<Writer>(
+        &mut self,
+        f: &mut Writer,
+        index_digit: usize,
+        line: usize,
+        line_content: &str,
+    ) -> fmt::Result
+    where
+        Writer: fmt::Write,
+        SF: FnMut(&str, &mut Writer) -> fmt::Result,
+        MF: FnMut(&str, &mut Writer) -> fmt::Result,
+        NF: FnMut(&str, &mut Writer) -> fmt::Result,
+    {
+        let number = format!("{:w$}", line, w = index_digit);
+        (self.number_formatter)(&number, f)?;
+        write!(f, " ")?;
+        (self.number_formatter)("|", f)?;
+        write!(f, " ")?;
+        (self.span_formatter)(&line_content, f)?;
+        writeln!(f)?;
+        Ok(())
+    }
     fn display_snippet_multi_line<Writer>(
         mut self,
         f: &mut Writer,
         index_digit: usize,
         start: (&str, Pos),
         end: (&str, Pos),
+        // 100
+        // 101
+        // 111
+        // 101
+        inner: (&str, Option<&str>, bool, Option<&str>),
     ) -> fmt::Result
     where
         Writer: fmt::Write,
@@ -119,10 +146,21 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         (self.span_formatter)(&start.0[start.1.col..], f)?;
         writeln!(f)?;
 
-        if start.1.line.abs_diff(end.1.line) > 1 {
+        {
+            let line = inner.0;
+            self.display_full_covered_snippet(f, index_digit, start.1.line + 2, line)?;
+        }
+
+        if let Some(line) = inner.1 {
+            self.display_full_covered_snippet(f, index_digit, start.1.line + 3, line)?;
+        } else if inner.2 {
             write!(f, "{} ", spacing)?;
             (self.number_formatter)("|", f)?;
             writeln!(f, " ...")?;
+        }
+
+        if let Some(line) = inner.3 {
+            self.display_full_covered_snippet(f, index_digit, end.1.line, line)?;
         }
 
         let number = format!("{:w$}", end.1.line + 1, w = index_digit);
@@ -204,11 +242,31 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             let line = (cur_line.as_str(), span);
             self.display_snippet_single_line(f, index_digit, line)?;
         } else {
-            let start_line = Self::visualize_white_space(lines.next().unwrap());
+            let lines: Vec<_> = lines.collect();
+            let start_line = Self::visualize_white_space(lines.first().unwrap());
             let end_line = Self::visualize_white_space(lines.last().unwrap());
             let start = (start_line.as_str(), start);
             let end = (end_line.as_str(), end);
-            self.display_snippet_multi_line(f, index_digit, start, end)?;
+            let inner_first = Self::visualize_white_space(lines[1]);
+            let inner_mid = if lines.len() > 5 {
+                (None, true)
+            } else if lines.len() == 5 {
+                (Some(Self::visualize_white_space(lines[2])), false)
+            } else {
+                (None, false)
+            };
+            let inner_last = if lines.len() >= 4 {
+                Some(Self::visualize_white_space(lines[lines.len() - 2]))
+            } else {
+                None
+            };
+            let inner = (
+                inner_first.deref(),
+                inner_mid.0.as_deref(),
+                inner_mid.1,
+                inner_last.as_deref(),
+            );
+            self.display_snippet_multi_line(f, index_digit, start, end, inner)?;
         }
         Ok(())
     }
