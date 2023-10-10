@@ -9,10 +9,56 @@ struct Pos {
     col: usize,
 }
 
-fn visualize_white_space(line: &str) -> String {
-    // \r ␍
-    // \n ␊
-    line.replace('\n', "␊").replace('\r', "␍")
+/// Visualize white spaces and control characters.
+///
+/// ␀␁␂␃␄␅␆␇␈␉␊␋␌␍␎␏
+/// ␐␑␒␓␔␕␖␗␘␙␚␛␜␝␞␟
+/// ␠
+/// ␡
+/// \r ␍
+/// \n ␊
+fn visualize_ws_and_cntrl(line: &str) -> String {
+    line.chars()
+        .map(|c| match c {
+            '\u{0}' => '␀',
+            '\u{1}' => '␁',
+            '\u{2}' => '␂',
+            '\u{3}' => '␃',
+            '\u{4}' => '␄',
+            '\u{5}' => '␅',
+            '\u{6}' => '␆',
+            '\u{7}' => '␇',
+            '\u{8}' => '␈',
+            '\u{9}' => '␉',
+            '\u{a}' => '␊',
+            '\u{b}' => '␋',
+            '\u{c}' => '␌',
+            '\u{d}' => '␍',
+            '\u{e}' => '␎',
+            '\u{f}' => '␏',
+            '\u{10}' => '␐',
+            '\u{11}' => '␑',
+            '\u{12}' => '␒',
+            '\u{13}' => '␓',
+            '\u{14}' => '␔',
+            '\u{15}' => '␕',
+            '\u{16}' => '␖',
+            '\u{17}' => '␗',
+            '\u{18}' => '␘',
+            '\u{19}' => '␙',
+            '\u{1a}' => '␚',
+            '\u{1b}' => '␛',
+            '\u{1c}' => '␜',
+            '\u{1d}' => '␝',
+            '\u{1e}' => '␞',
+            '\u{1f}' => '␟',
+            /*
+            '\u{20}' => '␠',
+            */
+            '\u{7f}' => '␡',
+            _ => c,
+        })
+        .collect()
 }
 
 #[derive(Debug)]
@@ -27,9 +73,9 @@ impl<'i> Partition2<'i> {
     fn new<'s: 'i>(line: usize, s: &'s str, col_start: usize, col_end: usize) -> Self {
         let (former, latter) = s.split_at(col_end);
         let (former, middle) = former.split_at(col_start);
-        let former = visualize_white_space(former);
-        let middle = visualize_white_space(middle);
-        let latter = visualize_white_space(latter);
+        let former = visualize_ws_and_cntrl(former);
+        let middle = visualize_ws_and_cntrl(middle);
+        let latter = visualize_ws_and_cntrl(latter);
         let _p = PhantomData;
         Self {
             line,
@@ -51,8 +97,8 @@ struct Partition<'i> {
 impl<'i> Partition<'i> {
     fn new<'s: 'i>(line: usize, s: &'s str, col: usize) -> Self {
         let (former, latter) = s.split_at(col);
-        let former = visualize_white_space(former);
-        let latter = visualize_white_space(latter);
+        let former = visualize_ws_and_cntrl(former);
+        let latter = visualize_ws_and_cntrl(latter);
         let _p = PhantomData;
         Self {
             line,
@@ -292,19 +338,19 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             let start = Partition::new(start.line, &start_line, start.col);
             let end = Partition::new(end.line, &end_line, end.col);
             let inner_first = if lines.len() >= 3 {
-                Some(visualize_white_space(lines[1]))
+                Some(visualize_ws_and_cntrl(lines[1]))
             } else {
                 None
             };
             let inner_mid = if lines.len() > 5 {
                 (None, true)
             } else if lines.len() == 5 {
-                (Some(visualize_white_space(lines[2])), false)
+                (Some(visualize_ws_and_cntrl(lines[2])), false)
             } else {
                 (None, false)
             };
             let inner_last = if lines.len() >= 4 {
-                Some(visualize_white_space(lines[lines.len() - 2]))
+                Some(visualize_ws_and_cntrl(lines[lines.len() - 2]))
             } else {
                 None
             };
