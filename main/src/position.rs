@@ -17,6 +17,8 @@ use core::ops::Range;
 use core::ptr;
 use core::str;
 
+use crate::formatter::FormatOption;
+
 use super::span;
 
 /// A cursor position in a `&str` which provides useful methods to manually parse that string.
@@ -458,6 +460,12 @@ impl<'i> Position<'i> {
 impl<'i> fmt::Debug for Position<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Position").field("pos", &self.pos).finish()
+    }
+}
+
+impl<'i> fmt::Display for Position<'i> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        FormatOption::default().display_position(self, f)
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::Span;
+use crate::{Position, Span};
 use alloc::{format, string::String, vec::Vec};
 use core::{fmt, marker::PhantomData};
 use unicode_width::UnicodeWidthStr;
@@ -141,6 +141,51 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             marker_formatter,
             number_formatter,
         }
+    }
+    fn ceil_log10(num: usize) -> usize {
+        let mut digit = 1usize;
+        let mut i = num;
+        while i >= 10 {
+            digit += 1;
+            i /= 10;
+        }
+        digit
+    }
+    fn display_snippet_single_pos<Writer>(
+        mut self,
+        f: &mut Writer,
+        index_digit: usize,
+        line: Partition<'_>,
+    ) -> fmt::Result
+    where
+        Writer: fmt::Write,
+        SF: FnMut(&str, &mut Writer) -> fmt::Result,
+        MF: FnMut(&str, &mut Writer) -> fmt::Result,
+        NF: FnMut(&str, &mut Writer) -> fmt::Result,
+    {
+        let spacing = " ".repeat(index_digit);
+        write!(f, "{} ", spacing)?;
+        (self.number_formatter)("|", f)?;
+        writeln!(f)?;
+
+        let number = format!("{:w$}", line.line + 1, w = index_digit);
+        (self.number_formatter)(&number, f)?;
+        write!(f, " ")?;
+        (self.number_formatter)("|", f)?;
+        write!(f, " {}{}", line.former, line.latter)?;
+        writeln!(f)?;
+
+        write!(f, "{} ", spacing)?;
+        (self.number_formatter)("|", f)?;
+        write!(
+            f,
+            " {}",
+            " ".repeat(UnicodeWidthStr::width_cjk(line.former.as_str())),
+        )?;
+        (self.marker_formatter)("^", f)?;
+        writeln!(f)?;
+
+        Ok(())
     }
     fn display_snippet_single_line<Writer>(
         mut self,
@@ -318,15 +363,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             .skip(start.line)
             .take(end.line - start.line + 1)
             .peekable();
-        let index_digit = {
-            let mut digit = 1usize;
-            let mut i = end.line + 1;
-            while i >= 10 {
-                digit += 1;
-                i /= 10;
-            }
-            digit
-        };
+        let index_digit = Self::ceil_log10(end.line + 1);
         if start.line == end.line {
             let cur_line = lines.next().unwrap();
             let line = Partition2::new(start.line, &cur_line, start.col, end.col);
@@ -363,5 +400,293 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             self.display_snippet_multi_line(f, index_digit, start, end, inner)?;
         }
         Ok(())
+    }
+    pub(crate) fn display_position<'i, Writer>(
+        self,
+        position: &Position<'i>,
+        f: &mut Writer,
+    ) -> fmt::Result
+    where
+        Writer: fmt::Write,
+        SF: FnMut(&str, &mut Writer) -> fmt::Result,
+        MF: FnMut(&str, &mut Writer) -> fmt::Result,
+        NF: FnMut(&str, &mut Writer) -> fmt::Result,
+    {
+        let mut pos = 0usize;
+        let input = Span::new(position.input, 0, position.input.len()).unwrap();
+        let mut iter = input.lines().enumerate().peekable();
+        while let Some((index, line)) = iter.peek() {
+            if pos + line.len() > position.pos() {
+                let l = index.clone();
+                let c = position.pos() - pos;
+                let index_digit = Self::ceil_log10(l + 1);
+                let line = Partition::new(l, &line, c);
+                self.display_snippet_single_pos(f, index_digit, line)?;
+                break;
+            }
+            pos += line.len();
+            iter.next();
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod position {
+    use super::*;
+    use alloc::string::ToString;
+
+    #[test]
+    fn first_pos() {
+        let msg = Position::new("123\n456\n789\n", 4).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+2 | 456␊
+  | ^
+"
+        );
+    }
+
+    #[test]
+    fn mid_pos() {
+        let msg = Position::new("123\n456\n789\n", 5).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+2 | 456␊
+  |  ^
+"
+        );
+    }
+
+    #[test]
+    fn last_pos() {
+        let msg = Position::new("123\n456\n789\n", 8).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+3 | 789␊
+  | ^
+"
+        );
+    }
+}
+
+#[cfg(test)]
+mod span {
+    use super::*;
+    use alloc::string::{String, ToString};
+    use core::fmt::Write;
+
+    #[test]
+    fn display_span_first_line() {
+        let msg = Span::new("123\n456\n789\n", 1, 2).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+1 | 123␊
+  |  ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_mid_line() {
+        let msg = Span::new("123\n456\n789\n", 6, 7).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+2 | 456␊
+  |   ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_last_line() {
+        let msg = Span::new("123\n456\n789\n", 9, 10).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+3 | 789␊
+  |  ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_same_pos() {
+        let msg = Span::new("123\n456\n789\n", 9, 9).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+3 | 789␊
+  |  
+"
+        );
+    }
+
+    #[test]
+    fn display_span_cr_lf_single_line() {
+        let msg = Span::new("123\r\n", 4, 5).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+1 | 123␍␊
+  |     ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_cr_lf_three_line() {
+        let msg = Span::new("123\r\n456\r\n789\r\n", 4, 14)
+            .unwrap()
+            .to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |     v
+1 | 123␍␊
+2 | 456␍␊
+3 | 789␍␊
+  |    ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_two_lines() {
+        let msg = Span::new("123\n456\n", 2, 5).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |   v
+1 | 123␊
+2 | 456␊
+  | ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_three_lines() {
+        let msg = Span::new("123\n456\n789\n", 2, 11).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |   v
+1 | 123␊
+2 | 456␊
+3 | 789␊
+  |   ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_four_lines() {
+        let msg = Span::new("123\n456\n789\nabc\n", 2, 14)
+            .unwrap()
+            .to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |   v
+1 | 123␊
+2 | 456␊
+3 | 789␊
+4 | abc␊
+  |  ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_five_lines() {
+        let msg = Span::new("123\n456\n789\nabc\ndef\n", 2, 20)
+            .unwrap()
+            .to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |   v
+1 | 123␊
+2 | 456␊
+3 | 789␊
+4 | abc␊
+5 | def␊
+  |    ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_six_lines() {
+        let msg = Span::new("123\n456\n789\nabc\ndef\nghi\n", 2, 23)
+            .unwrap()
+            .to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |   v
+1 | 123␊
+2 | 456␊
+  | ...
+5 | def␊
+6 | ghi␊
+  |   ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_unicode() {
+        let msg = Span::new("ß\n∆\n中\n", 2, 10).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |   v
+1 | ß␊
+2 | ∆␊
+3 | 中␊
+  |  ^
+"
+        );
+    }
+
+    #[test]
+    fn display_span_quoted() {
+        let mut msg = String::new();
+        Span::new("123\n456\n789\n", 2, 11)
+            .unwrap()
+            .display(
+                &mut msg,
+                FormatOption::new::<String>(
+                    |s, f| write!(f, "{{{s}}}"),
+                    |s, f| write!(f, "[{s}]"),
+                    |s, f| write!(f, "<{s}>"),
+                ),
+            )
+            .unwrap();
+        assert_eq!(
+            msg,
+            "  \
+  <|>   [v]
+<1> <|> 12{3␊}
+<2> <|> {456␊}
+<3> <|> {789}␊
+  <|>   [^]
+"
+        );
     }
 }
