@@ -246,7 +246,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         write!(f, " ")?;
         (self.number_formatter)("|", f)?;
         write!(f, " ")?;
-        (self.span_formatter)(&line_content, f)?;
+        (self.span_formatter)(line_content, f)?;
         writeln!(f)?;
         Ok(())
     }
@@ -338,7 +338,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         while let Some((index, line)) = iter.peek() {
             if pos + line.len() >= span.start() {
                 start = Some(Pos {
-                    line: index.clone(),
+                    line: *index,
                     col: span.start() - pos,
                 });
                 break;
@@ -366,14 +366,14 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         let index_digit = Self::ceil_log10(end.line + 1);
         if start.line == end.line {
             let cur_line = lines.next().unwrap();
-            let line = Partition2::new(start.line, &cur_line, start.col, end.col);
+            let line = Partition2::new(start.line, cur_line, start.col, end.col);
             self.display_snippet_single_line(f, index_digit, line)?;
         } else {
             let lines: Vec<_> = lines.collect();
             let start_line = lines.first().unwrap();
             let end_line = lines.last().unwrap();
-            let start = Partition::new(start.line, &start_line, start.col);
-            let end = Partition::new(end.line, &end_line, end.col);
+            let start = Partition::new(start.line, start_line, start.col);
+            let end = Partition::new(end.line, end_line, end.col);
             let inner_first = if lines.len() >= 3 {
                 Some(visualize_ws_and_cntrl(lines[1]))
             } else {
@@ -417,10 +417,10 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         let mut iter = input.lines().enumerate().peekable();
         while let Some((index, line)) = iter.peek() {
             if pos + line.len() > position.pos() {
-                let l = index.clone();
+                let l = *index;
                 let c = position.pos() - pos;
                 let index_digit = Self::ceil_log10(l + 1);
-                let line = Partition::new(l, &line, c);
+                let line = Partition::new(l, line, c);
                 self.display_snippet_single_pos(f, index_digit, line)?;
                 break;
             }
