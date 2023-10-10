@@ -11,7 +11,7 @@
 //! and modified.
 
 use core::cmp::Ordering;
-use core::fmt;
+use core::fmt::{self, Write};
 use core::hash::{Hash, Hasher};
 use core::ops::Range;
 use core::ptr;
@@ -460,6 +460,23 @@ impl<'i> Position<'i> {
 impl<'i> fmt::Debug for Position<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Position").field("pos", &self.pos).finish()
+    }
+}
+
+impl<'i> Position<'i> {
+    /// Format position with given option.
+    pub fn display<Writer, SF, MF, NF>(
+        &self,
+        f: &mut Writer,
+        opt: FormatOption<SF, MF, NF>,
+    ) -> fmt::Result
+    where
+        Writer: Write,
+        SF: FnMut(&str, &mut Writer) -> fmt::Result,
+        MF: FnMut(&str, &mut Writer) -> fmt::Result,
+        NF: FnMut(&str, &mut Writer) -> fmt::Result,
+    {
+        opt.display_position(self, f)
     }
 }
 

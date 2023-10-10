@@ -323,7 +323,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
 
         Ok(())
     }
-    pub(crate) fn display_snippet<'i, Writer>(self, span: &Span<'i>, f: &mut Writer) -> fmt::Result
+    pub(crate) fn display_span<'i, Writer>(self, span: &Span<'i>, f: &mut Writer) -> fmt::Result
     where
         Writer: fmt::Write,
         SF: FnMut(&str, &mut Writer) -> fmt::Result,

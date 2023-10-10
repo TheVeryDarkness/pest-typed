@@ -323,14 +323,14 @@ impl<'i> Span<'i> {
         MF: FnMut(&str, &mut Writer) -> fmt::Result,
         NF: FnMut(&str, &mut Writer) -> fmt::Result,
     {
-        opt.display_snippet(self, f)
+        opt.display_span(self, f)
     }
 }
 
 impl<'i> fmt::Display for Span<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let opt = FormatOption::default();
-        opt.display_snippet(self, f)
+        opt.display_span(self, f)
     }
 }
 
