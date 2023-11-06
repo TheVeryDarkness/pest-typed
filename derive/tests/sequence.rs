@@ -31,7 +31,7 @@ struct Parser;
 macro_rules! test {
     ($name:ident, $input:literal, $($fields:tt)*) => {
         mod $name {
-            use super::{pairs, Rule};
+            use super::{pairs, Rule, Deref};
             use pest_typed::{error::Error, ParsableTypedNode, ConstantStorage};
 
             #[test]
@@ -39,7 +39,11 @@ macro_rules! test {
                 let res = pairs::$name::parse($input)?;
                 assert_eq!(res, res.clone());
                 assert_eq!(res.content, res.content.clone());
-                let ( $($fields, )* ) = res.as_ref();
+                assert_eq!(&res.deref().0, res.get_all().0);
+                assert_eq!(res.get_matched().0, &res.get_all().0.matched);
+                let ( $($fields, )* ) = res.get_matched();
+                assert_eq!([$($fields.get_constant(), )*].concat(), $input);
+                let ( $($fields, )* ) = res.deref().clone().into_matched();
                 assert_eq!([$($fields.get_constant(), )*].concat(), $input);
                 Ok(())
             }
@@ -70,7 +74,7 @@ test!(s12, "abcdefghijkl", e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 e11);
 #[test]
 fn as_ref() {
     let s4 = pairs::s4::parse("abcd").unwrap();
-    let (a, b, c, d) = s4.as_ref();
+    let (a, b, c, d) = s4.get_matched();
     assert_eq!(a.get_content(), "a");
     assert_eq!(b.get_content(), "b");
     assert_eq!(c.get_content(), "c");

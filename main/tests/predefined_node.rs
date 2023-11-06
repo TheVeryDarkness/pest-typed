@@ -281,12 +281,27 @@ mod tests {
         let (any, _) = peeked.as_ref();
         assert_eq!(any.content, 'i');
         assert_eq!(name.iter().map(|c| c.content).collect::<String>(), "i");
+        assert_eq!(
+            name.deref()
+                .into_iter()
+                .map(|c| c.content)
+                .collect::<String>(),
+            "i"
+        );
 
         let l = Lifetime::<1>::parse("'input").unwrap();
         let (_, peeked, name) = l.as_ref();
         let (any, _) = peeked.as_ref();
         assert_eq!(any.content, 'i');
         assert_eq!(name.iter().map(|c| c.content).collect::<String>(), "input");
+        assert_eq!(
+            name.deref()
+                .clone()
+                .into_iter()
+                .map(|c| c.content)
+                .collect::<String>(),
+            "input"
+        );
 
         Lifetime::<1>::parse("'i'").unwrap_err();
     }
@@ -380,5 +395,77 @@ mod tests {
         Rep_1_3::parse("FooFooFooFooFoo").unwrap_err();
         let (pos, _) = Rep_1_3::parse_partial("FooFooFooFooFoo").unwrap();
         assert_eq!(pos.pos(), 12);
+
+        {
+            use std::collections::HashSet;
+            let mut set = HashSet::new();
+            for input in [
+                "foofoo",
+                "FooFoo",
+                "fOofOo",
+                "foOfoO",
+                "foofoo",
+                "foofoofoo",
+            ] {
+                set.insert(Rep_1_3::parse(input).unwrap());
+            }
+            assert_eq!(set.len(), 5);
+        }
+    }
+
+    #[test]
+    fn rep() {
+        compound_atomic_rule!(
+            Rep_0_3,
+            "Repeat previously matched expression 0 to 3 times",
+            Rule,
+            Rule::RepFoo,
+            RepMin<Skipped<Str<Foo>, Ignore<'i>, 0>, 0>
+        );
+
+        let x = Rep_0_3::parse("").unwrap();
+        assert_eq!(x.content.deref(), &RepMin::default());
+
+        use std::collections::HashSet;
+
+        let mut set = HashSet::new();
+        let foos = ["foofoo", "foo", "foofoofoo"];
+        for input in foos {
+            let r = Rep_0_3::parse(input).unwrap();
+            for s in r.iter_matched() {
+                set.insert(s.clone());
+            }
+            for s in r.deref().clone().into_iter_matched() {
+                set.insert(s);
+            }
+        }
+        assert_eq!(set.len(), 1);
+
+        let mut set = HashSet::new();
+        for input in ["foo", "foofoofoo", "foofoo", "foofoofoo"] {
+            set.insert(Rep_0_3::parse(input).unwrap());
+        }
+        assert_eq!(set.len(), 3);
+
+        compound_atomic_rule!(
+            Rep_2,
+            "Repeat \"foo\" 2 times",
+            Rule,
+            Rule::RepFoo,
+            [Insens<'i, Foo>; 2]
+        );
+        Rep_2::parse("").unwrap_err();
+        Rep_2::parse("foo").unwrap_err();
+        Rep_2::parse("foofoofoo").unwrap_err();
+        let arr = Rep_2::parse("foofoo").unwrap();
+        assert_eq!(
+            format!("{:?}", arr),
+            "Rep_2 { content: [Insens { content: \"foo\" }, Insens { content: \"foo\" }], span: Span { str: \"foofoo\", start: 0, end: 6 } }"
+        );
+        let mut set = HashSet::new();
+        for input in ["foofoo", "fooFOO", "FooFoo", "foofoo"] {
+            set.insert(Rep_2::parse(input).unwrap());
+        }
+        assert_eq!(set.len(), 3);
     }
 }

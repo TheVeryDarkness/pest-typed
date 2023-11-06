@@ -166,6 +166,10 @@ mod tests {
             vec![GrammarSource::Inline(r#"x = { "x" }"#.to_owned())]
         );
         assert_eq!(config, Config::default());
+        assert_eq!(
+            format!("{:?}", config.clone()),
+            format!("{:?}", Config::default())
+        );
     }
 
     #[test]

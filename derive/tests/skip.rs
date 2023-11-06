@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+use std::ops::Deref;
+
 use pest_typed::{error::Error, ParsableTypedNode as _};
 use pest_typed_derive::TypedParser;
 
@@ -23,6 +25,7 @@ struct Parser;
 fn comment() -> Result<(), Error<Rule>> {
     let vec = pairs::main::parse("x x x /*x*/")?;
     assert_eq!(vec.iter_matched().len(), 3);
+    assert_eq!(vec.deref().clone().into_iter_matched().len(), 3);
     Ok(())
 }
 

@@ -97,7 +97,32 @@ fn choices() {
                 .if_then(|_0| assert_eq!(_0.get_content(), "a"))
                 .else_if(|_1| assert_eq!(_1.get_content(), "b"))
                 .else_if(|_2| assert_eq!(_2.get_content(), "c"))
-                .else_then(|_3| assert_eq!(_3.get_content(), "d"))
+                .else_then(|_3| assert_eq!(_3.get_content(), "d"));
+            $branch
+                .reference()
+                .else_if(|_0| assert_eq!(_0.get_content(), "a"))
+                .else_if(|_1| assert_eq!(_1.get_content(), "b"))
+                .else_if(|_2| assert_eq!(_2.get_content(), "c"))
+                .else_then(|_3| assert_eq!(_3.get_content(), "d"));
+            $branch
+                .clone()
+                .consume()
+                .else_if(|_0| assert_eq!(_0.get_content(), "a"))
+                .else_if(|_1| assert_eq!(_1.get_content(), "b"))
+                .else_if(|_2| assert_eq!(_2.get_content(), "c"))
+                .else_then(|_3| assert_eq!(_3.get_content(), "d"));
+            $branch
+                .clone()
+                .consume_if_then(|_0| assert_eq!(_0.get_content(), "a"))
+                .else_if(|_1| assert_eq!(_1.get_content(), "b"))
+                .else_if(|_2| assert_eq!(_2.get_content(), "c"))
+                .else_then(|_3| assert_eq!(_3.get_content(), "d"));
+            $branch.$branch().unwrap();
+            if "_0" == stringify!($branch) {
+                assert!($branch._0().is_some());
+            } else {
+                assert!($branch._0().is_none());
+            }
         };
     }
     t!(_0);
