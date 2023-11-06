@@ -164,7 +164,7 @@ impl<T, IGNORED, const SKIP: usize, const MIN: usize> RepMin<Skipped<T, IGNORED,
         self.content.iter().map(|s| &s.matched)
     }
     /// Returns an iterator over all matched expressions by value.
-    pub fn into_iter_matched<'n>(self) -> IntoIter<T, IGNORED, SKIP> {
+    pub fn into_iter_matched(self) -> IntoIter<T, IGNORED, SKIP> {
         self.content.into_iter().map(|s| s.matched)
     }
 }
@@ -274,7 +274,7 @@ impl<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize>
         self.content.iter().map(|s| &s.matched)
     }
     /// Returns an iterator over all matched expressions by value.
-    pub fn into_iter_matched<'n>(self) -> IntoIter<T, IGNORED, SKIP> {
+    pub fn into_iter_matched(self) -> IntoIter<T, IGNORED, SKIP> {
         self.content.into_iter().map(|s| s.matched)
     }
 }
