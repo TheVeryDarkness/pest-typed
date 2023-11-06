@@ -190,7 +190,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         let line_remained_index = line_string
             .char_indices()
             .nth(col.saturating_sub(1))
-            .unwrap_or_else(|| (line_string.len(), '\0'))
+            .unwrap_or((line_string.len(), '\0'))
             .0;
         let line_matched = &line_string[..line_remained_index];
 
