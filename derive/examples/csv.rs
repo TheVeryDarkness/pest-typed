@@ -8,7 +8,7 @@ use std::iter::once;
 struct CSV;
 
 fn main() -> Result<(), Error<Rule>> {
-    let file = pairs::file::parse(
+    let file = pairs::file::try_parse(
         r#"1,2,3
 a,b,c
 A,B,C

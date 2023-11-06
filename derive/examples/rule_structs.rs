@@ -12,7 +12,7 @@ d = ${ "d" }
 struct Parser;
 
 fn parse(input: &'static str) -> Result<(), pest_typed::error::Error<Rule>> {
-    let a = pairs::a::parse(input)?;
+    let a = pairs::a::try_parse(input)?;
     // With accesser API.
     // Call `b()` to get reference to `b`.
     // Call `c()` to get reference to `c`.

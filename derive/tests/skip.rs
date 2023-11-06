@@ -23,7 +23,7 @@ struct Parser;
 
 #[test]
 fn comment() -> Result<(), Error<Rule>> {
-    let vec = pairs::main::parse("x x x /*x*/")?;
+    let vec = pairs::main::try_parse("x x x /*x*/")?;
     assert_eq!(vec.iter_matched().len(), 3);
     assert_eq!(vec.deref().clone().into_iter_matched().len(), 3);
     Ok(())
@@ -31,13 +31,13 @@ fn comment() -> Result<(), Error<Rule>> {
 
 #[test]
 fn skip_on_two_end() {
-    pairs::main::parse(" x x").unwrap_err();
-    pairs::main::parse("x x ").unwrap();
+    pairs::main::try_parse(" x x").unwrap_err();
+    pairs::main::try_parse("x x ").unwrap();
 }
 
 #[test]
 fn post_skip() -> Result<(), Error<Rule>> {
-    let program = pairs::program::parse("x x /*x*/")?;
+    let program = pairs::program::try_parse("x x /*x*/")?;
     let (_soi, main, _eoi) = program.get_matched();
     assert_eq!(main.iter_matched().len(), 2);
     Ok(())
@@ -45,7 +45,7 @@ fn post_skip() -> Result<(), Error<Rule>> {
 
 #[test]
 fn pre_skip() -> Result<(), Error<Rule>> {
-    let program = pairs::program::parse("/* x x */ x x")?;
+    let program = pairs::program::try_parse("/* x x */ x x")?;
     let (_soi, main, _eoi) = program.get_matched();
     assert_eq!(main.iter_matched().len(), 2);
     Ok(())

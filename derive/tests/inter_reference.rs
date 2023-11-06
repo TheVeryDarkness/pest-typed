@@ -20,7 +20,7 @@ struct Parser;
 
 #[test]
 fn main() {
-    let z = pairs::z::parse("xxxy").unwrap();
+    let z = pairs::z::try_parse("xxxy").unwrap();
     let mut buf = String::new();
     z.write_tree_to(&mut buf).unwrap();
     assert_eq!(buf, "z \"xxxy\"\n");

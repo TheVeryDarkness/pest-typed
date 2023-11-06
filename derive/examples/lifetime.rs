@@ -11,7 +11,7 @@ b2 = { "cc" }
 struct Parser;
 
 fn parse<'i>(input: &'i str) -> Result<&'i str, Error<Rule>> {
-    let a = pairs::a::parse(input)?;
+    let a = pairs::a::try_parse(input)?;
     let res = if let Some(b1) = a.b1() {
         b1.span.as_str()
     } else if let Some(b2) = a.b2() {

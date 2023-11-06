@@ -36,7 +36,7 @@ macro_rules! test {
 
             #[test]
             fn matched() -> Result<(), Error<Rule>> {
-                let res = pairs::$name::parse($input)?;
+                let res = pairs::$name::try_parse($input)?;
                 assert_eq!(res, res.clone());
                 assert_eq!(res.content, res.content.clone());
                 assert_eq!(&res.deref().0, res.get_all().0);
@@ -49,11 +49,11 @@ macro_rules! test {
             }
             #[test]
             fn unmatched() {
-                pairs::$name::parse(concat!("_", $input)).unwrap_err();
+                pairs::$name::try_parse(concat!("_", $input)).unwrap_err();
             }
             #[test]
             fn incomplete() {
-                pairs::$name::parse(concat!($input, "_")).unwrap_err();
+                pairs::$name::try_parse(concat!($input, "_")).unwrap_err();
             }
         }
     };
@@ -73,7 +73,7 @@ test!(s12, "abcdefghijkl", e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 e10 e11);
 
 #[test]
 fn as_ref() {
-    let s4 = pairs::s4::parse("abcd").unwrap();
+    let s4 = pairs::s4::try_parse("abcd").unwrap();
     let (a, b, c, d) = s4.get_matched();
     assert_eq!(a.get_content(), "a");
     assert_eq!(b.get_content(), "b");

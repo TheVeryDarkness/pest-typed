@@ -8,7 +8,7 @@ use pest_typed_derive::TypedParser;
 struct CSV;
 
 fn main() -> Result<()> {
-    let res = pairs::file::parse("a,b,c\nd,e,f")?;
+    let res = pairs::file::try_parse("a,b,c\nd,e,f")?;
     let mut buf = String::new();
     res.write_tree_to(&mut buf)?;
     assert_eq!(

@@ -42,16 +42,16 @@ where
 /// Node of concrete syntax tree.
 #[allow(clippy::perf)]
 pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
-    /// Create typed node.
+    /// Try to create typed node.
     #[allow(clippy::result_unit_err)]
     fn try_parse_with_until_end(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Result<Self, ()>;
-    /// Parse the whole input into given typed node.
+    /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
-    fn parse(input: &'i str) -> Result<Self, Error<R>> {
+    fn try_parse(input: &'i str) -> Result<Self, Error<R>> {
         let mut stack = Stack::new();
         let input = Position::from_start(input);
         let mut tracker = Tracker::new(input);
@@ -60,9 +60,9 @@ pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
             Err(_) => Err(tracker.collect()),
         }
     }
-    /// Parse the whole input into given typed node.
+    /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
-    fn parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {
+    fn try_parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {
         let mut stack = Stack::new();
         let input = Position::from_start(input);
         let mut tracker = Tracker::new(input);
@@ -70,6 +70,27 @@ pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
             Ok((input, res)) => Ok((input, res)),
             Err(_) => Err(tracker.collect()),
         }
+    }
+}
+
+/// Node of concrete syntax tree.
+#[allow(clippy::perf)]
+pub trait NeverFailedParsableTypedNode<'i, R: RuleType>: NeverFailedTypedNode<'i, R> {
+    /// Create typed node.
+    fn parse_with_until_end(input: Position<'i>, stack: &mut Stack<Span<'i>>) -> Self;
+    /// Parse the whole input into given typed node.
+    /// A rule is not atomic by default.
+    fn parse(input: &'i str) -> Self {
+        let mut stack = Stack::new();
+        let input = Position::from_start(input);
+        Self::parse_with_until_end(input, &mut stack)
+    }
+    /// Parse the whole input into given typed node.
+    /// A rule is not atomic by default.
+    fn parse_partial(input: &'i str) -> (Position<'i>, Self) {
+        let mut stack = Stack::new();
+        let input = Position::from_start(input);
+        Self::parse_with(input, &mut stack)
     }
 }
 

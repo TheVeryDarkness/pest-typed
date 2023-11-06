@@ -24,7 +24,7 @@ fn tree() {
     /// Note that [`indoc!`] is used.
     macro_rules! test {
         ($input:literal, $tree:literal) => {
-            let tree = pairs::main::parse($input).unwrap();
+            let tree = pairs::main::try_parse($input).unwrap();
             let string = tree.format_as_tree().unwrap();
             assert_eq!(string, $tree);
         };

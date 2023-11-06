@@ -986,8 +986,4 @@ pub mod generics {
 #[doc = "Re-export some types from rules to simplify the usage."]
 pub use rules as pairs;
 #[allow(clippy::all)]
-impl ::pest_typed::TypedParser<Rule> for Parser {
-    fn parse<'i, T: ::pest_typed::ParsableTypedNode<'i, Rule>>(input: &'i ::core::primitive::str) -> ::pest_typed::re_exported::Result<T, ::pest_typed::error::Error<Rule>> {
-        T::parse(input)
-    }
-}
+impl ::pest_typed::TypedParser<Rule> for Parser {}

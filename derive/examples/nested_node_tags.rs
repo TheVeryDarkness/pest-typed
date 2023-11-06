@@ -8,7 +8,7 @@ use pest_typed_derive::TypedParser;
 struct Parser;
 
 fn main() -> Result<(), pest_typed::error::Error<Rule>> {
-    let a = pairs::a::parse("abbbbbb")?;
+    let a = pairs::a::try_parse("abbbbbb")?;
     #[cfg(feature = "grammar-extras")]
     {
         // With node tags, one can access inner nodes more precisely without defining many rules.

@@ -18,8 +18,8 @@ struct Parser;
 
 #[test]
 fn tree() {
-    rules::main::parse("fooFooFOOFooFOOFoo").unwrap();
-    let a = rules::main::parse("fooFooFOOFOOFooFoo").unwrap_err();
+    rules::main::try_parse("fooFooFOOFooFOOFoo").unwrap();
+    let a = rules::main::try_parse("fooFooFOOFOOFooFoo").unwrap_err();
     assert_eq!(
         format!("{a}"),
         " --> 1:1
@@ -30,7 +30,7 @@ fn tree() {
   = ^---
     Expected [main]."
     );
-    let b = rules::main::parse("foo Foo FOO Foo FOO Foo").unwrap_err();
+    let b = rules::main::try_parse("foo Foo FOO Foo FOO Foo").unwrap_err();
     assert_eq!(
         format!("{b}"),
         " --> 1:1

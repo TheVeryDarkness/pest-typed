@@ -266,7 +266,7 @@ macro_rules! impl_pair {
     };
 }
 
-/// Implement [ParsableTypedNode::parse](crate::ParsableTypedNode::parse()) for structs.
+/// Implement [ParsableTypedNode::try_parse](crate::ParsableTypedNode::try_parse()) for structs.
 ///
 /// Arguments:
 ///

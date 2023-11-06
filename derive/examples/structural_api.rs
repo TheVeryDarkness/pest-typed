@@ -12,7 +12,7 @@ b3 = { "d" }
 struct Parser;
 
 fn parse(input: &str) -> Result<(), pest_typed::error::Error<Rule>> {
-    let a = pairs::a::parse(input)?;
+    let a = pairs::a::try_parse(input)?;
     let (str_a, var_b, c) = a.as_ref();
     assert_eq!(str_a.get_content(), "a");
     match_choices!(var_b {

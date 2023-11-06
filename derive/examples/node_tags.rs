@@ -12,7 +12,7 @@ b2 = { "cc" }
 struct Parser;
 
 fn main() -> Result<(), pest_typed::error::Error<Rule>> {
-    let a = pairs::a::parse("abbb")?;
+    let a = pairs::a::try_parse("abbb")?;
     // Tags enabled.
     #[cfg(feature = "grammar-extras")]
     {

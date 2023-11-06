@@ -23,7 +23,7 @@ fn tree() {
     let mut main = HashSet::new();
     let mut strings = HashSet::new();
     for input in ["foo ", "foOFoo Foo", "fOoFOoFoO FOoFoO"] {
-        let s = rules::main::parse(input).unwrap();
+        let s = rules::main::try_parse(input).unwrap();
         main.insert(s.clone());
         for string in s.get_matched().0.iter_matched() {
             strings.insert(string.content.clone());
@@ -38,11 +38,11 @@ fn tree() {
     assert_eq!(main.len(), 3);
     assert_eq!(strings.len(), 6);
 
-    let mut x = rules::main::parse("FOO ").unwrap();
+    let mut x = rules::main::try_parse("FOO ").unwrap();
     x.deref_mut().0.matched.content.clear();
     assert_eq!(x.get_matched().0, &RepMin::default());
 
-    let error = rules::main::parse(" ").unwrap_err();
+    let error = rules::main::try_parse(" ").unwrap_err();
     assert_eq!(
         format!("{error}"),
         " --> 1:2

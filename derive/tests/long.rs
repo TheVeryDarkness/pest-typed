@@ -19,6 +19,6 @@ struct Parser;
 
 #[test]
 fn parse() {
-    pairs::x::parse("abcdefghijklmnop").unwrap();
-    pairs::y::parse("abcdefghijklmnop").unwrap();
+    pairs::x::try_parse("abcdefghijklmnop").unwrap();
+    pairs::y::try_parse("abcdefghijklmnop").unwrap();
 }

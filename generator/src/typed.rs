@@ -21,9 +21,8 @@
 use super::docs::{consume, DocComment};
 use super::generator::{generate_enum, generate_include};
 use super::helper::{collect_data, get_string, GrammarSource};
-use super::types::result_type;
 use crate::config::Config;
-use crate::graph::{generate_typed_pair_from_rule, pest, pest_typed};
+use crate::graph::{generate_typed_pair_from_rule, pest_typed};
 use crate::helper::get_bool;
 use pest_meta::optimizer::OptimizedRule;
 use pest_meta::parser::{consume_rules, parse, rename_meta_rule, Rule};
@@ -120,23 +119,11 @@ fn generate_typed(
     let pairs = generate_typed_pair_from_rule(&rules, doc_comment, config);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let result = result_type();
-
     let pest_typed = pest_typed();
-    let pest = pest();
 
     let parser_impl = quote! {
         #[allow(clippy::all)]
-        impl #impl_generics #pest_typed::TypedParser<Rule> for #name #ty_generics #where_clause {
-            fn parse<'i, T: #pest_typed::ParsableTypedNode<'i, Rule>>(
-                input: &'i ::core::primitive::str
-            ) -> #result<
-                T,
-                #pest::error::Error<Rule>
-            > {
-                T::parse(input)
-            }
-        }
+        impl #impl_generics #pest_typed::TypedParser<Rule> for #name #ty_generics #where_clause {}
     };
 
     let res = quote! {
