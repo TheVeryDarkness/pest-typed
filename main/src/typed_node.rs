@@ -31,6 +31,7 @@ where
     Self: Sized + Debug + Clone + PartialEq,
 {
     /// Create typed node.
+    #[allow(clippy::result_unit_err)]
     fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
@@ -42,6 +43,7 @@ where
 #[allow(clippy::perf)]
 pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
     /// Create typed node.
+    #[allow(clippy::result_unit_err)]
     fn try_parse_with_until_end(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,

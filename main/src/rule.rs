@@ -692,6 +692,7 @@ macro_rules! rule_eoi {
 /// Full parse as a non-atomic rule.
 ///
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
+#[allow(clippy::result_unit_err)]
 pub fn parse<
     'i,
     R: RuleType + 'i,
@@ -722,6 +723,7 @@ pub fn parse<
 /// Full parse as an atomic rule.
 ///
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
+#[allow(clippy::result_unit_err)]
 pub fn parse_without_ignore<'i, R: RuleType + 'i, _Self: TypedNode<'i, R>>(
     input: Position<'i>,
     stack: &mut Stack<Span<'i>>,
