@@ -21,6 +21,15 @@ use crate::{
 };
 use alloc::vec::Vec;
 
+type Iter<'n, T, IGNORED, const SKIP: usize> = core::iter::Map<
+    alloc::slice::Iter<'n, Skipped<T, IGNORED, SKIP>>,
+    fn(&'n Skipped<T, IGNORED, SKIP>) -> &'n T,
+>;
+type IntoIter<T, IGNORED, const SKIP: usize> = core::iter::Map<
+    alloc::vec::IntoIter<Skipped<T, IGNORED, SKIP>>,
+    fn(Skipped<T, IGNORED, SKIP>) -> T,
+>;
+
 /// Repeatably match `T` at least `MIN` times.
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AtomicRep<T> {
@@ -150,26 +159,18 @@ impl<
 }
 impl<T, IGNORED, const SKIP: usize, const MIN: usize> RepMin<Skipped<T, IGNORED, SKIP>, MIN> {
     /// Returns an iterator over all matched expressions by reference.
-    pub fn iter_matched<'n>(
-        &'n self,
-    ) -> core::iter::Map<
-        alloc::slice::Iter<'n, Skipped<T, IGNORED, SKIP>>,
-        fn(&'n Skipped<T, IGNORED, SKIP>) -> &'n T,
-    > {
+    #[allow(clippy::needless_lifetimes)]
+    pub fn iter_matched<'n>(&'n self) -> Iter<'n, T, IGNORED, SKIP> {
         self.content.iter().map(|s| &s.matched)
     }
     /// Returns an iterator over all matched expressions by value.
-    pub fn into_iter_matched<'n>(
-        self,
-    ) -> core::iter::Map<
-        alloc::vec::IntoIter<Skipped<T, IGNORED, SKIP>>,
-        fn(Skipped<T, IGNORED, SKIP>) -> T,
-    > {
+    pub fn into_iter_matched<'n>(self) -> IntoIter<T, IGNORED, SKIP> {
         self.content.into_iter().map(|s| s.matched)
     }
 }
 impl<T, const MIN: usize> RepMin<T, MIN> {
     /// Returns an iterator over all skipped or matched expressions by reference.
+    #[allow(clippy::needless_lifetimes)]
     pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, T> {
         self.content.iter()
     }
@@ -268,26 +269,18 @@ impl<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize>
     RepMinMax<Skipped<T, IGNORED, SKIP>, MIN, MAX>
 {
     /// Returns an iterator over all matched expressions by reference.
-    pub fn iter_matched<'n>(
-        &'n self,
-    ) -> core::iter::Map<
-        alloc::slice::Iter<'n, Skipped<T, IGNORED, SKIP>>,
-        fn(&'n Skipped<T, IGNORED, SKIP>) -> &'n T,
-    > {
+    #[allow(clippy::needless_lifetimes)]
+    pub fn iter_matched<'n>(&'n self) -> Iter<'n, T, IGNORED, SKIP> {
         self.content.iter().map(|s| &s.matched)
     }
     /// Returns an iterator over all matched expressions by value.
-    pub fn into_iter_matched<'n>(
-        self,
-    ) -> core::iter::Map<
-        alloc::vec::IntoIter<Skipped<T, IGNORED, SKIP>>,
-        fn(Skipped<T, IGNORED, SKIP>) -> T,
-    > {
+    pub fn into_iter_matched<'n>(self) -> IntoIter<T, IGNORED, SKIP> {
         self.content.into_iter().map(|s| s.matched)
     }
 }
 impl<T, const MIN: usize, const MAX: usize> RepMinMax<T, MIN, MAX> {
     /// Returns an iterator over all skipped or matched expressions by reference.
+    #[allow(clippy::needless_lifetimes)]
     pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, T> {
         self.content.iter()
     }

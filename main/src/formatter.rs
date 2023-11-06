@@ -323,6 +323,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
 
         Ok(())
     }
+    #[allow(clippy::needless_lifetimes)]
     pub(crate) fn display_span<'i, Writer>(self, span: &Span<'i>, f: &mut Writer) -> fmt::Result
     where
         Writer: fmt::Write,
@@ -379,12 +380,10 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             } else {
                 None
             };
-            let inner_mid = if lines.len() > 5 {
-                (None, true)
-            } else if lines.len() == 5 {
-                (Some(visualize_ws_and_cntrl(lines[2])), false)
-            } else {
-                (None, false)
+            let inner_mid = match lines.len() {
+                6.. => (None, true),
+                5 => (Some(visualize_ws_and_cntrl(lines[2])), false),
+                _ => (None, false),
             };
             let inner_last = if lines.len() >= 4 {
                 Some(visualize_ws_and_cntrl(lines[lines.len() - 2]))
@@ -401,6 +400,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         }
         Ok(())
     }
+    #[allow(clippy::needless_lifetimes)]
     pub(crate) fn display_position<'i, Writer>(
         self,
         position: &Position<'i>,

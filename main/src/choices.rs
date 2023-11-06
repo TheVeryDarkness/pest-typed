@@ -116,6 +116,7 @@ macro_rules! choices {
             }
             impl<$V0, $($V, )* > $name<$V0, $($V, )* > {
                 /// Traverse all branches with reference.
+                #[allow(clippy::needless_lifetimes)]
                 pub fn reference<'n, Ret>(&'n self) -> helper::$v0<Ret, &'n $V0, $(&'n $V, )*> {
                     match self {
                         Self::$v0(c) => helper::$v0::$v0(c),
