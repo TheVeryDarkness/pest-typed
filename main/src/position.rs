@@ -496,18 +496,17 @@ impl<'i> Eq for Position<'i> {}
 
 impl<'i> PartialOrd for Position<'i> {
     fn partial_cmp(&self, other: &Position<'i>) -> Option<Ordering> {
-        if ptr::eq(self.input, other.input) {
-            self.pos.partial_cmp(&other.pos)
-        } else {
-            None
-        }
+        Some(self.cmp(other))
     }
 }
 
 impl<'i> Ord for Position<'i> {
     fn cmp(&self, other: &Position<'i>) -> Ordering {
-        self.partial_cmp(other)
-            .expect("cannot compare positions from different strs")
+        assert_eq!(
+            self.input, other.input,
+            "cannot compare positions from different strs"
+        );
+        self.pos.cmp(&other.pos)
     }
 }
 
