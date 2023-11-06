@@ -6,6 +6,8 @@ This motivates me to develop a statically typed version of pest based on current
 
 ## Usage
 
+See our may-be-outdated [documentation](https://docs.rs/pest_typed_derive) for some notes.
+
 ## Note
 
 The main drawback of this crate is that it compiles much slower than pest.
