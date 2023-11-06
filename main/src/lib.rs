@@ -50,6 +50,7 @@ pub use wrapper::{
 };
 
 pub mod choices;
+mod formatter;
 pub mod iterators;
 mod pratt;
 pub mod predefined_node;
@@ -59,7 +60,6 @@ pub mod sequence;
 pub mod tracker;
 mod typed_node;
 mod wrapper;
-mod formatter;
 pub use alloc::boxed::Box;
 
 // Below modules are copied from pest.
@@ -68,9 +68,9 @@ mod position;
 mod span;
 
 pub use pest::error;
+pub use pest::Stack;
 pub use position::Position;
 pub use span::{merge_spans, Span};
-pub use pest::Stack;
 
 // Re-export unicode.
 pub use pest::unicode;

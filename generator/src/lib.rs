@@ -23,10 +23,10 @@
 
 mod config;
 mod graph;
-mod typed;
 mod match_choices;
-pub use typed::derive_typed_parser;
+mod typed;
 pub use match_choices::match_choices;
+pub use typed::derive_typed_parser;
 
 // Below modules are copied from pest and modified.
 mod docs;
