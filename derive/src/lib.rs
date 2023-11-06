@@ -138,7 +138,7 @@
 //! |         Negative predicate          |                                                                                                           |                                                                                                   |
 //! |          `PUSH` and `PEEK`          |                                            Matched `content`.                                             |                                                                                                   |
 //! |         `POP` and `POP_ALL`         |                                              Popped `span`.                                               |                                                                                                   |
-//! |                Drop                 |                                                                                                           |                                                                                                   |
+//! |               `DROP`                |                                                                                                           |                                                                                                   |
 //!
 //! #### Sequence
 //!
@@ -149,8 +149,14 @@
 //! #### Choices
 //!
 //! Choices can be matched using `match`, as long as you find where its type is defined.
+//! Auto-generated choices types are named as `Choice{n}` where `n` is the count of choices.
+//! And every generics used can be found in mod `generics`.
 //!
-//! We provide several functions that simulate control structure
+//! Similarly, we provide a proc macro `match_choices` to handle choices
+//! with a bit simpler syntax.
+//! Note that you need to import module `generics`.
+//!
+//! What's more, we provide several functions that simulate control structure
 //! like `if` (`if_then(f)`), `else-if` (`else_if(f)`) and `else` (`else_then(f)`).
 //!
 //! Each of those functions accept a function `f` as argument,
@@ -160,13 +166,10 @@
 //! And `else_if` is only available when there are at least two cases that haven't been handled,
 //! so if it's the last case, use `else_then(f)` instead.
 //!
-//! Except that `else_then(f)` returns the final result,
-//! `if_then(f)` and `else_if(f)` will return a temporary helper object.
+//! While `else_then(f)` returns the final result,
+//! `if_then(f)` and `else_if(f)` return a temporary helper object.
 //!
 //! Using these functions, one can handle those cases one by one in order.
-//!
-//! But as sometimes captured values may be consumed,
-//! We provide a proc macro `match_choices` to handle choices.
 //!
 //! #### Example
 //!

@@ -20,6 +20,23 @@ fn parse(input: &str) -> Result<(), pest_typed::error::Error<Rule>> {
         b2 => assert_eq!(b2.get_content(), "cc"),
         b3 => assert_eq!(b3.get_content(), "d"),
     });
+    // Or equivalently codes below. Sometimes you may need to call `.deref()`.
+    use generics::Choice3;
+    match var_b {
+        Choice3::_0(b1) => assert_eq!(b1.get_content(), "bbb"),
+        Choice3::_1(b2) => assert_eq!(b2.get_content(), "cc"),
+        Choice3::_2(b3) => assert_eq!(b3.get_content(), "d"),
+    };
+    // Or codes below. Note that rust compiler won't be aware
+    // that only exactly one of those closures you pass will be called,
+    // so sometimes compiler will prevent you from using this.
+    // This method is no longer recommended and may be deprecated in the future.
+    // However, at current this is the only way that you can place a type innotation after the identifier.
+    var_b
+        .if_then(|b1: &pairs::b1<'_>| assert_eq!(b1.get_content(), "bbb"))
+        .else_if(|b2: &pairs::b2<'_>| assert_eq!(b2.get_content(), "cc"))
+        .else_then(|b3: &pairs::b3<'_>| assert_eq!(b3.get_content(), "d"));
+
     assert_eq!(c.get_content(), "c");
     assert!(c.content == "C" || c.content == "c");
     Ok(())

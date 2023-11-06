@@ -17,7 +17,7 @@ fn parse<'i>(input: &'i str) -> Result<&'i str, Error<Rule>> {
     } else if let Some(b2) = a.b2() {
         b2.span.as_str()
     } else {
-        panic!("All branches failed in succeeded matching");
+        unreachable!("All branches failed in succeeded matching");
     };
     Ok(res)
 }

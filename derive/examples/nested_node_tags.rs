@@ -11,7 +11,8 @@ fn main() -> Result<(), pest_typed::error::Error<Rule>> {
     let a = pairs::a::parse("abbbbbb")?;
     #[cfg(feature = "grammar-extras")]
     {
-        // With node tags, one can access inner nodes more precisely without define many rules.
+        // With node tags, one can access inner nodes more precisely without defining many rules.
+        // This maybe especially useful when you have some references the same rule.
         let b = a.b();
         assert_eq!(b.span.as_str(), "bbbbbb");
         let b1 = b.b1();
