@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! For Pratt Parser. See [`pest::pratt_parser`]
+//! For Pratt Parser. See [`pest::pratt_parser`].
 
 use crate::{RuleType, TypedNode};
 

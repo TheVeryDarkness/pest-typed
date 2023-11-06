@@ -12,7 +12,22 @@
 //! Features:
 //!
 //! - `std`: include [`std`] support.
-//! - ~`verbose`~ (TODO): provide verbose error messages.
+//!
+//!   Without this feature, we'll use [core] and [alloc].
+//!
+//! It's suggested that you use [pest_typed_derive](https://crates.io/pest_typed_derive) to automatically generate types from your grammar.
+//! And though we have a lot of macros here, only some of them are designed for external usage.
+//!
+//! - Choices: [choices!].
+//! - Sequence: [seq!].
+//! - Rules:
+//!     - Atomic rule: [atomic_rule!].
+//!     - Non-atomic rule: [non_atomic_rule!].
+//!     - Compound atomic rule: [compound_atomic_rule!].
+//!     - Normal rule: [normal_rule!].
+//!     - Silent rule: [silent_rule!].
+//!     - End-Of-Input rule: [rule_eoi!].
+//!     - Tag: [tag!].
 
 #![no_std]
 #![warn(

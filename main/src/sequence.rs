@@ -8,6 +8,8 @@
 // modified, or distributed except according to those terms.
 
 //! Definition of sequence-related macros and types.
+//!
+//! Sequences that are longer than 12 need be defined in your own crate with [crate::seq!].
 
 #[macro_export]
 /// Chained iterator type.

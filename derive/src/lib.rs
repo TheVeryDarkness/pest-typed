@@ -22,6 +22,8 @@
 //!
 //! When a rule is not atomic, inner contents that match `COMMENT` or `WHITESPACE` will be skipped automatically, and `COMMENT` is prior to `WHITESPACE`.
 //!
+//! Note that skipped items are taken into consideration when using [core::hash::Hash], [PartialEq] or [Eq].
+//!
 //! ## Generation
 //!
 //! We generate documents for automatically generated types, just hover on those types or view them in documents of your project to see them!
@@ -30,21 +32,9 @@
 //!
 //! The same with [pest](https://docs.rs/pest).
 //!
-//! It implement `Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd`.
+//! It implements `Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd`.
 //!
-//! ### Structs that are Generated for Rules
-//!
-//! We generate a **Rule Struct** for each rule.
-//!
-//! #### Fields
-//!
-//! There are three cases related to fields of a generated `struct`:
-//!
-//! - Emit inner nodes and a span (normal rule, non-atomic rule and compound atomic rule in **pest**).
-//! - Emit a span (atomic rule in **pest**).
-//! - Emit inner expression (silent rule in **pest**).
-//!
-//! ## Examples
+//! ## APIs
 //!
 //! Note: to use **pest_typed_derive** as a dependency, **pest_typed** is also needed.
 //!
@@ -54,11 +44,19 @@
 //!
 //! ### Accesser API
 //!
+//! See [`fn@derive_typed_parser`] for how to enable Accesser API.
+//!
 //! Accesser API is a group of functions, called **Accesser Functions**, to access referenced rules (or tags, if enabled).
 //!
 //! Accesser function is named with the same name of the rule that it's accessing.
 //!
-//! See [`fn@derive_typed_parser`] for how to enable Accesser API.
+//! For example, if you have
+//!
+//! ```pest
+//! foo = { bar }
+//! ```
+//!
+//! you can access `bar` from an instance `f` of `foo` by calling `f.bar()`.
 //!
 //! Given the pest grammar being:
 //!
@@ -72,15 +70,40 @@
 #![doc = include_str!("../examples/accesser_api.rs")]
 //! ```
 //!
-//! ### Emitted Fields of Rule Structs
+//! ### Rule Structs
 //!
-//! A rule structs is a struct that corresponds to a rule.
+//! We generate a **Rule Struct** for each rule.
+//! The inner structure is generated from the grammar structure inside the rule (or parsing expression grammar).
+//!
+//! And the [pest](https://pest.rs) grammar is displayed in short in doc comments using [core::fmt::Display] so that you can view the structure without switching to `.pest` files.
+//!
+//! #### Emitted Fields for Rule Structs
+//!
+//! There are three cases related to fields of a generated `struct`:
+//!
+//! - Emit inner nodes and a span (normal rule, non-atomic rule and compound atomic rule in **pest**).
+//! - Emit a span (atomic rule in **pest**).
+//! - Emit inner expression (silent rule in **pest**).
+//!
+//! #### Example for Rule Structs
 //!
 //! ```rust
 #![doc = include_str!("../examples/rule_structs.rs")]
 //! ```
 //!
-//! ### Emitted Fields of Tag Structs
+//! ### Tag Structs
+//!
+//! We generate a **Rule Struct** for each tag.
+//! The inner structure is generated from the grammar structure inside the tag.
+//!
+//! #### Emitted Fields for Tag Structs
+//!
+//! Fields:
+//!
+//! - Inner content.
+//! - Span for matched input.
+//!
+//! #### Example for Tag Structs
 //!
 //! An example using node tags.
 //!
@@ -94,41 +117,38 @@
 #![doc = include_str!("../examples/nested_node_tags.rs")]
 //! ```
 //!
-//! ### Lifetime
-//!
-//! Structs have fields that are contains references borrowed from the input, so each of them has a lifetime argument `'i`.
-//!
-//! Sometimes, you may encounter a lifetime error. Do not panic, just consider them seriously.
-//!
-//! ```rust
-#![doc = include_str!("../examples/lifetime.rs")]
-//! ```
-//!
-//! ### Emitted Fields and Functions of Nodes
+//! ### Normal Nodes
 //!
 //! We can handle complexer problems with lower-level API (also named **Structual API**).
 //!
-//! But note that the structure of a **Rule Struct** depends on the optimizer in **pest**, so it may change in the future.
+//! But note that the structure of a **Rule Struct** indirectly depends on the optimizer in **pest**, so it may change in the future.
 //!
 //! Maybe we can use [`pest_meta::ast::Expr`](https://docs.rs/pest_meta/latest/pest_meta/ast/enum.Expr.html) by default in the future.
 //!
-//! |            Node Type            |                                      Fields                                      |                                              Functions                                               |
-//! | :-----------------------------: | :------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------: |
-//! |         Non-silent rule         | Matched `content`, which can be used to access match expression; matched `span`. |                                  See [Accesser API](#accesser-api)                                   |
-//! |  Exact string (case-sensitive)  |                                                                                  | Original string to match, `const fn get_content(&self)`, which requires trait `pest_typed::Storage`. |
-//! | Exact string (case-insensitive) |                        Matched `content` (an `&'i str`).                         | Original string to match, `const fn get_content(&self)`, which requires trait `pest_typed::Storage`. |
-//! |      Sequence `T, Res...`       |                          matched `content` as a tuple.                           |               `as_ref(&self)`, which returns referencs of all elemnets `(&elemnts...)`               |
-//! |       Choices `T, Res...`       |                    Variants, each of which is `(content, _)`.                    |                                           `if_then(&self)`                                           |
-//! |            Optional             |                    Matched `content` wrapped in a [`Option`].                    |
-//! |        Repetition of `T`        |                         Matched `content` (an `Vec<T>`).                         |
-//!
-//! For multi-elements sequence and multi-branches choices, its underlying implementation is like a list in functional programing. Those fields or variants are not so easy to read and use, and it's recommended to use function API.
+//! |              Node Type              |                                                  Fields                                                   |                                             Functions                                             |
+//! | :---------------------------------: | :-------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------: |
+//! |           Non-silent rule           | Matched `content` (wrapped in a [`Box`]), which can be used to access matched expression; matched `span`. |                                 See [Accesser API](#accesser-api)                                 |
+//! |    Exact string (case-sensitive)    |                                                                                                           | `const fn get_content(&self)` to get original string, which requires trait `pest_typed::Storage`. |
+//! |   Exact string (case-insensitive)   |                                     Matched `content` (an `&'i str`).                                     | `const fn get_content(&self)` to get original string, which requires trait `pest_typed::Storage`. |
+//! |        Sequence `T, Res...`         |                                       Matched `content` as a tuple.                                       |           `get_matched(&self)`, which returns referencs of all elemnets `(&elemnts...)`           |
+//! |         Choices `T, Res...`         |                                   An enum, whose variants are choices.                                    |                       `if_then(&self)`, several functions `_0`, `_1`, etc.                        |
+//! | Optional (wrapped in an [`Option`]) |                                                                                                           |                                                                                                   |
+//! |          Repetition of `T`          |                                Matched `content` wrapped in a [`Vec<T>`].                                 |      `iter_matched` and `iter_all` (by reference); `into_matched` and `into_all` (by value)       |
+//! |         Positive predicate          |                                     Matched `content` (not consumed).                                     |                                                                                                   |
+//! |         Negative predicate          |                                                                                                           |                                                                                                   |
+//! |          `PUSH` and `PEEK`          |                                            Matched `content`.                                             |                                                                                                   |
+//! |         `POP` and `POP_ALL`         |                                              Popped `span`.                                               |                                                                                                   |
+//! |                Drop                 |                                                                                                           |                                                                                                   |
 //!
 //! #### Sequence
 //!
-//! One can use `as_ref` to access elements within a sequence directly.
+//! One can use `get_matched` by reference (or `into_matched` by value) to access elements within a sequence directly.
+//!
+//! Both functions return a tuple.
 //!
 //! #### Choices
+//!
+//! Choices can be matched using `match`, as long as you find where its type is defined.
 //!
 //! We provide several functions that simulate control structure
 //! like `if` (`if_then(f)`), `else-if` (`else_if(f)`) and `else` (`else_then(f)`).
@@ -152,6 +172,16 @@
 //!
 //! ```rust
 #![doc = include_str!("../examples/structural_api.rs")]
+//! ```
+//!
+//! ### Lifetime
+//!
+//! Structs have fields that contains references borrowed from the input, so each of them has a lifetime argument `'i`.
+//!
+//! Sometimes, you may encounter a lifetime error. Do not panic, just consider them seriously. And we'll fix them if it's caused by bad API design.
+//!
+//! ```rust
+#![doc = include_str!("../examples/lifetime.rs")]
 //! ```
 
 #![warn(

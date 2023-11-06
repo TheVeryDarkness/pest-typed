@@ -8,6 +8,8 @@
 // modified, or distributed except according to those terms.
 
 //! Definition of choices-related macros and types.
+//!
+//! Choices with more than 12 branches should be defined in your own crate with [`crate::choices!`].
 
 /// Choice helper with a next branch.
 pub trait NextChoice {
