@@ -3,7 +3,6 @@ use alloc::{format, string::String, vec::Vec};
 use core::{fmt, marker::PhantomData};
 use unicode_width::UnicodeWidthStr;
 
-#[derive(Debug)]
 struct Pos {
     line: usize,
     col: usize,
@@ -61,7 +60,6 @@ fn visualize_ws_and_cntrl(line: &str) -> String {
         .collect()
 }
 
-#[derive(Debug)]
 struct Partition2<'i> {
     line: usize,
     former: String,
@@ -87,7 +85,6 @@ impl<'i> Partition2<'i> {
     }
 }
 
-#[derive(Debug)]
 struct Partition<'i> {
     line: usize,
     former: String,
