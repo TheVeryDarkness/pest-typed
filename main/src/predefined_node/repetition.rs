@@ -22,7 +22,9 @@ use crate::{
 use alloc::vec::Vec;
 
 /// Repeatably match `T` at least `MIN` times.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
+#[derive(Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub struct AtomicRep<T> {
     /// Skipped and Matched expressions.
     pub content: Vec<T>,
@@ -77,7 +79,9 @@ impl<T: Clone + PartialEq> BoundWrapper for AtomicRep<T> {
 }
 
 /// Repeatably match `T` at least `MIN` times.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
+#[derive(Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub struct RepMin<T, const MIN: usize> {
     /// Skipped and Matched expressions.
     pub content: Vec<T>,
@@ -184,7 +188,9 @@ impl<T: Clone + PartialEq, const MIN: usize> BoundWrapper for RepMin<T, MIN> {
 }
 
 /// Repeatably match `T` at least `MIN` times and at most `MAX` times.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
+#[derive(Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub struct RepMinMax<T, const MIN: usize, const MAX: usize> {
     /// Skipped and Matched expressions.
     pub content: Vec<T>,

@@ -38,7 +38,7 @@ mod tests {
         Quote,
     }
 
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone, Hash, PartialEq, Eq)]
     pub struct Foo;
     impl StringWrapper for Foo {
         const CONTENT: &'static str = "foo";
@@ -217,7 +217,7 @@ mod tests {
 
     #[test]
     fn skip() {
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, Hash, PartialEq, Eq)]
         pub struct NewLine;
         impl StringArrayWrapper for NewLine {
             const CONTENT: &'static [&'static str] = &["\r\n", "\n", "\r"];
@@ -293,12 +293,12 @@ mod tests {
 
     #[test]
     fn negative_predicate() {
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, Hash, PartialEq, Eq)]
         pub struct StrFoo;
         impl StringWrapper for StrFoo {
             const CONTENT: &'static str = "foo";
         }
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, Hash, PartialEq, Eq)]
         pub struct StrBar;
         impl StringWrapper for StrBar {
             const CONTENT: &'static str = "bar";

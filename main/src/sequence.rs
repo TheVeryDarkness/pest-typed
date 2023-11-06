@@ -44,7 +44,7 @@ macro_rules! chain {
 #[macro_export]
 /// Generate sequences generics.
 ///
-/// Also generate iterator type with [`crate::chain`] and [`crate::chain`].
+/// Also generate iterator type with [`crate::chains`] and [`crate::chain`].
 macro_rules! seq {
     ($name:ident, $pest_typed:ident, $number:literal, $T0:ident, $t0:tt, $( $T:ident, $t:tt, )* ) => {
         #[doc = ::core::stringify!(Match a sequence with $number items.)]
@@ -141,6 +141,18 @@ macro_rules! seq {
                 self.content.$t0 == other.content.$t0
                 $(
                     && self.content.$t == other.content.$t
+                )*
+            }
+        }
+        impl<$T0: ::core::cmp::Eq, $($T: ::core::cmp::Eq, )*>
+            ::core::cmp::Eq for $name<T0, $($T, )*> {
+        }
+        impl<$T0: ::core::hash::Hash, $($T: ::core::hash::Hash, )*>
+            ::core::hash::Hash for $name<T0, $($T, )*> {
+            fn hash<H: ::core::hash::Hasher>(&self, hasher: &mut H) {
+                ::core::hash::Hash::hash(&self.content.$t0, hasher);
+                $(
+                    ::core::hash::Hash::hash(&self.content.$t, hasher);
                 )*
             }
         }

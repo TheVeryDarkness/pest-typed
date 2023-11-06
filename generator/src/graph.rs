@@ -522,7 +522,7 @@ impl Output {
         let wrapper = quote! {
             #[doc = #doc]
             #[allow(non_camel_case_types)]
-            #[derive(Clone, PartialEq)]
+            #[derive(Clone, Hash, PartialEq, Eq)]
             pub struct #s();
             impl #pest_typed::StringWrapper for #s {
                 const CONTENT: &'static #str = #string;
@@ -1231,7 +1231,7 @@ fn generate_unicode(
             results.push(quote! {
                 #[allow(non_camel_case_types)]
                 #[doc = #doc]
-                #[derive(Clone, PartialEq)]
+                #[derive(Clone, Hash, PartialEq, Eq)]
                 pub struct #property_ident {
                     pub content: #char,
                 }

@@ -103,7 +103,7 @@ macro_rules! choices {
             #![allow(clippy::style)]
 
             #[doc = ::core::stringify!(Match one of $number expressions.)]
-            #[derive(Clone, PartialEq)]
+            #[derive(Clone, Hash, PartialEq, Eq)]
             pub enum $name<$V0, $($V, )* > {
                 #[doc = ::core::stringify!(Variant $v0.)]
                 $v0($V0),

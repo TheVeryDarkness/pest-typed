@@ -423,7 +423,7 @@ macro_rules! declare_rule_struct {
             #[doc = $doc]
         )*
         #[allow(non_camel_case_types)]
-        #[derive(Clone, PartialEq)]
+        #[derive(Clone, Hash, PartialEq, Eq)]
         pub struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
             /// Matched expression.
             pub content: ::pest_typed::re_exported::Box<$inner>,
@@ -442,7 +442,7 @@ macro_rules! declare_rule_struct {
             #[doc = $doc]
         )*
         #[allow(non_camel_case_types)]
-        #[derive(Clone, PartialEq)]
+        #[derive(Clone, Hash, PartialEq, Eq)]
         pub struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
             /// Span of matched expression.
             pub span: ::pest_typed::Span<'i>,
@@ -460,7 +460,7 @@ macro_rules! declare_rule_struct {
             #[doc = $doc]
         )*
         #[allow(non_camel_case_types)]
-        #[derive(Clone, PartialEq)]
+        #[derive(Clone, Hash, PartialEq, Eq)]
         pub struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
             /// Matched expression.
             pub content: ::pest_typed::re_exported::Box<$inner>,
@@ -489,7 +489,7 @@ macro_rules! declare_rule_struct {
 macro_rules! tag {
     ($name:ident, $Rule:ty, $inner:ty) => {
         #[allow(non_camel_case_types)]
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Clone, Debug, Hash, PartialEq, Eq)]
         pub struct $name<'i, const INHERITED: usize> {
             /// Matched expression.
             pub content: $inner,

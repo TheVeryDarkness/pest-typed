@@ -18,3 +18,4 @@ std = ["pest/std"]
 pest.workspace = true
 custom_debug_derive = { version = "0.5.1" }
 unicode-width = { version = "0.1.11" }
+cmp_by_derive = { version = "0.1.0" }
