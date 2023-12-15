@@ -121,7 +121,7 @@
 //!
 //! We can handle complexer problems with lower-level API (also named **Structual API**).
 //!
-//! But note that the structure of a **Rule Struct** indirectly depends on the optimizer in **pest**, so it may change in the future.
+//! But note that, for a specific grammar, the structure of a **Rule Struct** indirectly depends on the optimizer in **pest**, as it uses [`pest_meta::optimizer::OptimizedExpr`](https://docs.rs/pest_meta/latest/pest_meta/optimizer/enum.OptimizedExpr.html), so it may change in the future.
 //!
 //! Maybe we can use [`pest_meta::ast::Expr`](https://docs.rs/pest_meta/latest/pest_meta/ast/enum.Expr.html) by default in the future.
 //!
@@ -154,7 +154,7 @@
 //!
 //! Similarly, we provide a proc macro `match_choices` to handle choices
 //! with a bit simpler syntax.
-//! Note that you need to import module `generics`.
+//! Note that you need to import module `generics` to use the macro.
 //!
 //! What's more, we provide several functions that simulate control structure
 //! like `if` (`if_then(f)`), `else-if` (`else_if(f)`) and `else` (`else_then(f)`).

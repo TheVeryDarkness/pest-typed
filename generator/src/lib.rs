@@ -9,6 +9,12 @@
 
 //! A code generator based on [`pest`].
 //!
+//! Features:
+//!
+//! - `grammar-extras`.
+//!
+//!    Enables extra grammars of [`pest`].
+//!
 //! It can create corresponding type definitions from pest grammar files.
 //!
 //! See [pest_typed](https://docs.rs/pest_typed/latest/pest_typed/) for related traits and types.

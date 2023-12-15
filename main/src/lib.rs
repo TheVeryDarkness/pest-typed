@@ -9,6 +9,8 @@
 
 //! Types for statically typed nodes and parser.
 //!
+//! Based on [pest] grammar. See <https://pest.rs> for more information.
+//!
 //! Features:
 //!
 //! - `std`: include [`std`] support.
@@ -16,7 +18,7 @@
 //!   Without this feature, we'll use [core] and [alloc].
 //!
 //! It's suggested that you use [pest_typed_derive](https://crates.io/pest_typed_derive) to automatically generate types from your grammar.
-//! 
+//!
 //! And though we have a lot of macros in this crate, only some of them are designed for usage outside the crate. They're listed below:
 //!
 //! - Choices: [choices!].
