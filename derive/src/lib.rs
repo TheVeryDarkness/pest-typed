@@ -208,8 +208,9 @@ use proc_macro::TokenStream;
         emit_rule_reference,
         emit_tagged_node_reference,
         do_not_emit_span,
+        truncate_accesser_at_node_tag,
         simulate_pair_api,
-        no_warnigs,
+        no_warnings,
     )
 )]
 pub fn derive_typed_parser(input: TokenStream) -> TokenStream {
