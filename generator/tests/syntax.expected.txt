@@ -46,140 +46,140 @@ mod constant_wrappers {
     #[doc = "A wrapper for `\"+\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_0();
+    pub struct r#w_0;
     impl ::pest_typed::StringWrapper for r#w_0 {
         const CONTENT: &'static ::core::primitive::str = "+";
     }
     #[doc = "A wrapper for `\"(\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_1();
+    pub struct r#w_1;
     impl ::pest_typed::StringWrapper for r#w_1 {
         const CONTENT: &'static ::core::primitive::str = "(";
     }
     #[doc = "A wrapper for `\")\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_2();
+    pub struct r#w_2;
     impl ::pest_typed::StringWrapper for r#w_2 {
         const CONTENT: &'static ::core::primitive::str = ")";
     }
     #[doc = "A wrapper for `\"\\\"\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_3();
+    pub struct r#w_3;
     impl ::pest_typed::StringWrapper for r#w_3 {
         const CONTENT: &'static ::core::primitive::str = "\"";
     }
     #[doc = "A wrapper for `\"\\\"\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_4();
+    pub struct r#w_4;
     impl ::pest_typed::StringWrapper for r#w_4 {
         const CONTENT: &'static ::core::primitive::str = "\"";
     }
     #[doc = "A wrapper for `\"\\\"\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_5();
+    pub struct r#w_5;
     impl ::pest_typed::StringWrapper for r#w_5 {
         const CONTENT: &'static ::core::primitive::str = "\"";
     }
     #[doc = "A wrapper for `\"b\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_6();
+    pub struct r#w_6;
     impl ::pest_typed::StringWrapper for r#w_6 {
         const CONTENT: &'static ::core::primitive::str = "b";
     }
     #[doc = "A wrapper for `\"BB\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_7();
+    pub struct r#w_7;
     impl ::pest_typed::StringWrapper for r#w_7 {
         const CONTENT: &'static ::core::primitive::str = "BB";
     }
     #[doc = "A wrapper for `\"b\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_8();
+    pub struct r#w_8;
     impl ::pest_typed::StringWrapper for r#w_8 {
         const CONTENT: &'static ::core::primitive::str = "b";
     }
     #[doc = "A wrapper for `\"c\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_9();
+    pub struct r#w_9;
     impl ::pest_typed::StringWrapper for r#w_9 {
         const CONTENT: &'static ::core::primitive::str = "c";
     }
     #[doc = "A wrapper for `\"r#\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_10();
+    pub struct r#w_10;
     impl ::pest_typed::StringWrapper for r#w_10 {
         const CONTENT: &'static ::core::primitive::str = "r#";
     }
     #[doc = "A wrapper for `\"0x\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_11();
+    pub struct r#w_11;
     impl ::pest_typed::StringWrapper for r#w_11 {
         const CONTENT: &'static ::core::primitive::str = "0x";
     }
     #[doc = "A wrapper for `\"1\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_12();
+    pub struct r#w_12;
     impl ::pest_typed::StringWrapper for r#w_12 {
         const CONTENT: &'static ::core::primitive::str = "1";
     }
     #[doc = "A wrapper for `\".\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_13();
+    pub struct r#w_13;
     impl ::pest_typed::StringWrapper for r#w_13 {
         const CONTENT: &'static ::core::primitive::str = ".";
     }
     #[doc = "A wrapper for `\"a\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_14();
+    pub struct r#w_14;
     impl ::pest_typed::StringWrapper for r#w_14 {
         const CONTENT: &'static ::core::primitive::str = "a";
     }
     #[doc = "A wrapper for `\"b\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_15();
+    pub struct r#w_15;
     impl ::pest_typed::StringWrapper for r#w_15 {
         const CONTENT: &'static ::core::primitive::str = "b";
     }
     #[doc = "A wrapper for `\"b\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_16();
+    pub struct r#w_16;
     impl ::pest_typed::StringWrapper for r#w_16 {
         const CONTENT: &'static ::core::primitive::str = "b";
     }
     #[doc = "A wrapper for `\"c\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_17();
+    pub struct r#w_17;
     impl ::pest_typed::StringWrapper for r#w_17 {
         const CONTENT: &'static ::core::primitive::str = "c";
     }
     #[doc = "A wrapper for `\"b\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_18();
+    pub struct r#w_18;
     impl ::pest_typed::StringWrapper for r#w_18 {
         const CONTENT: &'static ::core::primitive::str = "b";
     }
     #[doc = "A wrapper for `\"?\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_19();
+    pub struct r#w_19;
     impl ::pest_typed::StringWrapper for r#w_19 {
         const CONTENT: &'static ::core::primitive::str = "?";
     }

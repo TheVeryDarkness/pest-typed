@@ -523,7 +523,7 @@ impl Output {
             #[doc = #doc]
             #[allow(non_camel_case_types)]
             #[derive(Clone, Hash, PartialEq, Eq)]
-            pub struct #s();
+            pub struct #s;
             impl #pest_typed::StringWrapper for #s {
                 const CONTENT: &'static #str = #string;
             }
@@ -544,7 +544,7 @@ impl Output {
             #[doc = #doc]
             #[allow(non_camel_case_types)]
             #[derive(Clone, PartialEq)]
-            pub struct #s();
+            pub struct #s;
             impl #pest_typed::StringArrayWrapper for #s {
                 const CONTENT: &'static [&'static #str] = &[ #(#strings),* ];
             }
