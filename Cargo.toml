@@ -2,7 +2,7 @@
 members = ["derive", "generator", "main"]
 resolver = "2"
 package.readme = "./README.md"
-package.version = "0.11.8"
+package.version = "0.12.0"
 
 [workspace.dependencies]
 pest = { version = "2.7.4" }
@@ -10,10 +10,10 @@ pest_meta = { version = "2.7.4" }
 
 [workspace.dependencies.pest_typed]
 path = "./main"
-version = "0.11.8"
+version = "0.12.0"
 default-features = false
 
 [workspace.dependencies.pest_typed_generator]
 path = "./generator"
-version = "0.11.8"
+version = "0.12.0"
 default-features = false
