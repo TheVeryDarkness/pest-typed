@@ -7,6 +7,7 @@ package.version = "0.12.1"
 [workspace.dependencies]
 pest = { version = "2.7.5" }
 pest_meta = { version = "2.7.5" }
+pest_derive = { version = "2.7.5" }
 
 [workspace.dependencies.pest_typed]
 path = "./main"

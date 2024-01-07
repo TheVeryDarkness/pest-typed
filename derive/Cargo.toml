@@ -14,7 +14,7 @@ license = "MIT/Apache-2.0"
 proc-macro = true
 
 [features]
-grammar-extras = ["pest_typed_generator/grammar-extras"]
+grammar-extras = ["pest_typed_generator/grammar-extras", "pest_derive/grammar-extras"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -27,9 +27,8 @@ pest_typed.workspace = true
 indoc = { version = "2.0" }
 anyhow = { version = "1.0" }
 criterion = "0.5.1"
-pest = "2.7.5"
-pest_derive = "2.7.5"
-
+pest.workspace = true
+pest_derive.workspace = true
 
 [[bench]]
 name = "basic_benchmark"
