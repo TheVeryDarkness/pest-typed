@@ -160,8 +160,8 @@ macro_rules! impl_deref {
 #[macro_export]
 macro_rules! impl_pair_with_empty {
     ($name:ident, $Rule:ty, $rule:expr) => {
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            ::pest_typed::RuleStruct<'i, $Rule> for $name<'i, INHERITED>
+        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> ::pest_typed::Spanned<'i, $Rule>
+            for $name<'i, INHERITED>
         {
             fn span(&self) -> ::pest_typed::Span<'i> {
                 self.span
@@ -206,8 +206,8 @@ macro_rules! impl_pair_with_content {
         {
             type Inner = $inner;
         }
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            ::pest_typed::RuleStruct<'i, $Rule> for $name<'i, INHERITED>
+        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> ::pest_typed::Spanned<'i, $Rule>
+            for $name<'i, INHERITED>
         {
             fn span(&self) -> ::pest_typed::Span<'i> {
                 self.span
@@ -222,7 +222,7 @@ macro_rules! impl_pair_with_content {
                 &'n (dyn ::pest_typed::iterators::Pair<'i, 'n, $Rule> + 'n),
             > {
                 let i = <$inner as ::pest_typed::iterators::Pairs<'i, 'n, $Rule>>::iter_pairs(
-                    self.content.as_ref(),
+                    &self.content,
                 );
                 i.collect::<::pest_typed::re_exported::Vec<_>>().into_iter()
             }
@@ -234,9 +234,53 @@ macro_rules! impl_pair_with_content {
                 >,
             > {
                 let i = <$inner as ::pest_typed::iterators::Pairs<'i, 'n, $Rule>>::into_iter_pairs(
-                    *self.content,
+                    <Self as $crate::RuleStruct<$Rule>>::take_inner(self),
                 );
                 i.collect::<::pest_typed::re_exported::Vec<_>>().into_iter()
+            }
+        }
+    };
+}
+
+/// Implement [`Pair`](crate::iterators::Pair) for a struct.
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$boxed:tt`. `true` or `false`.
+#[macro_export]
+macro_rules! impl_rule_struct {
+    ($name:ident, $Rule:ty, $inner:ty, true) => {
+        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
+            ::pest_typed::RuleStruct<'i, $Rule> for $name<'i, INHERITED>
+        {
+            type Inner = $inner;
+            fn take_inner(self) -> $inner {
+                *self.content
+            }
+            fn ref_inner(&self) -> &$inner {
+                &self.content
+            }
+            fn mut_inner(&mut self) -> &mut $inner {
+                &mut self.content
+            }
+        }
+    };
+    ($name:ident, $Rule:ty, $inner:ty, false) => {
+        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
+            ::pest_typed::RuleStruct<'i, $Rule> for $name<'i, INHERITED>
+        {
+            type Inner = $inner;
+            fn take_inner(self) -> $inner {
+                self.content
+            }
+            fn ref_inner(&self) -> &$inner {
+                &self.content
+            }
+            fn mut_inner(&mut self) -> &mut $inner {
+                &mut self.content
             }
         }
     };
@@ -337,7 +381,7 @@ macro_rules! impl_try_parse_with {
                 tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
             ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
                 let (input, content) = <$inner>::try_parse_with(input, stack, tracker)?;
-                let content = ::pest_typed::re_exported::Box::new(content);
+                let content = content.into();
                 Ok((
                     input,
                     Self {
@@ -381,7 +425,7 @@ macro_rules! impl_try_parse_with {
                     let start = input;
                     let (input, content) = <$inner>::try_parse_with(input, stack, tracker)?;
                     let span = start.span(&input);
-                    let content = ::pest_typed::re_exported::Box::new(content);
+                    let content = content.into();
                     Ok((input, Self { content, span }))
                 })
             }
@@ -408,6 +452,22 @@ macro_rules! impl_rule_wrapper {
     };
 }
 
+/// Get inner type.
+///
+/// Arguments:
+///
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$boxed:tt`. `true` or `false`.
+#[macro_export]
+macro_rules! rule_inner {
+    ($inner:ty, true) => {
+        $crate::re_exported::Box<$inner>
+    };
+    ($inner:ty, false) => {
+        $inner
+    };
+}
+
 /// Declare the body of the struct.
 ///
 /// Arguments:
@@ -416,9 +476,10 @@ macro_rules! impl_rule_wrapper {
 /// - `$($doc:literal)*`. A list of strings that is prepended to generated struct as document comments.
 /// - `$inner:ty`. Type of inner parsing expression.
 /// - `$emission:tt`. `Span`, `Expression` or `Both`.
+/// - `$boxed:tt`. `true` or `false`.
 #[macro_export]
 macro_rules! declare_rule_struct {
-    ($name:ident, $($doc:literal)*, $inner:ty, Expression) => {
+    ($name:ident, $($doc:literal)*, $Rule:ty, $inner:ty, Expression, $boxed:tt) => {
         $(
             #[doc = $doc]
         )*
@@ -426,7 +487,7 @@ macro_rules! declare_rule_struct {
         #[derive(Clone, Hash, PartialEq, Eq)]
         pub struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
             /// Matched expression.
-            pub content: ::pest_typed::re_exported::Box<$inner>,
+            pub content: $crate::rule_inner!($inner, $boxed),
             _phantom: ::core::marker::PhantomData<&'i ::core::primitive::str>,
         }
         impl<'i, const INHERITED: ::core::primitive::usize> ::core::fmt::Debug for $name<'i, INHERITED> {
@@ -436,8 +497,9 @@ macro_rules! declare_rule_struct {
                     .finish()
             }
         }
+        ::pest_typed::impl_rule_struct!($name, $Rule, $inner, $boxed);
     };
-    ($name:ident, $($doc:literal)*, $inner:ty, Span) => {
+    ($name:ident, $($doc:literal)*, $Rule:ty, $inner:ty, Span, $boxed:tt) => {
         $(
             #[doc = $doc]
         )*
@@ -455,7 +517,7 @@ macro_rules! declare_rule_struct {
             }
         }
     };
-    ($name:ident, $($doc:literal)*, $inner:ty, Both) => {
+    ($name:ident, $($doc:literal)*, $Rule:ty, $inner:ty, Both, $boxed:tt) => {
         $(
             #[doc = $doc]
         )*
@@ -463,7 +525,7 @@ macro_rules! declare_rule_struct {
         #[derive(Clone, Hash, PartialEq, Eq)]
         pub struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
             /// Matched expression.
-            pub content: ::pest_typed::re_exported::Box<$inner>,
+            pub content: $crate::rule_inner!($inner, $boxed),
             /// Span of matched expression.
             pub span: ::pest_typed::Span<'i>,
         }
@@ -475,6 +537,7 @@ macro_rules! declare_rule_struct {
                     .finish()
             }
         }
+        ::pest_typed::impl_rule_struct!($name, $Rule, $inner, $boxed);
     };
 }
 
@@ -543,8 +606,8 @@ macro_rules! tag {
 /// - [silent_rule](`crate::silent_rule!`).
 #[macro_export]
 macro_rules! rule {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $atomicity:tt, $emission:tt) => {
-        ::pest_typed::declare_rule_struct!($name, $($doc)*, $inner, $emission);
+    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $atomicity:tt, $emission:tt, $boxed:tt) => {
+        ::pest_typed::declare_rule_struct!($name, $($doc)*, $Rule, $inner, $emission, $boxed);
         ::pest_typed::impl_rule_wrapper!($name, $Rule, $rule);
         ::pest_typed::impl_try_parse_with!($name, $Rule, $inner, $atomicity, $emission);
         ::pest_typed::impl_parse!($name, $Rule, $ignored, $atomicity);
@@ -566,7 +629,7 @@ macro_rules! rule {
 #[macro_export]
 macro_rules! atomic_rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Span);
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Span, false);
     };
 }
 
@@ -579,10 +642,11 @@ macro_rules! atomic_rule {
 /// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
 /// - `$rule:expr`. Rule enumeration.
 /// - `$inner:ty`. Type of inner parsing expression.
+/// - `$boxed:tt`. Whether wrap inner type in a [Box](crate::re_exported::Box). `true` or `false`.
 #[macro_export]
 macro_rules! compound_atomic_rule {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Both);
+    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $boxed:tt) => {
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Both, $boxed);
     };
 }
 
@@ -597,11 +661,13 @@ macro_rules! compound_atomic_rule {
 /// - `$inner:ty`. Type of inner parsing expression.
 /// - `$ignored:ty`. Type of auto-skipped parsing  expressions.
 ///
-///   Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
+///    Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
+///
+/// - `$boxed:tt`. Whether wrap inner type in a [Box](crate::re_exported::Box). `true` or `false`.
 #[macro_export]
 macro_rules! non_atomic_rule {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, false, Both);
+    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, false, Both, $boxed);
     };
 }
 
@@ -616,11 +682,13 @@ macro_rules! non_atomic_rule {
 /// - `$inner:ty`. Type of inner parsing expression.
 /// - `$ignored:ty`. Type of auto-skipped parsing expressions.
 ///
-///   Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
+///    Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
+///
+/// - `$boxed:tt`. Whether wrap inner type in a [Box](crate::re_exported::Box). `true` or `false`.
 #[macro_export]
 macro_rules! normal_rule {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Both);
+    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Both, $boxed);
     };
 }
 
@@ -635,11 +703,13 @@ macro_rules! normal_rule {
 /// - `$inner:ty`. Type of inner parsing expression.
 /// - `$ignored:ty`. Type of auto-skipped parsing expressions.
 ///
-///   Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
+///    Must implement [NeverFailedTypedNode](`crate::NeverFailedTypedNode`). Normally using [Skipped](`crate::predefined_node::Skipped`).
+///
+/// - `$boxed:tt`. Whether wrap inner type in a [Box](crate::re_exported::Box). `true` or `false`.
 #[macro_export]
 macro_rules! silent_rule {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Expression);
+    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
+        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Expression, $boxed);
     };
 }
 
@@ -655,8 +725,10 @@ macro_rules! rule_eoi {
         ::pest_typed::declare_rule_struct!(
             $name,
             "The rule for end of input.",
+            $Rule,
             ::pest_typed::predefined_node::EOI,
-            Both
+            Both,
+            false
         );
         ::pest_typed::impl_rule_wrapper!($name, $Rule, <$Rule>::EOI);
         ::pest_typed::impl_try_parse_with!(

@@ -46,7 +46,4 @@
     "POP_ALL",
     "DROP",
     "PEEK_ALL",
-
-    "COMMENT",
-    "WHITESPACE"
 ]

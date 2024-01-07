@@ -15,7 +15,7 @@ use crate::{
         Positive, Push, RepMin, RepMinMax, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK, PEEK_ALL,
         POP, POP_ALL, SOI,
     },
-    typed_node::RuleStruct,
+    typed_node::{RuleStorage, RuleStruct, Spanned},
     StringArrayWrapper, StringWrapper, TypedNode,
 };
 use alloc::{boxed, collections::VecDeque, string::String, vec, vec::Vec};
@@ -51,7 +51,7 @@ pub trait Pairs<'i: 'n, 'n, R: RuleType + 'n> {
 }
 
 /// Simulate [`pest::iterators::Pair`].
-pub trait Pair<'i: 'n, 'n, R: RuleType + 'n>: RuleStruct<'i, R> {
+pub trait Pair<'i: 'n, 'n, R: RuleType + 'n>: Spanned<'i, R> + RuleStorage<R> {
     /// Collect inner pairs' [`Pairs::Iter`] and make them into a [`vec::IntoIter`].
     fn inner(&'n self) -> vec::IntoIter<&'n (dyn Pair<'i, 'n, R>)>;
     /// Collect inner pairs' [`Pairs::IntoIter`] and make them into a [`vec::IntoIter`].

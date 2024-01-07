@@ -1,10 +1,10 @@
-use pest_typed::{ParsableTypedNode as _, Span, Storage as _};
+use pest_typed::{ParsableTypedNode as _, RuleStruct, Span, Storage};
 use pest_typed_derive::{match_choices, TypedParser};
 
 #[derive(TypedParser)]
 #[grammar_inline = r#"
 a =  { (b | c) ~ d }
-b = _{ "b" }
+b = _{ "b" ~ b? }
 c = @{ "c" }
 d = ${ "d" }
 "#]
@@ -19,8 +19,8 @@ fn parse(input: &'static str) -> Result<(), pest_typed::error::Error<Rule>> {
     // Call `d()` to get reference to `d`.
     if let Some(b) = a.b() {
         // `b` is a silent rule, it only contains inner expressions.
-        // And as its content is wrapped in a `Box`,
-        // its size will always be the size of a Box.
+        // Its content may be wrapped in a Box when it's one of the nodes that is in a cycle with minimal length.
+        // Then its size will always be the size of a Box.
         assert_eq!(std::mem::size_of_val(b), std::mem::size_of::<Box<usize>>());
     } else if let Some(c) = a.c() {
         assert_eq!(c.span.as_str(), "c");
@@ -33,7 +33,10 @@ fn parse(input: &'static str) -> Result<(), pest_typed::error::Error<Rule>> {
     // Call `get_matched` to destruct the sequence.
     let (b_or_c, d) = a.get_matched();
     match b_or_c {
-        Choice2::_0(b) => assert_eq!(std::mem::size_of_val(b.content.as_ref()), 0),
+        Choice2::_0(b) => assert_eq!(
+            std::mem::size_of_val(b.ref_inner()),
+            std::mem::size_of::<Box<rules::b>>()
+        ),
         Choice2::_1(c) => assert_eq!(std::mem::size_of_val(c), std::mem::size_of::<Span>()),
     }
     // Or match_choices from `pest_typed_derive`.

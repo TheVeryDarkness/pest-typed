@@ -47,7 +47,7 @@ extern crate std;
 
 pub use pest::RuleType;
 use typed_node::NeverFailedParsableTypedNode;
-pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, RuleStruct, TypedNode};
+pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, RuleStruct, Spanned, TypedNode};
 pub use wrapper::{
     BoundWrapper, ConstantStorage, RuleWrapper, Storage, StringArrayWrapper, StringWrapper,
     TypeWrapper,

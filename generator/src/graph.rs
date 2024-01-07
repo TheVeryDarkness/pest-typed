@@ -395,6 +395,7 @@ impl ToTokens for Emission {
 struct RuleConfig<'g> {
     pub atomicity: Option<bool>,
     pub rule_id: Ident,
+    pub boxed: bool,
     #[allow(dead_code)]
     pub rule_name: &'g str,
     pub rule_desc: String,
@@ -416,7 +417,7 @@ impl<'g> RuleConfig<'g> {
 
 fn rule<'g>(
     rule_config: &RuleConfig<'g>,
-    type_name: &TokenStream,
+    type_name: TokenStream,
     accessers: &Accesser<'g>,
     emission: Emission,
 ) -> TokenStream {
@@ -430,7 +431,7 @@ fn rule<'g>(
     fn create<'g>(
         rule_config: &RuleConfig<'g>,
         accesser_impl: TokenStream,
-        inner_type: &TokenStream,
+        inner_type: TokenStream,
         emission: Emission,
     ) -> TokenStream {
         let root = quote! {super};
@@ -443,8 +444,9 @@ fn rule<'g>(
         };
         let docs = rule_config.get_doc();
         let ignore = ignore(&root);
+        let boxed = rule_config.boxed;
         quote! {
-            #pest_typed::rule!(#name, #(#docs)*, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission);
+            #pest_typed::rule!(#name, #(#docs)*, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission, #boxed);
             impl<'i, const INHERITED: usize> #name<'i, INHERITED> {
                 #accesser_impl
             }
@@ -602,7 +604,7 @@ fn process_single_alias<'g>(
 ) -> (TokenStream, Accesser<'g>) {
     if explicit {
         let rule_id = &rule_config.rule_id;
-        let def = rule(rule_config, &type_name, &accessers, emission);
+        let def = rule(rule_config, type_name, &accessers, emission);
         map.insert(def);
         let rules = rules_mod();
         (quote! {#root::#rules::#rule_id::<'i>}, accessers)
@@ -940,6 +942,7 @@ fn generate_graph_node<'g>(
 fn generate_graph<'g: 'f, 'f>(
     rules: &'g [OptimizedRule],
     defined: &'f BTreeSet<&'g str>,
+    not_boxed: &'f BTreeSet<&'g str>,
     builtins_without_lifetime: &'f BTreeSet<&'g str>,
     config: Config,
     doc: &DocComment,
@@ -963,9 +966,11 @@ fn generate_graph<'g: 'f, 'f>(
             "Corresponds to expression: `{}`. {}",
             rule.expr, atomicity_doc
         );
+        let boxed = !not_boxed.contains(rule_name);
         let rule_doc = doc.line_docs.get(rule_name).map(|s| s.as_str());
         let rule_config = RuleConfig {
             atomicity,
+            boxed,
             rule_id: ident(rule_name),
             rule_name,
             rule_desc,
@@ -986,7 +991,34 @@ fn generate_graph<'g: 'f, 'f>(
     res
 }
 
-fn collect_used_rule<'s>(rule: &'s OptimizedRule, res: &mut BTreeSet<&'s str>) {
+/// Whether skipped rules has been defined.
+#[derive(Clone, Copy)]
+struct Implicit {
+    whitespace: bool,
+    comment: bool,
+}
+
+impl<'s> From<&'s [OptimizedRule]> for Implicit {
+    fn from(value: &'s [OptimizedRule]) -> Self {
+        let whitespace = value.iter().any(|rule| rule.name == "WHITESPACE");
+        let comment = value.iter().any(|rule| rule.name == "COMMENT");
+        Self {
+            whitespace,
+            comment,
+        }
+    }
+}
+
+fn collect_used_rule<'s>(rule: &'s OptimizedRule, implicit: Implicit, res: &mut BTreeSet<&'s str>) {
+    //
+    if rule.ty == RuleType::Normal {
+        if implicit.comment {
+            res.insert("COMMENT");
+        }
+        if implicit.whitespace {
+            res.insert("WHITESPACE");
+        }
+    }
     let mut exprs = vec![&rule.expr];
     while let Some(expr) = exprs.pop() {
         match expr {
@@ -1010,33 +1042,37 @@ fn collect_used_rule<'s>(rule: &'s OptimizedRule, res: &mut BTreeSet<&'s str>) {
         }
     }
 }
-fn collect_used_rules<'s>(rules: &'s [OptimizedRule]) -> BTreeSet<&'s str> {
+
+fn collect_used_rules<'s>(rules: &'s [OptimizedRule], implicit: Implicit) -> BTreeSet<&'s str> {
     let mut res = BTreeSet::<&'s str>::new();
-    res.insert("COMMENT");
-    res.insert("WHITESPACE");
     for rule in rules {
-        collect_used_rule(rule, &mut res);
+        collect_used_rule(rule, implicit, &mut res);
     }
     res
 }
 
-#[allow(dead_code)]
-fn collect_reachability<'g>(rules: &'g [OptimizedRule]) -> BTreeMap<&'g str, BTreeSet<&'g str>> {
+fn collect_reachability<'g>(
+    rules: &'g [OptimizedRule],
+    implicit: Implicit,
+) -> BTreeMap<&'g str, BTreeSet<&'g str>> {
     let mut res: BTreeMap<&'g str, BTreeSet<&'g str>> = BTreeMap::new();
     for rule in rules {
         let entry = res.entry(rule.name.as_str()).or_default();
-        collect_used_rule(rule, entry);
+        collect_used_rule(rule, implicit, entry);
     }
     for _ in 0..rules.len() {
         for rule in rules {
-            let cur = res.remove(rule.name.as_str()).unwrap_or_default();
-            let mut new = cur.clone();
-            for referenced in cur {
-                if let Some(iter) = res.get(referenced) {
-                    new.extend(iter);
+            if let Some(cur) = res.remove(rule.name.as_str()) {
+                let mut new = cur.clone();
+                for referenced in cur {
+                    if let Some(iter) = res.get(referenced) {
+                        new.extend(iter);
+                    }
+                }
+                if !new.contains(rule.name.as_str()) {
+                    res.insert(rule.name.as_str(), new);
                 }
             }
-            res.insert(rule.name.as_str(), new);
         }
     }
     res
@@ -1051,7 +1087,9 @@ pub(crate) fn generate_typed_pair_from_rule(
 
     let defined_rules: BTreeSet<&str> = rules.iter().map(|rule| rule.name.as_str()).collect();
 
-    let referenced_rules = collect_used_rules(rules);
+    let implicit = Implicit::from(rules);
+
+    let referenced_rules = collect_used_rules(rules, implicit);
 
     let (builtin, mut builtins_without_lifetime) =
         generate_builtin(&defined_rules, &referenced_rules);
@@ -1062,9 +1100,15 @@ pub(crate) fn generate_typed_pair_from_rule(
         &mut builtins_without_lifetime,
     );
 
+    let not_boxed = collect_reachability(rules, implicit)
+        .keys()
+        .cloned()
+        .collect();
+
     let mut graph = generate_graph(
         rules,
         &defined_rules,
+        &not_boxed,
         &builtins_without_lifetime,
         config,
         doc,
@@ -1371,8 +1415,9 @@ mod tests {
     #[test]
     fn inlined_used_rules() {
         let (_, rules) = parse_and_optimize(r#"x = { a ~ b } a = { "a" } b = { ^"b" }"#).unwrap();
-        let used = collect_used_rules(&rules);
-        assert_eq!(used, BTreeSet::from(["a", "b", "WHITESPACE", "COMMENT"]));
+        let implicit = Implicit::from(rules.as_slice());
+        let used = collect_used_rules(&rules, implicit);
+        assert_eq!(used, BTreeSet::from(["a", "b"]));
     }
     #[test]
     /// Check collected used rules in a complex grammar.
@@ -1380,9 +1425,21 @@ mod tests {
     /// PEEK and PUSH are translated to [`OptimizedExpr::PeekSlice`] and [`OptimizedExpr::Push`].
     fn used_rules() {
         let rules = &PARSE_RESULT.1;
-        let used = collect_used_rules(&rules);
+        let implicit = Implicit::from(rules.as_slice());
+        let used = collect_used_rules(&rules, implicit);
         let expected = include!("../tests/syntax.used.rules.txt");
         let expected = BTreeSet::from(expected);
         assert_eq!(used, expected);
+    }
+    #[test]
+    /// Check we can actually break the cycles.
+    fn inter_reference() {
+        let (_, rules) =
+            parse_and_optimize(r#"a = { "a" ~ b* } b = { "b" ~ c? } c = { a+ }"#).unwrap();
+        let implicit = Implicit::from(rules.as_slice());
+        let used = collect_used_rules(&rules, implicit);
+        assert_eq!(used, BTreeSet::from(["a", "b", "c"]));
+        let graph = collect_reachability(&rules, implicit);
+        assert_eq!(graph, BTreeMap::from([("b", BTreeSet::from(["a", "c"]))]));
     }
 }

@@ -20,8 +20,8 @@ mod tests {
         predefined_node::*,
         rule_eoi,
         sequence::{Seq2, Seq3},
-        silent_rule, BoundWrapper, ParsableTypedNode, RuleWrapper, Storage, StringArrayWrapper,
-        StringWrapper, TypeWrapper,
+        silent_rule, BoundWrapper, ParsableTypedNode, RuleStruct, RuleWrapper, Storage,
+        StringArrayWrapper, StringWrapper, TypeWrapper,
     };
     use std::{fmt::Write, ops::Deref, string::String};
 
@@ -60,7 +60,8 @@ mod tests {
         "Comment.",
         Rule,
         Rule::COMMENT,
-        CharRange::<'\t', '\t'>
+        CharRange::<'\t', '\t'>,
+        false
     );
     normal_rule!(
         StrFoo,
@@ -68,7 +69,8 @@ mod tests {
         Rule,
         Rule::Foo,
         Str::<Foo>,
-        AtomicRep<Choice2<WHITESPACE<'i>, COMMENT<'i>>>
+        AtomicRep<Choice2<WHITESPACE<'i>, COMMENT<'i>>>,
+        false
     );
     rule_eoi!(EOI, Rule);
 
@@ -106,7 +108,8 @@ mod tests {
             Rule,
             Rule::RepFoo,
             Ignore<'i>,
-            Empty<'i>
+            Empty<'i>,
+            false
         );
         tmp::try_parse(" \t  ").unwrap();
     }
@@ -120,7 +123,8 @@ mod tests {
             Rule,
             Rule::RepFoo,
             REP<'i>,
-            Ignore<'i>
+            Ignore<'i>,
+            false
         );
 
         let rep1 = R::try_parse("foofoofoo").unwrap();
@@ -168,7 +172,8 @@ mod tests {
             Rule,
             Rule::RepFoo,
             REP<'i>,
-            Ignore<'i>
+            Ignore<'i>,
+            false
         );
 
         let rep1 = R::try_parse("fooFoofoo").unwrap();
@@ -227,7 +232,8 @@ mod tests {
             "Quoted string.",
             Rule,
             Rule::String,
-            Seq2<Skipped<Skip<'i, NewLine>, Ignore<'i>, 0>, Skipped<NEWLINE, Ignore<'i>, 0>>
+            Seq2<Skipped<Skip<'i, NewLine>, Ignore<'i>, 0>, Skipped<NEWLINE, Ignore<'i>, 0>>,
+            false
         );
 
         let s1 = QuotedString::<1>::try_parse("2\r\n").unwrap();
@@ -245,7 +251,8 @@ mod tests {
             "Skip 3 characters.",
             Rule,
             Rule::Foo,
-            SkipChar<'i, 3>
+            SkipChar<'i, 3>,
+            false
         );
         three::<1>::try_parse("foo").unwrap();
         three::<1>::try_parse("foobar").unwrap_err();
@@ -272,7 +279,8 @@ mod tests {
                     0,
                 >,
                 Skipped<AtomicRep<CharRange<'a', 'z'>>, Ignore<'i>, 0>,
-            >
+            >,
+            false
         );
 
         let l = Lifetime::<1>::try_parse("'i").unwrap();
@@ -323,7 +331,8 @@ mod tests {
             "Any character except \"foo\" or \"bar\".",
             Rule,
             Rule::NotFooBar,
-            AtomicRep<(Negative<Choice2<Str<StrFoo>, Str<StrBar>>>, ANY)>
+            AtomicRep<(Negative<Choice2<Str<StrFoo>, Str<StrBar>>>, ANY)>,
+            false
         );
         let _ = not_foo_bar::<1>::try_parse("").unwrap();
         let baz = not_foo_bar::<1>::try_parse("baz").unwrap();
@@ -352,7 +361,8 @@ mod tests {
             Seq2<
                 Skipped<Push<Insens<'i, Foo>>, Ignore<'i>, 0>,
                 Skipped<RepMinMax<Skipped<PEEK<'i>, Ignore<'i>, 0>, 1, 3>, Ignore<'i>, 0>,
-            >
+            >,
+            false
         );
         let r = Rep_1_3::<1>::try_parse("foOfoO").unwrap();
         assert_eq!(
@@ -420,11 +430,12 @@ mod tests {
             "Repeat previously matched expression 0 to 3 times",
             Rule,
             Rule::RepFoo,
-            RepMin<Skipped<Str<Foo>, Ignore<'i>, 0>, 0>
+            RepMin<Skipped<Str<Foo>, Ignore<'i>, 0>, 0>,
+            false
         );
 
         let x = Rep_0_3::try_parse("").unwrap();
-        assert_eq!(x.content.deref(), &RepMin::default());
+        assert_eq!(x.ref_inner(), &RepMin::default());
 
         use std::collections::HashSet;
 
@@ -452,7 +463,8 @@ mod tests {
             "Repeat \"foo\" 2 times",
             Rule,
             Rule::RepFoo,
-            [Insens<'i, Foo>; 2]
+            [Insens<'i, Foo>; 2],
+            false
         );
         Rep_2::try_parse("").unwrap_err();
         Rep_2::try_parse("foo").unwrap_err();

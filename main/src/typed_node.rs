@@ -104,9 +104,21 @@ impl<R: RuleType, T: RuleWrapper<R>> RuleStorage<R> for T {
 }
 
 /// A trait for those struct that correspond to non-silent rules.
-pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
+pub trait Spanned<'i, R: RuleType> {
     /// The span of a matched expression by a non-silent rule.
     fn span(&self) -> Span<'i>;
+}
+
+/// A trait for those struct that correspond to rules with inner expression.
+pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
+    /// Inner type.
+    type Inner;
+    /// Take inner content.
+    fn take_inner(self) -> Self::Inner;
+    /// Reference inner content.
+    fn ref_inner(&self) -> &Self::Inner;
+    /// Reference inner content mutably.
+    fn mut_inner(&mut self) -> &mut Self::Inner;
 }
 
 /// Match `[T; N]`.
