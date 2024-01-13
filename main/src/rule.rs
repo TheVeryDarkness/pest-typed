@@ -26,12 +26,12 @@ use crate::{
 macro_rules! impl_pairs_with_self {
     ($name:ident, $Rule:ty) => {
         impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            ::pest_typed::iterators::Pairs<'i, 'n, $Rule> for $name<'i, INHERITED>
+            $crate::iterators::Pairs<'i, 'n, $Rule> for $name<'i, INHERITED>
         {
-            type Iter = ::core::iter::Once<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, $Rule>>;
+            type Iter = ::core::iter::Once<&'n dyn $crate::iterators::Pair<'i, 'n, $Rule>>;
             type IntoIter = ::core::iter::Once<
-                ::pest_typed::re_exported::Box<
-                    dyn ::pest_typed::iterators::Pair<'i, 'n, $Rule> + 'n,
+                $crate::re_exported::Box<
+                    dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n,
                 >,
             >;
 
@@ -39,7 +39,7 @@ macro_rules! impl_pairs_with_self {
                 ::core::iter::once(self)
             }
             fn into_iter_pairs(self) -> Self::IntoIter {
-                ::core::iter::once(::pest_typed::re_exported::Box::new(self))
+                ::core::iter::once($crate::re_exported::Box::new(self))
             }
         }
     };
@@ -58,31 +58,31 @@ macro_rules! impl_pairs_with_self {
 macro_rules! impl_pairs_with_inner {
     ($name:ident, $Rule:ty, $inner:ty) => {
         impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            ::pest_typed::iterators::Pairs<'i, 'n, $Rule> for $name<'i, INHERITED>
+            $crate::iterators::Pairs<'i, 'n, $Rule> for $name<'i, INHERITED>
         {
-            type Iter = ::pest_typed::re_exported::vec::IntoIter<
-                &'n dyn ::pest_typed::iterators::Pair<'i, 'n, $Rule>,
+            type Iter = $crate::re_exported::vec::IntoIter<
+                &'n dyn $crate::iterators::Pair<'i, 'n, $Rule>,
             >;
-            type IntoIter = ::pest_typed::re_exported::vec::IntoIter<
-                ::pest_typed::re_exported::Box<
-                    dyn ::pest_typed::iterators::Pair<'i, 'n, $Rule> + 'n,
+            type IntoIter = $crate::re_exported::vec::IntoIter<
+                $crate::re_exported::Box<
+                    dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n,
                 >,
             >;
 
             fn iter_pairs(&'n self) -> Self::Iter {
-                let i = <$inner as ::pest_typed::iterators::Pairs<'i, 'n, $Rule>>::iter_pairs(
+                let i = <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::iter_pairs(
                     &self.content,
                 );
-                i.collect::<::pest_typed::re_exported::Vec<_>>().into_iter()
+                i.collect::<$crate::re_exported::Vec<_>>().into_iter()
             }
             fn into_iter_pairs(self) -> Self::IntoIter {
                 let i = self.content.into_iter_pairs();
                 /*
-                let i = <$inner as ::pest_typed::iterators::Pairs<'i, 'n, $Rule>>::into_iter(
+                let i = <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::into_iter(
                     self.content,
                 );
                 */
-                i.collect::<::pest_typed::re_exported::Vec<_>>().into_iter()
+                i.collect::<$crate::re_exported::Vec<_>>().into_iter()
             }
         }
     };
@@ -99,10 +99,10 @@ macro_rules! impl_pairs_with_inner {
 #[macro_export]
 macro_rules! impl_pairs {
     ($name:ident, $Rule:ty, $inner:ty, Expression) => {
-        ::pest_typed::impl_pairs_with_inner!($name, $Rule, $inner);
+        $crate::impl_pairs_with_inner!($name, $Rule, $inner);
     };
     ($name:ident, $Rule:ty, $inner:ty, $emit:tt) => {
-        ::pest_typed::impl_pairs_with_self!($name, $Rule);
+        $crate::impl_pairs_with_self!($name, $Rule);
     };
 }
 
@@ -144,7 +144,7 @@ macro_rules! impl_deref_with_content {
 macro_rules! impl_deref {
     ($name:ident, $inner:ty, Span) => {};
     ($name:ident, $inner:ty, $emission:tt) => {
-        ::pest_typed::impl_deref_with_content!($name, $inner);
+        $crate::impl_deref_with_content!($name, $inner);
     };
 }
 
@@ -160,31 +160,31 @@ macro_rules! impl_deref {
 #[macro_export]
 macro_rules! impl_pair_with_empty {
     ($name:ident, $Rule:ty, $rule:expr) => {
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> ::pest_typed::Spanned<'i, $Rule>
+        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> $crate::Spanned<'i, $Rule>
             for $name<'i, INHERITED>
         {
-            fn span(&self) -> ::pest_typed::Span<'i> {
+            fn span(&self) -> $crate::Span<'i> {
                 self.span
             }
         }
         impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            ::pest_typed::iterators::Pair<'i, 'n, $Rule> for $name<'i, INHERITED>
+            $crate::iterators::Pair<'i, 'n, $Rule> for $name<'i, INHERITED>
         {
             fn inner(
                 &'n self,
-            ) -> ::pest_typed::re_exported::vec::IntoIter<
-                &'n (dyn ::pest_typed::iterators::Pair<'i, 'n, $Rule> + 'n),
+            ) -> $crate::re_exported::vec::IntoIter<
+                &'n (dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n),
             > {
-                ::pest_typed::re_exported::Vec::new().into_iter()
+                $crate::re_exported::Vec::new().into_iter()
             }
             fn into_inner(
                 self,
-            ) -> ::pest_typed::re_exported::vec::IntoIter<
-                ::pest_typed::re_exported::Box<
-                    (dyn ::pest_typed::iterators::Pair<'i, 'n, $Rule> + 'n),
+            ) -> $crate::re_exported::vec::IntoIter<
+                $crate::re_exported::Box<
+                    (dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n),
                 >,
             > {
-                ::pest_typed::re_exported::Vec::new().into_iter()
+                $crate::re_exported::Vec::new().into_iter()
             }
         }
     };
@@ -201,42 +201,42 @@ macro_rules! impl_pair_with_empty {
 #[macro_export]
 macro_rules! impl_pair_with_content {
     ($name:ident, $Rule:ty, $rule:expr, $inner:ty) => {
-        impl<'i, const INHERITED: ::core::primitive::usize> ::pest_typed::TypeWrapper
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::TypeWrapper
             for $name<'i, INHERITED>
         {
             type Inner = $inner;
         }
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> ::pest_typed::Spanned<'i, $Rule>
+        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> $crate::Spanned<'i, $Rule>
             for $name<'i, INHERITED>
         {
-            fn span(&self) -> ::pest_typed::Span<'i> {
+            fn span(&self) -> $crate::Span<'i> {
                 self.span
             }
         }
         impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            ::pest_typed::iterators::Pair<'i, 'n, $Rule> for $name<'i, INHERITED>
+            $crate::iterators::Pair<'i, 'n, $Rule> for $name<'i, INHERITED>
         {
             fn inner(
                 &'n self,
-            ) -> ::pest_typed::re_exported::vec::IntoIter<
-                &'n (dyn ::pest_typed::iterators::Pair<'i, 'n, $Rule> + 'n),
+            ) -> $crate::re_exported::vec::IntoIter<
+                &'n (dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n),
             > {
-                let i = <$inner as ::pest_typed::iterators::Pairs<'i, 'n, $Rule>>::iter_pairs(
+                let i = <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::iter_pairs(
                     &self.content,
                 );
-                i.collect::<::pest_typed::re_exported::Vec<_>>().into_iter()
+                i.collect::<$crate::re_exported::Vec<_>>().into_iter()
             }
             fn into_inner(
                 self,
-            ) -> ::pest_typed::re_exported::vec::IntoIter<
-                ::pest_typed::re_exported::Box<
-                    (dyn ::pest_typed::iterators::Pair<'i, 'n, $Rule> + 'n),
+            ) -> $crate::re_exported::vec::IntoIter<
+                $crate::re_exported::Box<
+                    (dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n),
                 >,
             > {
-                let i = <$inner as ::pest_typed::iterators::Pairs<'i, 'n, $Rule>>::into_iter_pairs(
+                let i = <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::into_iter_pairs(
                     <Self as $crate::RuleStruct<$Rule>>::take_inner(self),
                 );
-                i.collect::<::pest_typed::re_exported::Vec<_>>().into_iter()
+                i.collect::<$crate::re_exported::Vec<_>>().into_iter()
             }
         }
     };
@@ -254,7 +254,7 @@ macro_rules! impl_pair_with_content {
 macro_rules! impl_rule_struct {
     ($name:ident, $Rule:ty, $inner:ty, true) => {
         impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            ::pest_typed::RuleStruct<'i, $Rule> for $name<'i, INHERITED>
+            $crate::RuleStruct<'i, $Rule> for $name<'i, INHERITED>
         {
             type Inner = $inner;
             fn take_inner(self) -> $inner {
@@ -270,7 +270,7 @@ macro_rules! impl_rule_struct {
     };
     ($name:ident, $Rule:ty, $inner:ty, false) => {
         impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            ::pest_typed::RuleStruct<'i, $Rule> for $name<'i, INHERITED>
+            $crate::RuleStruct<'i, $Rule> for $name<'i, INHERITED>
         {
             type Inner = $inner;
             fn take_inner(self) -> $inner {
@@ -300,13 +300,13 @@ macro_rules! impl_rule_struct {
 macro_rules! impl_pair {
     ($name:ident, $Rule:ty, $rule:expr, $inner:ty, $atomicity:expr, Expression) => {};
     ($name:ident, $Rule:ty, $rule:expr, $inner:ty, true, $emit:tt) => {
-        ::pest_typed::impl_pair_with_empty!($name, $Rule, $rule);
+        $crate::impl_pair_with_empty!($name, $Rule, $rule);
     };
     ($name:ident, $Rule:ty, $rule:expr, $inner:ty, false, $emit:tt) => {
-        ::pest_typed::impl_pair_with_content!($name, $Rule, $rule, $inner);
+        $crate::impl_pair_with_content!($name, $Rule, $rule, $inner);
     };
     ($name:ident, $Rule:ty, $rule:expr, $inner:ty, INHERITED, $emit:tt) => {
-        ::pest_typed::impl_pair_with_content!($name, $Rule, $rule, $inner);
+        $crate::impl_pair_with_content!($name, $Rule, $rule, $inner);
     };
 }
 
@@ -324,14 +324,14 @@ macro_rules! impl_pair {
 #[macro_export]
 macro_rules! impl_parse {
     ($name:ident, $Rule:ty, $ignored:ty, true) => {
-        impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i, 1> {
+        impl<'i> $crate::ParsableTypedNode<'i, $Rule> for $name<'i, 1> {
             #[inline]
             fn try_parse_with_until_end(
                 input: $crate::Position<'i>,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
             ) -> ::core::result::Result<Self, ()> {
-                ::pest_typed::rule::parse_without_ignore::<$Rule, Self>(
+                $crate::rule::parse_without_ignore::<$Rule, Self>(
                     input,
                     stack,
                     tracker,
@@ -341,14 +341,14 @@ macro_rules! impl_parse {
         }
     };
     ($name:ident, $Rule:ty, $ignored:ty, $non_true:tt) => {
-        impl<'i> ::pest_typed::ParsableTypedNode<'i, $Rule> for $name<'i, 1> {
+        impl<'i> $crate::ParsableTypedNode<'i, $Rule> for $name<'i, 1> {
             #[inline]
             fn try_parse_with_until_end(
                 input: $crate::Position<'i>,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
             ) -> ::core::result::Result<Self, ()> {
-                ::pest_typed::rule::parse::<$Rule, Self, $ignored>(
+                $crate::rule::parse::<$Rule, Self, $ignored>(
                     input,
                     stack,
                     tracker,
@@ -371,15 +371,15 @@ macro_rules! impl_parse {
 #[macro_export]
 macro_rules! impl_try_parse_with {
     ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Expression) => {
-        impl<'i, const INHERITED: ::core::primitive::usize> ::pest_typed::TypedNode<'i, $Rule>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::TypedNode<'i, $Rule>
             for $name<'i, INHERITED>
         {
             #[inline]
             fn try_parse_with(
-                input: ::pest_typed::Position<'i>,
-                stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
-                tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
+                input: $crate::Position<'i>,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::result::Result<($crate::Position<'i>, Self), ()> {
                 let (input, content) = <$inner>::try_parse_with(input, stack, tracker)?;
                 let content = content.into();
                 Ok((
@@ -393,15 +393,15 @@ macro_rules! impl_try_parse_with {
         }
     };
     ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Span) => {
-        impl<'i, const INHERITED: ::core::primitive::usize> ::pest_typed::TypedNode<'i, $Rule>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::TypedNode<'i, $Rule>
             for $name<'i, INHERITED>
         {
             #[inline]
             fn try_parse_with(
-                input: ::pest_typed::Position<'i>,
-                stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
-                tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
+                input: $crate::Position<'i>,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::result::Result<($crate::Position<'i>, Self), ()> {
                 tracker.record_during(input, |tracker| {
                     let start = input;
                     let (input, _) = <$inner>::try_parse_with(input, stack, tracker)?;
@@ -412,15 +412,15 @@ macro_rules! impl_try_parse_with {
         }
     };
     ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Both) => {
-        impl<'i, const INHERITED: ::core::primitive::usize> ::pest_typed::TypedNode<'i, $Rule>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::TypedNode<'i, $Rule>
             for $name<'i, INHERITED>
         {
             #[inline]
             fn try_parse_with(
-                input: ::pest_typed::Position<'i>,
-                stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
-                tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
+                input: $crate::Position<'i>,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::result::Result<($crate::Position<'i>, Self), ()> {
                 tracker.record_during(input, |tracker| {
                     let start = input;
                     let (input, content) = <$inner>::try_parse_with(input, stack, tracker)?;
@@ -443,7 +443,7 @@ macro_rules! impl_try_parse_with {
 #[macro_export]
 macro_rules! impl_rule_wrapper {
     ($name:ident, $Rule:ty, $rule:expr) => {
-        impl<'i, const INHERITED: ::core::primitive::usize> ::pest_typed::RuleWrapper<$Rule>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::RuleWrapper<$Rule>
             for $name<'i, INHERITED>
         {
             const RULE: $Rule = $rule;
@@ -497,7 +497,7 @@ macro_rules! declare_rule_struct {
                     .finish()
             }
         }
-        ::pest_typed::impl_rule_struct!($name, $Rule, $inner, $boxed);
+        $crate::impl_rule_struct!($name, $Rule, $inner, $boxed);
     };
     ($name:ident, $($doc:literal)*, $Rule:ty, $inner:ty, Span, $boxed:tt) => {
         $(
@@ -507,7 +507,7 @@ macro_rules! declare_rule_struct {
         #[derive(Clone, Hash, PartialEq, Eq)]
         pub struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
             /// Span of matched expression.
-            pub span: ::pest_typed::Span<'i>,
+            pub span: $crate::Span<'i>,
         }
         impl<'i, const INHERITED: ::core::primitive::usize> ::core::fmt::Debug for $name<'i, INHERITED> {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
@@ -527,7 +527,7 @@ macro_rules! declare_rule_struct {
             /// Matched expression.
             pub content: $crate::rule_inner!($inner, $boxed),
             /// Span of matched expression.
-            pub span: ::pest_typed::Span<'i>,
+            pub span: $crate::Span<'i>,
         }
         impl<'i, const INHERITED: ::core::primitive::usize> ::core::fmt::Debug for $name<'i, INHERITED> {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
@@ -537,7 +537,7 @@ macro_rules! declare_rule_struct {
                     .finish()
             }
         }
-        ::pest_typed::impl_rule_struct!($name, $Rule, $inner, $boxed);
+        $crate::impl_rule_struct!($name, $Rule, $inner, $boxed);
     };
 }
 
@@ -557,16 +557,16 @@ macro_rules! tag {
             /// Matched expression.
             pub content: $inner,
             /// Span of matched expression.
-            pub span: ::pest_typed::Span<'i>,
+            pub span: $crate::Span<'i>,
         }
-        impl<'i, const INHERITED: usize> ::pest_typed::TypedNode<'i, $Rule>
+        impl<'i, const INHERITED: usize> $crate::TypedNode<'i, $Rule>
             for $name<'i, INHERITED>
         {
             fn try_parse_with(
-                input: ::pest_typed::Position<'i>,
-                stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
-                tracker: &mut ::pest_typed::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<(::pest_typed::Position<'i>, Self), ()> {
+                input: $crate::Position<'i>,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::result::Result<($crate::Position<'i>, Self), ()> {
                 let start = input;
                 match <$inner>::try_parse_with(input, stack, tracker) {
                     ::core::result::Result::Ok((input, content)) => {
@@ -577,8 +577,8 @@ macro_rules! tag {
                 }
             }
         }
-        ::pest_typed::impl_deref_with_content!($name, $inner);
-        ::pest_typed::impl_pairs_with_inner!($name, $Rule, $inner);
+        $crate::impl_deref_with_content!($name, $inner);
+        $crate::impl_pairs_with_inner!($name, $Rule, $inner);
     };
 }
 
@@ -607,13 +607,13 @@ macro_rules! tag {
 #[macro_export]
 macro_rules! rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $atomicity:tt, $emission:tt, $boxed:tt) => {
-        ::pest_typed::declare_rule_struct!($name, $($doc)*, $Rule, $inner, $emission, $boxed);
-        ::pest_typed::impl_rule_wrapper!($name, $Rule, $rule);
-        ::pest_typed::impl_try_parse_with!($name, $Rule, $inner, $atomicity, $emission);
-        ::pest_typed::impl_parse!($name, $Rule, $ignored, $atomicity);
-        ::pest_typed::impl_deref!($name, $inner, $emission);
-        ::pest_typed::impl_pairs!($name, $Rule, $inner, $emission);
-        ::pest_typed::impl_pair!($name, $Rule, $rule, $inner, $atomicity, $emission);
+        $crate::declare_rule_struct!($name, $($doc)*, $Rule, $inner, $emission, $boxed);
+        $crate::impl_rule_wrapper!($name, $Rule, $rule);
+        $crate::impl_try_parse_with!($name, $Rule, $inner, $atomicity, $emission);
+        $crate::impl_parse!($name, $Rule, $ignored, $atomicity);
+        $crate::impl_deref!($name, $inner, $emission);
+        $crate::impl_pairs!($name, $Rule, $inner, $emission);
+        $crate::impl_pair!($name, $Rule, $rule, $inner, $atomicity, $emission);
     };
 }
 
@@ -629,7 +629,7 @@ macro_rules! rule {
 #[macro_export]
 macro_rules! atomic_rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Span, false);
+        $crate::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Span, false);
     };
 }
 
@@ -646,7 +646,7 @@ macro_rules! atomic_rule {
 #[macro_export]
 macro_rules! compound_atomic_rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $boxed:tt) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Both, $boxed);
+        $crate::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Both, $boxed);
     };
 }
 
@@ -667,7 +667,7 @@ macro_rules! compound_atomic_rule {
 #[macro_export]
 macro_rules! non_atomic_rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, false, Both, $boxed);
+        $crate::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, false, Both, $boxed);
     };
 }
 
@@ -688,7 +688,7 @@ macro_rules! non_atomic_rule {
 #[macro_export]
 macro_rules! normal_rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Both, $boxed);
+        $crate::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Both, $boxed);
     };
 }
 
@@ -709,7 +709,7 @@ macro_rules! normal_rule {
 #[macro_export]
 macro_rules! silent_rule {
     ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
-        ::pest_typed::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Expression, $boxed);
+        $crate::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Expression, $boxed);
     };
 }
 
@@ -722,23 +722,23 @@ macro_rules! silent_rule {
 #[macro_export]
 macro_rules! rule_eoi {
     ($name:ident, $Rule:ty) => {
-        ::pest_typed::declare_rule_struct!(
+        $crate::declare_rule_struct!(
             $name,
             "The rule for end of input.",
             $Rule,
-            ::pest_typed::predefined_node::EOI,
+            $crate::predefined_node::EOI,
             Both,
             false
         );
-        ::pest_typed::impl_rule_wrapper!($name, $Rule, <$Rule>::EOI);
-        ::pest_typed::impl_try_parse_with!(
+        $crate::impl_rule_wrapper!($name, $Rule, <$Rule>::EOI);
+        $crate::impl_try_parse_with!(
             $name,
             $Rule,
-            ::pest_typed::predefined_node::EOI,
+            $crate::predefined_node::EOI,
             INHERITED,
             Both
         );
-        impl<'i, const INHERITED: usize> ::pest_typed::ParsableTypedNode<'i, $Rule>
+        impl<'i, const INHERITED: usize> $crate::ParsableTypedNode<'i, $Rule>
             for $name<'i, INHERITED>
         {
             #[inline]
@@ -747,7 +747,7 @@ macro_rules! rule_eoi {
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
             ) -> ::core::result::Result<Self, ()> {
-                ::pest_typed::rule::parse_without_ignore::<$Rule, Self>(
+                $crate::rule::parse_without_ignore::<$Rule, Self>(
                     input,
                     stack,
                     tracker,
@@ -755,9 +755,9 @@ macro_rules! rule_eoi {
                 )
             }
         }
-        ::pest_typed::impl_deref!($name, ::pest_typed::predefined_node::EOI, Expression);
-        ::pest_typed::impl_pairs_with_self!($name, $Rule);
-        ::pest_typed::impl_pair_with_empty!($name, $Rule, <$Rule>::EOI);
+        $crate::impl_deref!($name, $crate::predefined_node::EOI, Expression);
+        $crate::impl_pairs_with_self!($name, $Rule);
+        $crate::impl_pair_with_empty!($name, $Rule, <$Rule>::EOI);
     };
 }
 
