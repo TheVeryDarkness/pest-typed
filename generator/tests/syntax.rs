@@ -9,6 +9,7 @@
 
 use pest_typed_generator::derive_typed_parser;
 use quote::quote;
+use std::io::Write;
 
 /// Use a script to format generated codes if changed.
 ///
@@ -17,11 +18,16 @@ use quote::quote;
 /// ```
 #[test]
 fn generated_rules() {
-    let path_generated = "tests/syntax.generated.txt";
+    let path_generated = "tests/syntax-generated.rs";
     let path_expected = if cfg!(feature = "grammar-extras") {
-        "tests/syntax.extras.expected.txt"
+        "tests/syntax-expected-extras.rs"
     } else {
-        "tests/syntax.expected.txt"
+        "tests/syntax-expected.rs"
+    };
+    let feature = if cfg!(feature = "grammar-extras") {
+        "#![cfg(feature = \"grammar-extras\")]\n"
+    } else {
+        "#![cfg(not(feature = \"grammar-extras\"))]\n"
     };
     let actual = derive_typed_parser(
         quote! {
@@ -32,13 +38,15 @@ fn generated_rules() {
             struct Parser;
         },
         false,
+        false,
     );
     let actual = actual.to_string();
-    std::fs::write(path_generated, &actual).unwrap();
+    let mut f = std::fs::File::create(path_generated).unwrap();
+    writeln!(f, "{}", feature).unwrap();
+    writeln!(f, "{}", actual).unwrap();
+    drop(f);
     let output = std::process::Command::new("rustfmt")
         .arg(path_generated)
-        .arg("--config")
-        .arg("use_small_heuristics=Max,max_width=1000")
         .output()
         .unwrap();
     assert!(

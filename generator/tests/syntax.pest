@@ -20,14 +20,14 @@ Silent = _{ "(" | ")" }
 CompoundAtomic = ${ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 
 /// Tagged rule.
-Tag = { ANY ~ (#Second = (PUSH(CompoundAtomic) ~ &Silent ~ !Atomic))? ~ (#Third = NonAtomic* ~ Regular+)? }
+Tag = { Any ~ (#Second = (PUSH(CompoundAtomic) ~ (#inner = Any) ~ &Silent ~ !Atomic))? ~ (#inner = Any) ~ (#Third = NonAtomic* ~ Regular+)? }
 // It's weird that this line can't be formatted.
 /// Non-atomic rule.
 NonAtomic       = !{ (CaseInsensitive? ~ CharRange+ ~ Tag*)? ~ ("b" | "BB" ~ "b"?)? ~ ^"c"* ~ (!Seq ~ Any)+ }
 ExactString     =  { "r#" }
 CaseInsensitive =  { ^"0x" }
 CharRange       =  { '0'..'9' }
-Any             =  { ANY }
+Any             = _{ ANY }
 Seq             =  { "1" ~ '2'..'9' ~ "." }
 Choice          =  { "a" | ^"b"+ ~ RepAtLeastOnce | &"c" ~ Choice ~ Rep ~ Opt | Peek | PeekLeft | PeekRight | PeekLeftRight | Drop | PeekAll }
 Rep             =  { ^"b"* }

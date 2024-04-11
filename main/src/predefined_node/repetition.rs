@@ -313,17 +313,12 @@ fn try_parse_unit<
     tracker: &mut Tracker<'i, R>,
     i: usize,
 ) -> Result<(Position<'i>, Skipped<T, Skip, SKIP>), ()> {
-    let skipped = core::array::from_fn(|_| {
-        if i == 0 {
-            Skip::default()
-        } else {
-            let (next, skipped) = Skip::parse_with(input, stack);
-            input = next;
-            skipped
-        }
-    });
+    if i > 0 {
+        let (next, _) = Skip::parse_with(input, stack);
+        input = next;
+    }
     let (next, matched) = T::try_parse_with(input, stack, tracker)?;
     input = next;
-    let res = Skipped { skipped, matched };
+    let res = Skipped::from(matched);
     Ok((input, res))
 }

@@ -37,7 +37,11 @@ use syn::{self, Generics, Ident};
 /// based on the parsed grammar. It will generate an explicit "include_str" statement.
 ///
 #[doc = include_str!("../Usage.md")]
-pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenStream {
+pub fn derive_typed_parser(
+    input: TokenStream,
+    include_grammar: bool,
+    include_derive: bool,
+) -> TokenStream {
     let ast: DeriveInput = syn::parse2(input).unwrap();
     let (name, generics, contents, config) = parse_typed_derive(ast);
 
@@ -59,6 +63,7 @@ pub fn derive_typed_parser(input: TokenStream, include_grammar: bool) -> TokenSt
         optimized,
         &doc_comment,
         include_grammar,
+        include_derive,
         config,
     )
 }
@@ -108,6 +113,7 @@ fn generate_typed(
     rules: Vec<OptimizedRule>,
     doc_comment: &DocComment,
     include_grammar: bool,
+    include_derive: bool,
     config: Config,
 ) -> TokenStream {
     let include_fix = if include_grammar {
@@ -121,9 +127,13 @@ fn generate_typed(
 
     let pest_typed = pest_typed();
 
-    let parser_impl = quote! {
-        #[allow(clippy::all)]
-        impl #impl_generics #pest_typed::TypedParser<Rule> for #name #ty_generics #where_clause {}
+    let parser_impl = if include_derive {
+        quote! {
+            #[allow(clippy::all)]
+            impl #impl_generics #pest_typed::TypedParser<Rule> for #name #ty_generics #where_clause {}
+        }
+    } else {
+        quote! {}
     };
 
     let res = quote! {
@@ -192,6 +202,7 @@ mod tests {
                 struct x;
             },
             false,
+            false,
         );
     }
 
@@ -203,6 +214,7 @@ mod tests {
                 #[grammar = "invalid/path/"]
                 struct x;
             },
+            false,
             false,
         );
     }
@@ -216,6 +228,7 @@ mod tests {
                 struct x;
             },
             false,
+            false,
         );
     }
 
@@ -227,6 +240,7 @@ mod tests {
                 #[grammar_inline = "x = { }"]
                 struct x;
             },
+            false,
             false,
         );
     }
@@ -241,6 +255,7 @@ mod tests {
                 struct x;
             },
             false,
+            false,
         );
     }
 
@@ -253,6 +268,7 @@ mod tests {
                 #[no_warnings = 1]
                 struct x;
             },
+            false,
             false,
         );
     }
