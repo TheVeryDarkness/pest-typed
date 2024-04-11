@@ -1,5 +1,5 @@
 #![cfg(feature = "grammar-extras")]
-
+#![allow(unused_parens)]
 #[doc = ""]
 #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -182,8 +182,10 @@ mod constant_wrappers {
 #[doc = "Generated structs for tags."]
 pub mod tags {
     #[doc = "Tags inside rule [super::super::rules::r#Tag]."]
+    #[allow(non_snake_case)]
     pub mod r#Tag {
         #[doc = "Tag r#Second referenced by r#Tag."]
+        #[allow(non_camel_case_types)]
         pub type r#Second<'i, 's, const INHERITED: ::core::primitive::usize> =
             (&'s super::super::generics::Seq4<
                 (::pest_typed::predefined_node::Skipped<
@@ -210,6 +212,7 @@ pub mod tags {
                 >),
             >);
         #[doc = "Tag r#Third referenced by r#Tag."]
+        #[allow(non_camel_case_types)]
         pub type r#Third<'i, 's, const INHERITED: ::core::primitive::usize> =
             (&'s super::super::generics::Rep<
                 'i,
@@ -217,6 +220,7 @@ pub mod tags {
                 super::super::rules::r#NonAtomic<'i, INHERITED>,
             >);
         #[doc = "Tag r#inner referenced by r#Tag."]
+        #[allow(non_camel_case_types)]
         pub type r#inner<'i, 's, const INHERITED: ::core::primitive::usize> = (
             &'s super::super::rules::r#Any<'i, INHERITED>,
             &'s super::super::rules::r#Any<'i, INHERITED>,
@@ -349,7 +353,34 @@ pub mod rules_impl {
             pub fn r#Second<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<
-                super::super::tags::r#Tag::r#Second<'i, 's, INHERITED>,
+                (&super::super::generics::Seq4<
+                    (::pest_typed::predefined_node::Skipped<
+                        super::super::generics::Push<
+                            super::super::rules::r#CompoundAtomic<'i, INHERITED>,
+                        >,
+                        super::super::generics::Skipped<'i>,
+                        INHERITED,
+                    >),
+                    (::pest_typed::predefined_node::Skipped<
+                        super::super::rules::r#Any<'i, INHERITED>,
+                        super::super::generics::Skipped<'i>,
+                        INHERITED,
+                    >),
+                    (::pest_typed::predefined_node::Skipped<
+                        super::super::generics::Positive<
+                            super::super::rules::r#Silent<'i, INHERITED>,
+                        >,
+                        super::super::generics::Skipped<'i>,
+                        INHERITED,
+                    >),
+                    (::pest_typed::predefined_node::Skipped<
+                        super::super::generics::Negative<
+                            super::super::rules::r#Atomic<'i, INHERITED>,
+                        >,
+                        super::super::generics::Skipped<'i>,
+                        INHERITED,
+                    >),
+                >),
             > {
                 let res = &self.content;
                 {
@@ -365,7 +396,11 @@ pub mod rules_impl {
             pub fn r#Third<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<
-                super::super::tags::r#Tag::r#Third<'i, 's, INHERITED>,
+                (&super::super::generics::Rep<
+                    'i,
+                    INHERITED,
+                    super::super::rules::r#NonAtomic<'i, INHERITED>,
+                >),
             > {
                 let res = &self.content;
                 {
@@ -381,7 +416,7 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`inner`]."]
             #[allow(non_snake_case)]
-            pub fn r#inner<'s>(&'s self) -> super::super::tags::r#Tag::r#inner<'i, 's, INHERITED> {
+            pub fn r#inner<'s>(&'s self) -> (&super::super::rules::r#Any<'i, INHERITED>) {
                 let res = &self.content;
                 {
                     let res = &res.content.2.matched;
@@ -1015,6 +1050,7 @@ pub mod rules_impl {
                 res
             }
         }
+        #[allow(unused_imports)]
         use super::super::unicode::*;
         ::pest_typed::rule_eoi!(EOI, super::super::Rule);
         #[allow(non_camel_case_types)]
@@ -1034,7 +1070,7 @@ pub mod rules_impl {
 pub use rules_impl::rules;
 #[doc = "Used generics."]
 pub mod generics {
-    use pest_typed::{predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
+    use pest_typed::predefined_node;
     #[doc = r" Skipped content."]
     pub type Skipped<'i> = predefined_node::Empty<'i>;
     pub use pest_typed::choices::Choice2;

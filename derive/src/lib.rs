@@ -214,7 +214,7 @@ use proc_macro::TokenStream;
     )
 )]
 pub fn derive_typed_parser(input: TokenStream) -> TokenStream {
-    pest_typed_generator::derive_typed_parser(input.into(), true).into()
+    pest_typed_generator::derive_typed_parser(input.into(), true, true).into()
 }
 
 /// The main method that's called by the proc macro is [`pest_typed_generator::match_choices()`].

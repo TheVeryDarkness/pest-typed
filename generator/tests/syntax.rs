@@ -43,6 +43,7 @@ fn generated_rules() {
     let actual = actual.to_string();
     let mut f = std::fs::File::create(path_generated).unwrap();
     writeln!(f, "{}", feature).unwrap();
+    writeln!(f, "{}", "#![allow(unused_parens)]").unwrap();
     writeln!(f, "{}", actual).unwrap();
     drop(f);
     let output = std::process::Command::new("rustfmt")
