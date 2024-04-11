@@ -295,15 +295,13 @@ impl<
         const SKIP: usize,
     > Pairs<'i, 'n, R> for Skipped<T, Skip, SKIP>
 {
-    type Iter = Chain<<[Skip; SKIP] as Pairs<'i, 'n, R>>::Iter, T::Iter>;
-    type IntoIter = Chain<<[Skip; SKIP] as Pairs<'i, 'n, R>>::IntoIter, T::IntoIter>;
+    type Iter = T::Iter;
+    type IntoIter = T::IntoIter;
     fn iter_pairs(&'n self) -> Self::Iter {
-        self.skipped.iter_pairs().chain(self.matched.iter_pairs())
+        self.matched.iter_pairs()
     }
     fn into_iter_pairs(self) -> Self::IntoIter {
-        self.skipped
-            .into_iter_pairs()
-            .chain(self.matched.into_iter_pairs())
+        self.matched.into_iter_pairs()
     }
 }
 
