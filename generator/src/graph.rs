@@ -1161,7 +1161,7 @@ pub(crate) fn generate_typed_pair_from_rule(
     let mods = graph.collect();
     let unicode = unicode_mod();
     let generics = {
-        let root = quote! {super::super};
+        let root = quote! {super};
         let rules_mod = rules_mod();
         let _i32 = _i32();
         let usize = _usize();
@@ -1302,7 +1302,7 @@ fn generate_unicode(
     let span = _span();
     let char = _char();
     let tracker = tracker();
-    let root = quote! {super::super};
+    let root = quote! {super};
     let box_ = box_type();
 
     for property in unicode_property_names() {
@@ -1332,7 +1332,7 @@ fn generate_unicode(
                     fn try_parse_with(
                         mut input: #position<'i>,
                         _stack: &mut #stack<#span<'i>>,
-                        tracker: &mut #tracker<'i, #root::Rule>,
+                        _tracker: &mut #tracker<'i, #root::Rule>,
                     ) -> #result<(#position<'i>, Self), ()> {
                         match #pest_typed::predefined_node::match_char_by(&mut input, #pest_unicode::#property_ident) {
                             Some(content) => {

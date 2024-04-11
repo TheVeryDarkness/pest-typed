@@ -1,5 +1,5 @@
 #![cfg(not(feature = "grammar-extras"))]
-
+#![allow(unused_parens)]
 #[doc = ""]
 #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -1107,6 +1107,7 @@ pub mod rules_impl {
                 res
             }
         }
+        #[allow(unused_imports)]
         use super::super::unicode::*;
         ::pest_typed::rule_eoi!(EOI, super::super::Rule);
         #[allow(non_camel_case_types)]
@@ -1126,7 +1127,7 @@ pub mod rules_impl {
 pub use rules_impl::rules;
 #[doc = "Used generics."]
 pub mod generics {
-    use pest_typed::{predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
+    use pest_typed::predefined_node;
     #[doc = r" Skipped content."]
     pub type Skipped<'i> = predefined_node::Empty<'i>;
     pub use pest_typed::choices::Choice2;
