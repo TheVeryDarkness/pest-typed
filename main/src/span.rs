@@ -7,6 +7,9 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Copied from pest/pest/src/position.rs (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
+//! and modified.
+
 use core::fmt::{self, Write};
 use core::hash::{Hash, Hasher};
 use core::ops::{Bound, RangeBounds};
