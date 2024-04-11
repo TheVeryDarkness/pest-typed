@@ -85,17 +85,21 @@ macro_rules! seq {
                 let content =
                 (
                     {
-                        let (next, matched) = $T0::try_parse_with(input, stack, tracker)?;
+                        let skipped = ::core::array::from_fn(|_| Skip::default());
+                        let (next, matched) = T0::try_parse_with(input, stack, tracker)?;
                         input = next;
-                        $pest_typed::predefined_node::Skipped::<$T0, Skip, SKIP>::from(matched)
+                        $pest_typed::predefined_node::Skipped { skipped, matched }
                     },
                     $(
                         {
-                            let (next, _) = Skip::parse_with(input, stack);
-                            input = next;
+                            let skipped = ::core::array::from_fn(|_| {
+                                let (next, skipped) = Skip::parse_with(input, stack);
+                                input = next;
+                                skipped
+                            });
                             let (next, matched) = $T::try_parse_with(input, stack, tracker)?;
                             input = next;
-                            $pest_typed::predefined_node::Skipped::<$T, Skip, SKIP>::from(matched)
+                            $pest_typed::predefined_node::Skipped { skipped, matched }
                         },
                     )*
                 );

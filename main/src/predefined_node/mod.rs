@@ -470,20 +470,20 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
 /// Skip comments (by rule `COMMENT`) or white spaces (by rule `WHITESPACE`) if there is any.
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub struct Skipped<T, Skip, const SKIP: usize> {
+    /// Skipped content.
+    pub skipped: [Skip; SKIP],
     /// Matched content.
     pub matched: T,
-    _phantom: PhantomData<*const Skip>,
 }
 impl<T: Debug, Skip: Debug, const SKIP: usize> Debug for Skipped<T, Skip, SKIP> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        Debug::fmt(&self.matched, f)
-    }
-}
-impl<T, Skip, const SKIP: usize> From<T> for Skipped<T, Skip, SKIP> {
-    fn from(matched: T) -> Self {
-        Self {
-            matched,
-            _phantom: PhantomData,
+        if SKIP > 0 {
+            f.debug_struct("Skipped")
+                .field("skipped", &self.skipped)
+                .field("matched", &self.matched)
+                .finish()
+        } else {
+            Debug::fmt(&self.matched, f)
         }
     }
 }
