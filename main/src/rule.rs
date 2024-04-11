@@ -541,47 +541,6 @@ macro_rules! declare_rule_struct {
     };
 }
 
-/// The start point of a node tag.
-///
-/// Arguments:
-///
-/// - `$name:ident`. Name of generated struct.
-/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
-/// - `$inner:ty`. Type of inner parsing expression.
-#[macro_export]
-macro_rules! tag {
-    ($name:ident, $Rule:ty, $inner:ty) => {
-        #[allow(non_camel_case_types)]
-        #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-        pub struct $name<'i, const INHERITED: usize> {
-            /// Matched expression.
-            pub content: $inner,
-            /// Span of matched expression.
-            pub span: $crate::Span<'i>,
-        }
-        impl<'i, const INHERITED: usize> $crate::TypedNode<'i, $Rule>
-            for $name<'i, INHERITED>
-        {
-            fn try_parse_with(
-                input: $crate::Position<'i>,
-                stack: &mut $crate::Stack<$crate::Span<'i>>,
-                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<($crate::Position<'i>, Self), ()> {
-                let start = input;
-                match <$inner>::try_parse_with(input, stack, tracker) {
-                    ::core::result::Result::Ok((input, content)) => {
-                        let span = start.span(&input);
-                        ::core::result::Result::Ok((input, Self { content, span }))
-                    }
-                    ::core::result::Result::Err(_) => ::core::result::Result::Err(()),
-                }
-            }
-        }
-        $crate::impl_deref_with_content!($name, $inner);
-        $crate::impl_pairs_with_inner!($name, $Rule, $inner);
-    };
-}
-
 /// Start point of a rule.
 ///
 /// Arguments:

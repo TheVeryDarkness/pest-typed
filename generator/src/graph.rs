@@ -58,6 +58,10 @@ fn rules_mod() -> TokenStream {
     quote! {rules}
 }
 
+fn rules_impl_mod() -> TokenStream {
+    quote! {rules_impl}
+}
+
 fn pairs_mod() -> TokenStream {
     quote! {pairs}
 }
@@ -88,7 +92,7 @@ enum Node<'g> {
     /// - Type: `&#ident`
     /// - Path: `.content`
     #[cfg(feature = "grammar-extras")]
-    Tag(&'g str),
+    Tag(&'g str, &'g str, Vec<TokenStream>),
     // Type remained.
     /// - Type: `#inner`
     /// - Path: `.content`
@@ -118,14 +122,14 @@ impl<'g> Node<'g> {
         Self::Rule(value, has_lifetime, has_skip)
     }
     #[cfg(feature = "grammar-extras")]
-    fn from_tag(value: &'g str) -> Self {
-        Self::Tag(value)
+    fn from_tag(rule_name: &'g str, tag_name: &'g str, tokens: Vec<TokenStream>) -> Self {
+        Self::Tag(rule_name, tag_name, tokens)
     }
     fn flattenable(&self) -> bool {
         match self {
             Node::Rule(_, _, _) => false,
             #[cfg(feature = "grammar-extras")]
-            Node::Tag(_) => false,
+            Node::Tag(_, _, _) => false,
             Node::Content(inner) | Node::SequenceI(_, inner) => inner.flattenable(),
             Node::ChoiceI(_, false, _) | Node::Optional(false, _) => true,
             Node::ChoiceI(_, true, inner) | Node::Optional(true, inner) => inner.flattenable(),
@@ -204,13 +208,10 @@ impl<'g> Node<'g> {
                 (quote! {res}, quote! {&'s #root::#rules_mod::#t #generics})
             }
             #[cfg(feature = "grammar-extras")]
-            Node::Tag(t) => {
-                let t = ident(t);
-                let rule_id = &config.rule_id;
-                (
-                    quote! {res},
-                    quote! {&'s #root::tags::#rule_id::#t::<'i, INHERITED>},
-                )
+            Node::Tag(_rule, _tag, inner) => {
+                // let tag_id = format_ident!("r#{tag}");
+                // let rule_id = format_ident!("r#{rule}");
+                (quote! {res}, quote! {(#(&#inner),*)})
             }
             Node::Content(inner) => {
                 let (pa, ty) = inner.expand(root, config);
@@ -258,9 +259,15 @@ impl<'g> Node<'g> {
 }
 
 /// `'g` stands for the lifetime of rules.
+#[derive(Clone)]
 struct Accesser<'g> {
     /// name -> (path, type)
     accessers: BTreeMap<&'g str, Node<'g>>,
+}
+impl<'g> Default for Accesser<'g> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 impl<'g> Accesser<'g> {
     pub fn new() -> Self {
@@ -269,14 +276,12 @@ impl<'g> Accesser<'g> {
         }
     }
     pub fn from_rule(name: &'g str, id: &'g str, has_life_time: bool, has_skip: bool) -> Self {
-        let mut res = BTreeMap::new();
-        res.insert(name, Node::from_rule(id, has_life_time, has_skip));
+        let res = BTreeMap::from([(name, Node::from_rule(id, has_life_time, has_skip))]);
         Self { accessers: res }
     }
     #[cfg(feature = "grammar-extras")]
-    pub fn from_tag(name: &'g str, id: &'g str) -> Self {
-        let mut res = BTreeMap::new();
-        res.insert(name, Node::from_tag(id));
+    pub fn from_tag(rule: &'g str, name: &'g str, tokens: TokenStream) -> Self {
+        let res = BTreeMap::from([(name, Node::from_tag(rule, name, vec![tokens]))]);
         Self { accessers: res }
     }
     pub fn content(self) -> Self {
@@ -302,7 +307,8 @@ impl<'g> Accesser<'g> {
         }
         self
     }
-    pub fn join(mut self, other: Accesser<'g>) -> Self {
+    /// Join two accesser forest in the same level.
+    pub fn join_mut(&mut self, other: Accesser<'g>) {
         other.accessers.into_iter().for_each(|(name, tree)| {
             let entry = self.accessers.entry(name);
             match entry {
@@ -316,6 +322,10 @@ impl<'g> Accesser<'g> {
                 }
             }
         });
+    }
+    /// Join two accesser forest in the same level.
+    pub fn join(mut self, other: Accesser<'g>) -> Self {
+        self.join_mut(other);
         self
     }
     pub fn collect(&self, root: &TokenStream, config: &RuleConfig<'g>) -> TokenStream {
@@ -348,6 +358,9 @@ fn position() -> TokenStream {
 }
 fn _bool() -> TokenStream {
     quote! {::core::primitive::bool}
+}
+fn _usize() -> TokenStream {
+    quote! {::core::primitive::usize}
 }
 fn _char() -> TokenStream {
     quote! {::core::primitive::char}
@@ -392,6 +405,7 @@ impl ToTokens for Emission {
     }
 }
 
+#[derive(Clone)]
 struct RuleConfig<'g> {
     pub atomicity: Option<bool>,
     pub rule_id: Ident,
@@ -421,7 +435,7 @@ fn rule<'g>(
     accessers: &Accesser<'g>,
     emission: Emission,
 ) -> TokenStream {
-    let root = quote! {super};
+    let root = quote! {super::super};
     let _bool = _bool();
     let accessers = match emission {
         Emission::Both | Emission::Expression => accessers.collect(&root, rule_config),
@@ -434,7 +448,7 @@ fn rule<'g>(
         inner_type: TokenStream,
         emission: Emission,
     ) -> TokenStream {
-        let root = quote! {super};
+        let root = quote! {super::super};
         let pest_typed = pest_typed();
         let name = &rule_config.rule_id;
         let atomicity = match rule_config.atomicity {
@@ -445,9 +459,10 @@ fn rule<'g>(
         let docs = rule_config.get_doc();
         let ignore = ignore(&root);
         let boxed = rule_config.boxed;
+        let usize = _usize();
         quote! {
             #pest_typed::rule!(#name, #(#docs)*, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission, #boxed);
-            impl<'i, const INHERITED: usize> #name<'i, INHERITED> {
+            impl<'i, const INHERITED: #usize> #name<'i, INHERITED> {
                 #accesser_impl
             }
         }
@@ -455,21 +470,24 @@ fn rule<'g>(
     create(rule_config, accessers, type_name, emission)
 }
 
-struct Output {
+struct Output<'g> {
     content: Vec<TokenStream>,
     wrappers: Vec<TokenStream>,
     wrapper_counter: usize,
+    rule_configs: BTreeMap<Ident, RuleConfig<'g>>,
+    /// Rule Name -> (Tag Name, ([Type], Accesser)).
     #[cfg(feature = "grammar-extras")]
-    tagged_nodes: BTreeMap<Ident, Vec<TokenStream>>,
+    tagged_nodes: BTreeMap<Ident, BTreeMap<Ident, (Vec<TokenStream>, Accesser<'g>)>>,
     sequences: BTreeSet<usize>,
     choices: BTreeSet<usize>,
 }
-impl Output {
+impl<'g> Output<'g> {
     fn new() -> Self {
         Self {
             content: Vec::new(),
             wrappers: Vec::new(),
             wrapper_counter: 0,
+            rule_configs: BTreeMap::new(),
             #[cfg(feature = "grammar-extras")]
             tagged_nodes: BTreeMap::new(),
             sequences: BTreeSet::new(),
@@ -493,24 +511,29 @@ impl Output {
         &self.choices
     }
     /// Insert rule struct to rule module.
-    fn insert(&mut self, tokens: TokenStream) {
+    fn insert(&mut self, tokens: TokenStream, config: RuleConfig<'g>) {
+        self.content.push(tokens);
+        let prev = self.rule_configs.insert(config.rule_id.clone(), config);
+        assert!(prev.is_none());
+    }
+    /// Insert built-in rule structs.
+    fn insert_builtin(&mut self, tokens: TokenStream) {
         self.content.push(tokens);
     }
     /// Insert tag struct to tag module.
     /// Return the module path relative to module root.
     #[cfg(feature = "grammar-extras")]
-    fn insert_tag(&mut self, rule_name: &Ident, tokens: TokenStream) -> TokenStream {
-        let entry = self.tagged_nodes.entry(rule_name.clone());
-        match entry {
-            btree_map::Entry::Vacant(entry) => {
-                entry.insert(vec![tokens]);
-            }
-            btree_map::Entry::Occupied(mut entry) => {
-                let vec = entry.get_mut();
-                vec.push(tokens);
-            }
-        }
-        quote! { tags::#rule_name }
+    fn insert_tag(
+        &mut self,
+        rule_name: &Ident,
+        tag_name: &Ident,
+        inner: TokenStream,
+        accesser: Accesser<'g>,
+    ) -> () {
+        let entry = self.tagged_nodes.entry(rule_name.clone()).or_default();
+        let entry = entry.entry(tag_name.clone()).or_default();
+        entry.0.push(inner);
+        entry.1.join_mut(accesser);
     }
     /// Insert a string wrapper to corresponding module.
     /// Return the module path relative to module root.
@@ -561,12 +584,38 @@ impl Output {
         let wrapper_mod = constant_wrappers();
         let rules = rules_mod();
         #[cfg(feature = "grammar-extras")]
-        let tags = self.tagged_nodes.iter().map(|(name, def)| {
-            let doc = format!("Tags inside rule [super::super::rules::{}].", name);
+        let tags = self.tagged_nodes.iter().flat_map(|(rule_name, tags)| {
+            let usize = _usize();
+            // let root = quote! {super::super};
+            // let config = self.rule_configs.get(rule_name).unwrap();
+            #[allow(unused_variables)]
+            let tags = tags.iter().map(|(tag_name, (types, accesser))| {
+                let comment = format!("Tag {} referenced by {}.", tag_name, rule_name);
+                // let accesser = accesser.collect(&root, config);
+                quote! {
+                    #[doc = #comment]
+                    #[allow(non_camel_case_types)]
+                    pub type #tag_name<'i, 's, const INHERITED: #usize> = ( #(&'s #types),* );
+                }
+                /*
+                quote! {
+                    #[doc = #comment]
+                    pub struct #tag_name<'s, 'i, const INHERITED: #usize>{
+                        /// Tag contents.
+                        pub content: ( #(&'s #types, )* )
+                    }
+                    impl<'s, 'i, const INHERITED: #usize> #tag_name<'s, 'i, INHERITED> {
+                        #accesser
+                    }
+                }
+                */
+            });
+            let doc = format!("Tags inside rule [super::super::rules::{}].", rule_name);
             quote! {
                 #[doc = #doc]
-                pub mod #name {
-                    #(#def)*
+                #[allow(non_snake_case)]
+                pub mod #rule_name {
+                    #(#tags)*
                 }
             }
         });
@@ -579,22 +628,27 @@ impl Output {
         };
         #[cfg(not(feature = "grammar-extras"))]
         let mod_tags = quote! {};
+        let rules_impl = rules_impl_mod();
         quote! {
             mod #wrapper_mod {
                 #(#wrappers)*
             }
             #mod_tags
             #[doc = "Definitions of statically typed nodes generated by pest-generator."]
-            pub mod #rules {
-                #(#content)*
+            pub mod #rules_impl {
+                #[doc = "Definitions of statically typed nodes generated by pest-generator."]
+                pub mod #rules {
+                    #(#content)*
+                }
             }
+            pub use #rules_impl::#rules as #rules;
         }
     }
 }
 
 /// Returns (type name, accesser).
 fn process_single_alias<'g>(
-    map: &mut Output,
+    map: &mut Output<'g>,
     rule_config: &RuleConfig<'g>,
     type_name: TokenStream,
     accessers: Accesser<'g>,
@@ -605,7 +659,7 @@ fn process_single_alias<'g>(
     if explicit {
         let rule_id = &rule_config.rule_id;
         let def = rule(rule_config, type_name, &accessers, emission);
-        map.insert(def);
+        map.insert(def, rule_config.clone());
         let rules = rules_mod();
         (quote! {#root::#rules::#rule_id::<'i>}, accessers)
     } else {
@@ -618,7 +672,7 @@ fn generate_graph_node<'g>(
     expr: &'g OptimizedExpr,
     rule_config: &RuleConfig<'g>,
     // From node name to type definition and implementation
-    map: &mut Output,
+    map: &mut Output<'g>,
     explicit: bool,
     emission: Emission,
     config: Config,
@@ -888,7 +942,6 @@ fn generate_graph_node<'g>(
         #[cfg(feature = "grammar-extras")]
         OptimizedExpr::NodeTag(inner_expr, tag) => {
             if config.emit_tagged_node_reference {
-                let new_root = &quote! {super::super};
                 let tag_id = ident(tag.as_str());
                 let (inner, accesser) = generate_graph_node(
                     inner_expr,
@@ -897,31 +950,20 @@ fn generate_graph_node<'g>(
                     explicit,
                     emission,
                     config,
-                    new_root,
+                    root,
                 );
-                let pest_typed = pest_typed();
-                let rule_id = &rule_config.rule_id;
-                let accessers_def = accesser.collect(new_root, rule_config);
-                let comment = format!("Tag {} referenced by {}.", tag, rule_config.rule_name);
-                let def = quote! {
-                    #[doc = #comment]
-                    #pest_typed::tag!(#tag_id, #new_root::Rule, #inner);
-                    impl<'i, const INHERITED: usize> #tag_id<'i, INHERITED> {
-                        #accessers_def
-                    }
-                };
-                let tag_module = map.insert_tag(rule_id, def);
-                let new_accesser = Accesser::from_tag(tag.as_str(), tag.as_str());
+                map.insert_tag(
+                    &rule_config.rule_id,
+                    &tag_id,
+                    inner.clone(),
+                    accesser.clone(),
+                );
+                let new_accesser =
+                    Accesser::from_tag(rule_config.rule_name, tag.as_str(), inner.clone());
                 if config.truncate_accesser_at_node_tag {
-                    (
-                        quote! {#root::#tag_module::#tag_id::<'i, #skip>},
-                        new_accesser,
-                    )
+                    (inner, new_accesser)
                 } else {
-                    (
-                        quote! {#root::#tag_module::#tag_id::<'i, #skip>},
-                        new_accesser.join(accesser),
-                    )
+                    (inner, new_accesser.join(accesser))
                 }
             } else {
                 let (inner, accesser) = generate_graph_node(
@@ -941,12 +983,12 @@ fn generate_graph_node<'g>(
 
 fn generate_graph<'g: 'f, 'f>(
     rules: &'g [OptimizedRule],
-    defined: &'f BTreeSet<&'g str>,
+    defined: &'g BTreeSet<&'g str>,
     not_boxed: &'f BTreeSet<&'g str>,
-    builtins_without_lifetime: &'f BTreeSet<&'g str>,
+    builtins_without_lifetime: &'g BTreeSet<&'g str>,
     config: Config,
-    doc: &DocComment,
-) -> Output {
+    doc: &'g DocComment,
+) -> Output<'g> {
     let mut res = Output::new();
     for rule in rules.iter() {
         let rule_name = rule.name.as_str();
@@ -985,7 +1027,7 @@ fn generate_graph<'g: 'f, 'f>(
             true,
             emission,
             config,
-            &quote! {super},
+            &quote! {super::super},
         );
     }
     res
@@ -1114,16 +1156,15 @@ pub(crate) fn generate_typed_pair_from_rule(
         doc,
     );
 
-    graph.insert(quote! {
-        #builtin
-    });
+    graph.insert_builtin(quote! {#builtin});
 
     let mods = graph.collect();
     let unicode = unicode_mod();
     let generics = {
-        let root = quote! {super};
+        let root = quote! {super::super};
         let rules_mod = rules_mod();
         let _i32 = _i32();
+        let usize = _usize();
         let fill = |set: &BTreeSet<usize>,
                     target: &mut Vec<TokenStream>,
                     prefix: &str,
@@ -1213,16 +1254,16 @@ pub(crate) fn generate_typed_pair_from_rule(
         quote! {
             #[doc = "Used generics."]
             pub mod generics {
-                use #pest_typed::{predefined_node, StringArrayWrapper, StringWrapper, TypedNode};
+                use #pest_typed::predefined_node;
                 /// Skipped content.
                 pub type Skipped<'i> = #skip;
                 pub use predefined_node::{Str, Insens, PeekSlice1, PeekSlice2, Push, Skip, CharRange, Positive, Negative};
                 #(#seq)*
                 #(#chs)*
                 /// Repeat arbitrary times.
-                pub type Rep<'i, const SKIP: usize, T> = predefined_node::Rep<T, Skipped<'i>, SKIP>;
+                pub type Rep<'i, const SKIP: #usize, T> = predefined_node::Rep<T, Skipped<'i>, SKIP>;
                 /// Repeat at least once.
-                pub type RepOnce<'i, const SKIP: usize, T> = predefined_node::RepOnce<T, Skipped<'i>, SKIP>;
+                pub type RepOnce<'i, const SKIP: #usize, T> = predefined_node::RepOnce<T, Skipped<'i>, SKIP>;
             }
         }
     };
@@ -1261,7 +1302,7 @@ fn generate_unicode(
     let span = _span();
     let char = _char();
     let tracker = tracker();
-    let root = quote! {super};
+    let root = quote! {super::super};
     let box_ = box_type();
 
     for property in unicode_property_names() {
@@ -1286,12 +1327,12 @@ fn generate_unicode(
                         }
                     }
                 }
-                impl<'i> #pest_typed::TypedNode<'i, super::Rule> for #property_ident {
+                impl<'i> #pest_typed::TypedNode<'i, #root::Rule> for #property_ident {
                     #[inline]
                     fn try_parse_with(
                         mut input: #position<'i>,
                         _stack: &mut #stack<#span<'i>>,
-                        tracker: &mut #tracker<'i, super::Rule>,
+                        tracker: &mut #tracker<'i, #root::Rule>,
                     ) -> #result<(#position<'i>, Self), ()> {
                         match #pest_typed::predefined_node::match_char_by(&mut input, #pest_unicode::#property_ident) {
                             Some(content) => {
@@ -1333,10 +1374,12 @@ fn generate_builtin(
     defined: &BTreeSet<&str>,
     referenced: &BTreeSet<&str>,
 ) -> (TokenStream, BTreeSet<&'static str>) {
+    let root = quote! {super::super};
     let pest_typed = pest_typed();
     let unicode = unicode_mod();
     let mut results = vec![quote! {
-        use super::#unicode::*;
+        #[allow(unused_imports)]
+        use #root::#unicode::*;
     }];
     let mut builtins_without_lifetime = BTreeSet::new();
     macro_rules! insert_builtin {
@@ -1364,7 +1407,7 @@ fn generate_builtin(
     }
 
     results.push(quote! {
-        #pest_typed::rule_eoi!(EOI, super::Rule);
+        #pest_typed::rule_eoi!(EOI, #root::Rule);
     });
 
     insert_builtin!("ANY", ANY);

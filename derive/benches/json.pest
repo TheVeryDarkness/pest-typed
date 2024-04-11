@@ -38,4 +38,4 @@ bool = { "true" | "false" }
 
 null = { "null" }
 
-WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+WHITESPACE = @{ " " | "\t" | "\r" | "\n" }

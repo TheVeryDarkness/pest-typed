@@ -6,6 +6,8 @@ use pest_typed_derive::TypedParser;
 a  = { "a" ~ #b = (b1 | b2) }
 b1 = { "bbb" }
 b2 = { "cc" }
+item = { "x" }
+c  = { #a = item ~ ("," ~ #a = item)* }
 "#]
 #[emit_rule_reference]
 #[emit_tagged_node_reference]
