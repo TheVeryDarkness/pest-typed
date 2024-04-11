@@ -1,4 +1,5 @@
-use pest_typed::{error::Error, ParsableTypedNode as _};
+use anyhow::Error;
+use pest_typed::ParsableTypedNode as _;
 use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
@@ -10,7 +11,7 @@ b2 = { "cc" }
 #[emit_rule_reference]
 struct Parser;
 
-fn parse<'i>(input: &'i str) -> Result<&'i str, Error<Rule>> {
+fn parse<'i>(input: &'i str) -> Result<&'i str, Error> {
     let a = pairs::a::try_parse(input)?;
     let res = if let Some(b1) = a.b1() {
         b1.span.as_str()
@@ -22,7 +23,7 @@ fn parse<'i>(input: &'i str) -> Result<&'i str, Error<Rule>> {
     Ok(res)
 }
 
-fn main() -> Result<(), Error<Rule>> {
+fn main() -> Result<(), Error> {
     let res = parse("abbb")?;
     println!("{}", res);
     Ok(())

@@ -30,9 +30,7 @@ macro_rules! impl_pairs_with_self {
         {
             type Iter = ::core::iter::Once<&'n dyn $crate::iterators::Pair<'i, 'n, $Rule>>;
             type IntoIter = ::core::iter::Once<
-                $crate::re_exported::Box<
-                    dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n,
-                >,
+                $crate::re_exported::Box<dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n>,
             >;
 
             fn iter_pairs(&'n self) -> Self::Iter {
@@ -60,19 +58,15 @@ macro_rules! impl_pairs_with_inner {
         impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
             $crate::iterators::Pairs<'i, 'n, $Rule> for $name<'i, INHERITED>
         {
-            type Iter = $crate::re_exported::vec::IntoIter<
-                &'n dyn $crate::iterators::Pair<'i, 'n, $Rule>,
-            >;
+            type Iter =
+                $crate::re_exported::vec::IntoIter<&'n dyn $crate::iterators::Pair<'i, 'n, $Rule>>;
             type IntoIter = $crate::re_exported::vec::IntoIter<
-                $crate::re_exported::Box<
-                    dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n,
-                >,
+                $crate::re_exported::Box<dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n>,
             >;
 
             fn iter_pairs(&'n self) -> Self::Iter {
-                let i = <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::iter_pairs(
-                    &self.content,
-                );
+                let i =
+                    <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::iter_pairs(&self.content);
                 i.collect::<$crate::re_exported::Vec<_>>().into_iter()
             }
             fn into_iter_pairs(self) -> Self::IntoIter {
@@ -180,9 +174,7 @@ macro_rules! impl_pair_with_empty {
             fn into_inner(
                 self,
             ) -> $crate::re_exported::vec::IntoIter<
-                $crate::re_exported::Box<
-                    (dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n),
-                >,
+                $crate::re_exported::Box<(dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n)>,
             > {
                 $crate::re_exported::Vec::new().into_iter()
             }
@@ -221,17 +213,14 @@ macro_rules! impl_pair_with_content {
             ) -> $crate::re_exported::vec::IntoIter<
                 &'n (dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n),
             > {
-                let i = <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::iter_pairs(
-                    &self.content,
-                );
+                let i =
+                    <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::iter_pairs(&self.content);
                 i.collect::<$crate::re_exported::Vec<_>>().into_iter()
             }
             fn into_inner(
                 self,
             ) -> $crate::re_exported::vec::IntoIter<
-                $crate::re_exported::Box<
-                    (dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n),
-                >,
+                $crate::re_exported::Box<(dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n)>,
             > {
                 let i = <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::into_iter_pairs(
                     <Self as $crate::RuleStruct<$Rule>>::take_inner(self),
@@ -253,8 +242,8 @@ macro_rules! impl_pair_with_content {
 #[macro_export]
 macro_rules! impl_rule_struct {
     ($name:ident, $Rule:ty, $inner:ty, true) => {
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            $crate::RuleStruct<'i, $Rule> for $name<'i, INHERITED>
+        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> $crate::RuleStruct<'i, $Rule>
+            for $name<'i, INHERITED>
         {
             type Inner = $inner;
             fn take_inner(self) -> $inner {
@@ -269,8 +258,8 @@ macro_rules! impl_rule_struct {
         }
     };
     ($name:ident, $Rule:ty, $inner:ty, false) => {
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            $crate::RuleStruct<'i, $Rule> for $name<'i, INHERITED>
+        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> $crate::RuleStruct<'i, $Rule>
+            for $name<'i, INHERITED>
         {
             type Inner = $inner;
             fn take_inner(self) -> $inner {
@@ -330,7 +319,7 @@ macro_rules! impl_parse {
                 input: $crate::Position<'i>,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<Self, ()> {
+            ) -> ::core::option::Option<Self> {
                 $crate::rule::parse_without_ignore::<$Rule, Self>(
                     input,
                     stack,
@@ -347,13 +336,8 @@ macro_rules! impl_parse {
                 input: $crate::Position<'i>,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<Self, ()> {
-                $crate::rule::parse::<$Rule, Self, $ignored>(
-                    input,
-                    stack,
-                    tracker,
-                    <$Rule>::EOI,
-                )
+            ) -> ::core::option::Option<Self> {
+                $crate::rule::parse::<$Rule, Self, $ignored>(input, stack, tracker, <$Rule>::EOI)
             }
         }
     };
@@ -379,10 +363,10 @@ macro_rules! impl_try_parse_with {
                 input: $crate::Position<'i>,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<($crate::Position<'i>, Self), ()> {
+            ) -> ::core::option::Option<($crate::Position<'i>, Self)> {
                 let (input, content) = <$inner>::try_parse_with(input, stack, tracker)?;
                 let content = content.into();
-                Ok((
+                Some((
                     input,
                     Self {
                         content,
@@ -401,12 +385,12 @@ macro_rules! impl_try_parse_with {
                 input: $crate::Position<'i>,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<($crate::Position<'i>, Self), ()> {
+            ) -> ::core::option::Option<($crate::Position<'i>, Self)> {
                 tracker.record_during(input, |tracker| {
                     let start = input;
                     let (input, _) = <$inner>::try_parse_with(input, stack, tracker)?;
                     let span = start.span(&input);
-                    Ok((input, Self { span }))
+                    Some((input, Self { span }))
                 })
             }
         }
@@ -420,13 +404,13 @@ macro_rules! impl_try_parse_with {
                 input: $crate::Position<'i>,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<($crate::Position<'i>, Self), ()> {
+            ) -> ::core::option::Option<($crate::Position<'i>, Self)> {
                 tracker.record_during(input, |tracker| {
                     let start = input;
                     let (input, content) = <$inner>::try_parse_with(input, stack, tracker)?;
                     let span = start.span(&input);
                     let content = content.into();
-                    Ok((input, Self { content, span }))
+                    Some((input, Self { content, span }))
                 })
             }
         }
@@ -690,13 +674,7 @@ macro_rules! rule_eoi {
             false
         );
         $crate::impl_rule_wrapper!($name, $Rule, <$Rule>::EOI);
-        $crate::impl_try_parse_with!(
-            $name,
-            $Rule,
-            $crate::predefined_node::EOI,
-            INHERITED,
-            Both
-        );
+        $crate::impl_try_parse_with!($name, $Rule, $crate::predefined_node::EOI, INHERITED, Both);
         impl<'i, const INHERITED: usize> $crate::ParsableTypedNode<'i, $Rule>
             for $name<'i, INHERITED>
         {
@@ -705,7 +683,7 @@ macro_rules! rule_eoi {
                 input: $crate::Position<'i>,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::result::Result<Self, ()> {
+            ) -> ::core::option::Option<Self> {
                 $crate::rule::parse_without_ignore::<$Rule, Self>(
                     input,
                     stack,
@@ -723,7 +701,6 @@ macro_rules! rule_eoi {
 /// Full parse as a non-atomic rule.
 ///
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
-#[allow(clippy::result_unit_err)]
 pub fn parse<
     'i,
     R: RuleType + 'i,
@@ -734,10 +711,10 @@ pub fn parse<
     stack: &mut Stack<Span<'i>>,
     tracker: &mut Tracker<'i, R>,
     rule_eoi: R,
-) -> Result<_Self, ()> {
+) -> Option<_Self> {
     let (input, res) = match _Self::try_parse_with(input, stack, tracker) {
-        Ok((input, res)) => (input, res),
-        Err(_) => return Err(()),
+        Some((input, res)) => (input, res),
+        None => return None,
     };
     let (input, _) = IGNORED::parse_with(input, stack);
     let (_, _) = match tracker.record_during_with(
@@ -745,33 +722,32 @@ pub fn parse<
         |tracker| EOI::try_parse_with(input, stack, tracker),
         rule_eoi,
     ) {
-        Ok((input, res)) => (input, res),
-        Err(_) => return Err(()),
+        Some((input, res)) => (input, res),
+        None => return None,
     };
-    Ok(res)
+    Some(res)
 }
 
 /// Full parse as an atomic rule.
 ///
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
-#[allow(clippy::result_unit_err)]
 pub fn parse_without_ignore<'i, R: RuleType + 'i, _Self: TypedNode<'i, R>>(
     input: Position<'i>,
     stack: &mut Stack<Span<'i>>,
     tracker: &mut Tracker<'i, R>,
     rule_eoi: R,
-) -> Result<_Self, ()> {
+) -> Option<_Self> {
     let (input, res) = match _Self::try_parse_with(input, stack, tracker) {
-        Ok((input, res)) => (input, res),
-        Err(_) => return Err(()),
+        Some((input, res)) => (input, res),
+        None => return None,
     };
     let (_, _) = match tracker.record_during_with(
         input,
         |tracker| EOI::try_parse_with(input, stack, tracker),
         rule_eoi,
     ) {
-        Ok((input, res)) => (input, res),
-        Err(_) => return Err(()),
+        Some((input, res)) => (input, res),
+        None => return None,
     };
-    Ok(res)
+    Some(res)
 }

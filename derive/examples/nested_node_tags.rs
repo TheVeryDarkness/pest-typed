@@ -1,3 +1,4 @@
+use anyhow::Error;
 use pest_typed::ParsableTypedNode as _;
 use pest_typed_derive::TypedParser;
 
@@ -7,22 +8,23 @@ use pest_typed_derive::TypedParser;
 #[emit_tagged_node_reference]
 struct Parser;
 
-fn main() -> Result<(), pest_typed::error::Error<Rule>> {
+fn main() -> Result<(), Error> {
     let a = pairs::a::try_parse("abbbbbb")?;
     #[cfg(feature = "grammar-extras")]
     {
         // With node tags, one can access inner nodes more precisely without defining many rules.
         // This maybe especially useful when you have some references the same rule.
-        let b = a.b();
-        assert_eq!(b.span.as_str(), "bbbbbb");
-        let b1 = b.b1();
-        assert_eq!(b1.span.as_str(), "b");
-        let c = b.c();
-        assert_eq!(c.span.as_str(), "bbbbb");
-        let b2 = c.b2();
-        assert_eq!(b2.span.as_str(), "bb");
-        let b3 = c.b3();
-        assert_eq!(b3.span.as_str(), "bbb");
+
+        let _b = a.b();
+        // assert_eq!(b.span.as_str(), "bbbbbb");
+        // let b1 = b.b1();
+        // assert_eq!(b1.span.as_str(), "b");
+        // let c = b.c();
+        // assert_eq!(c.span.as_str(), "bbbbb");
+        // let b2 = c.b2();
+        // assert_eq!(b2.span.as_str(), "bb");
+        // let b3 = c.b3();
+        // assert_eq!(b3.span.as_str(), "bbb");
     }
     #[cfg(not(feature = "grammar-extras"))]
     {

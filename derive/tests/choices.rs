@@ -8,7 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use pest_typed::{ParsableTypedNode, Storage};
-use pest_typed_derive::{match_choices, TypedParser};
+use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
 #[grammar_inline = r#"
@@ -30,7 +30,9 @@ struct Parser;
 macro_rules! matching {
     ($res:expr, $input:literal) => {};
     ($res:expr, $($input:literal)*) => {
-        match_choices!{
+        use super::generics;
+        use pest_typed::Storage;
+        pest_typed_derive::match_choices!{
             $res.get_matched().0 {
                 $(
                     s => assert_eq!(s.get_content(), $input)
@@ -42,17 +44,15 @@ macro_rules! matching {
 macro_rules! test {
     ($name:ident, $($input:literal)*) => {
         mod $name {
-            #[allow(unused_imports)]
-            use super::{pairs, Rule, generics, match_choices};
-            #[allow(unused_imports)]
+            use super::pairs;
             use pest_typed::{
-                error::Error,
                 iterators::{Pair, Pairs},
-                ParsableTypedNode, Storage,
+                ParsableTypedNode,
             };
+            use anyhow::Error;
             const INPUT : &'static str = concat!($($input,)*);
             #[test]
-            fn success() -> Result<(), Error<Rule>> {
+            fn success() -> Result<(), Error> {
                 let res = pairs::$name::try_parse(INPUT)?;
                 let span = res.span;
                 assert_eq!(span, res.iter_pairs().next().unwrap().span());

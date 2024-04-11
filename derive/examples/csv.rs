@@ -1,4 +1,5 @@
-use pest_typed::{error::Error, ParsableTypedNode};
+use anyhow::Error;
+use pest_typed::ParsableTypedNode;
 use pest_typed_derive::TypedParser;
 use std::iter::once;
 
@@ -7,7 +8,7 @@ use std::iter::once;
 #[emit_rule_reference]
 struct CSV;
 
-fn main() -> Result<(), Error<Rule>> {
+fn main() -> Result<(), Error> {
     let file = pairs::file::try_parse(
         r#"1,2,3
 a,b,c

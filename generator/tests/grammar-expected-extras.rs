@@ -86,13 +86,13 @@ pub mod unicode {
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Result<(::pest_typed::Position<'i>, Self), ()> {
+        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::EMOJI,
             ) {
-                Some(content) => Ok((input, Self::from(content))),
-                None => Err(()),
+                Some(content) => Some((input, Self::from(content))),
+                None => None,
             }
         }
     }
@@ -134,13 +134,13 @@ pub mod unicode {
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Result<(::pest_typed::Position<'i>, Self), ()> {
+        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::XID_CONTINUE,
             ) {
-                Some(content) => Ok((input, Self::from(content))),
-                None => Err(()),
+                Some(content) => Some((input, Self::from(content))),
+                None => None,
             }
         }
     }
@@ -182,13 +182,13 @@ pub mod unicode {
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Result<(::pest_typed::Position<'i>, Self), ()> {
+        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::XID_START,
             ) {
-                Some(content) => Ok((input, Self::from(content))),
-                None => Err(()),
+                Some(content) => Some((input, Self::from(content))),
+                None => None,
             }
         }
     }
@@ -230,13 +230,13 @@ pub mod unicode {
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Result<(::pest_typed::Position<'i>, Self), ()> {
+        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::ARABIC,
             ) {
-                Some(content) => Ok((input, Self::from(content))),
-                None => Err(()),
+                Some(content) => Some((input, Self::from(content))),
+                None => None,
             }
         }
     }
@@ -278,13 +278,13 @@ pub mod unicode {
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Result<(::pest_typed::Position<'i>, Self), ()> {
+        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::HAN,
             ) {
-                Some(content) => Ok((input, Self::from(content))),
-                None => Err(()),
+                Some(content) => Some((input, Self::from(content))),
+                None => None,
             }
         }
     }
@@ -326,13 +326,13 @@ pub mod unicode {
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Result<(::pest_typed::Position<'i>, Self), ()> {
+        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::HANGUL,
             ) {
-                Some(content) => Ok((input, Self::from(content))),
-                None => Err(()),
+                Some(content) => Some((input, Self::from(content))),
+                None => None,
             }
         }
     }
@@ -374,13 +374,13 @@ pub mod unicode {
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Result<(::pest_typed::Position<'i>, Self), ()> {
+        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::HIRAGANA,
             ) {
-                Some(content) => Ok((input, Self::from(content))),
-                None => Err(()),
+                Some(content) => Some((input, Self::from(content))),
+                None => None,
             }
         }
     }

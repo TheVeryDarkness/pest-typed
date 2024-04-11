@@ -8,10 +8,10 @@
 // modified, or distributed except according to those terms.
 
 use crate::{
-    error::Error, position::Position, predefined_node::restore_on_err, span::Span,
+    error::Error, position::Position, predefined_node::restore_on_none, span::Span,
     tracker::Tracker, RuleWrapper, Stack,
 };
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use core::fmt::Debug;
 use pest::RuleType;
 
@@ -31,50 +31,46 @@ where
     Self: Sized + Debug + Clone + PartialEq,
 {
     /// Create typed node.
-    #[allow(clippy::result_unit_err)]
     fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()>;
+    ) -> Option<(Position<'i>, Self)>;
 }
 
 /// Node of concrete syntax tree.
-#[allow(clippy::perf)]
 pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
     /// Try to create typed node.
-    #[allow(clippy::result_unit_err)]
     fn try_parse_with_until_end(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<Self, ()>;
+    ) -> Option<Self>;
     /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
-    fn try_parse(input: &'i str) -> Result<Self, Error<R>> {
+    fn try_parse(input: &'i str) -> Result<Self, Box<Error<R>>> {
         let mut stack = Stack::new();
         let input = Position::from_start(input);
         let mut tracker = Tracker::new(input);
         match Self::try_parse_with_until_end(input, &mut stack, &mut tracker) {
-            Ok(res) => Ok(res),
-            Err(_) => Err(tracker.collect()),
+            Some(res) => Ok(res),
+            None => Err(Box::new(tracker.collect())),
         }
     }
     /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
-    fn try_parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Error<R>> {
+    fn try_parse_partial(input: &'i str) -> Result<(Position<'i>, Self), Box<Error<R>>> {
         let mut stack = Stack::new();
         let input = Position::from_start(input);
         let mut tracker = Tracker::new(input);
         match Self::try_parse_with(input, &mut stack, &mut tracker) {
-            Ok((input, res)) => Ok((input, res)),
-            Err(_) => Err(tracker.collect()),
+            Some((input, res)) => Ok((input, res)),
+            None => Err(Box::new(tracker.collect())),
         }
     }
 }
 
 /// Node of concrete syntax tree.
-#[allow(clippy::perf)]
 pub trait NeverFailedParsableTypedNode<'i, R: RuleType>: NeverFailedTypedNode<'i, R> {
     /// Create typed node.
     fn parse_with_until_end(input: Position<'i>, stack: &mut Stack<Span<'i>>) -> Self;
@@ -127,7 +123,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const N: usize> TypedNode<'i, R> for 
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let mut vec = Vec::new();
         for _ in 0..N {
             let (next, res) = T::try_parse_with(input, stack, tracker)?;
@@ -135,9 +131,9 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const N: usize> TypedNode<'i, R> for 
             vec.push(res);
         }
         match vec.try_into() {
-            Ok(res) => Ok((input, res)),
+            Ok(res) => Some((input, res)),
             // Actually impossible.
-            Err(_) => Err(()),
+            Err(_) => None,
         }
     }
 }
@@ -149,10 +145,10 @@ impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> TypedNode<'i, 
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let (input, t1) = T1::try_parse_with(input, stack, tracker)?;
         let (input, t2) = T2::try_parse_with(input, stack, tracker)?;
-        Ok((input, (t1, t2)))
+        Some((input, (t1, t2)))
     }
 }
 
@@ -163,11 +159,11 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Option<T> {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        let res = restore_on_err(stack, |stack| T::try_parse_with(input, stack, tracker));
+    ) -> Option<(Position<'i>, Self)> {
+        let res = restore_on_none(stack, |stack| T::try_parse_with(input, stack, tracker));
         match res {
-            Ok((input, inner)) => Ok((input, Some(inner))),
-            Err(_) => Ok((input, None)),
+            Some((input, inner)) => Some((input, Some(inner))),
+            None => Some((input, None)),
         }
     }
 }

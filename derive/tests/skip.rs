@@ -7,10 +7,10 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::ops::Deref;
-
-use pest_typed::{error::Error, ParsableTypedNode as _};
+use anyhow::Error;
+use pest_typed::ParsableTypedNode as _;
 use pest_typed_derive::TypedParser;
+use std::ops::Deref;
 
 #[derive(TypedParser)]
 #[grammar_inline = r#"
@@ -22,7 +22,7 @@ program    = { SOI ~ main ~ EOI }
 struct Parser;
 
 #[test]
-fn comment() -> Result<(), Error<Rule>> {
+fn comment() -> Result<(), Error> {
     let vec = pairs::main::try_parse("x x x /*x*/")?;
     assert_eq!(vec.iter_matched().len(), 3);
     assert_eq!(vec.deref().clone().into_iter_matched().len(), 3);
@@ -36,7 +36,7 @@ fn skip_on_two_end() {
 }
 
 #[test]
-fn post_skip() -> Result<(), Error<Rule>> {
+fn post_skip() -> Result<(), Error> {
     let program = pairs::program::try_parse("x x /*x*/")?;
     let (_soi, main, _eoi) = program.get_matched();
     assert_eq!(main.iter_matched().len(), 2);
@@ -44,7 +44,7 @@ fn post_skip() -> Result<(), Error<Rule>> {
 }
 
 #[test]
-fn pre_skip() -> Result<(), Error<Rule>> {
+fn pre_skip() -> Result<(), Error> {
     let program = pairs::program::try_parse("/* x x */ x x")?;
     let (_soi, main, _eoi) = program.get_matched();
     assert_eq!(main.iter_matched().len(), 2);

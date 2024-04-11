@@ -9,7 +9,7 @@
 
 use crate::config::Config;
 use crate::docs::DocComment;
-use crate::types::{box_type, option_type, result_type, vec_type};
+use crate::types::{box_type, option_type, vec_type};
 use pest::unicode::unicode_property_names;
 use pest_meta::{
     ast::RuleType,
@@ -1296,7 +1296,7 @@ fn generate_unicode(
     let mut results = vec![];
     let pest_typed = pest_typed();
     let pest_unicode = pest_unicode();
-    let result = result_type();
+    let option = option_type();
     let position = position();
     let stack = stack();
     let span = _span();
@@ -1333,13 +1333,13 @@ fn generate_unicode(
                         mut input: #position<'i>,
                         _stack: &mut #stack<#span<'i>>,
                         _tracker: &mut #tracker<'i, #root::Rule>,
-                    ) -> #result<(#position<'i>, Self), ()> {
+                    ) -> #option<(#position<'i>, Self)> {
                         match #pest_typed::predefined_node::match_char_by(&mut input, #pest_unicode::#property_ident) {
                             Some(content) => {
-                                Ok((input, Self::from(content)))
+                                Some((input, Self::from(content)))
                             }
                             None => {
-                                Err(())
+                                None
                             }
                         }
                     }

@@ -31,11 +31,12 @@ struct Parser;
 macro_rules! test {
     ($name:ident, $input:literal, $($fields:tt)*) => {
         mod $name {
-            use super::{pairs, Rule, Deref};
-            use pest_typed::{error::Error, ParsableTypedNode, ConstantStorage};
+            use super::{pairs, Deref};
+            use pest_typed::{ParsableTypedNode, ConstantStorage};
+            use anyhow::Error;
 
             #[test]
-            fn matched() -> Result<(), Error<Rule>> {
+            fn matched() -> Result<(), Error> {
                 let res = pairs::$name::try_parse($input)?;
                 assert_eq!(res, res.clone());
                 assert_eq!(res.content, res.content.clone());

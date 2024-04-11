@@ -14,7 +14,7 @@
 use core::ops::{Deref, DerefMut};
 
 use crate::{
-    predefined_node::{restore_on_err, Skipped},
+    predefined_node::{restore_on_none, Skipped},
     tracker::Tracker,
     wrapper::BoundWrapper,
     NeverFailedTypedNode, Position, RuleType, Span, Stack, TypedNode,
@@ -48,12 +48,12 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for Atomi
         let mut tracker = Tracker::new(input);
 
         for _ in 0usize.. {
-            match restore_on_err(stack, |stack| T::try_parse_with(input, stack, &mut tracker)) {
-                Ok((next, matched)) => {
+            match restore_on_none(stack, |stack| T::try_parse_with(input, stack, &mut tracker)) {
+                Some((next, matched)) => {
                     input = next;
                     vec.push(matched);
                 }
-                Err(_) => break,
+                None => break,
             }
         }
         (input, Self { content: vec })
@@ -65,8 +65,8 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for AtomicRep<T> {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        Ok(Self::parse_with(input, stack))
+    ) -> Option<(Position<'i>, Self)> {
+        Some(Self::parse_with(input, stack))
     }
 }
 impl<T> Deref for AtomicRep<T> {
@@ -104,12 +104,12 @@ impl<
         let mut tracker = Tracker::new(input);
 
         for i in 0usize.. {
-            match restore_on_err(stack, |stack| try_parse_unit(input, stack, &mut tracker, i)) {
-                Ok((next, matched)) => {
+            match restore_on_none(stack, |stack| try_parse_unit(input, stack, &mut tracker, i)) {
+                Some((next, matched)) => {
                     input = next;
                     vec.push(matched);
                 }
-                Err(_) => break,
+                None => break,
             }
         }
         (input, Self { content: vec })
@@ -135,18 +135,18 @@ impl<
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let mut vec = Vec::new();
 
         for i in 0usize.. {
-            match restore_on_err(stack, |stack| try_parse_unit(input, stack, tracker, i)) {
-                Ok((next, matched)) => {
+            match restore_on_none(stack, |stack| try_parse_unit(input, stack, tracker, i)) {
+                Some((next, matched)) => {
                     input = next;
                     vec.push(matched);
                 }
-                Err(err) => {
+                None => {
                     if i < MIN {
-                        return Err(err);
+                        return None;
                     } else {
                         break;
                     }
@@ -154,13 +154,12 @@ impl<
             }
         }
 
-        Ok((input, Self { content: vec }))
+        Some((input, Self { content: vec }))
     }
 }
 impl<T, IGNORED, const SKIP: usize, const MIN: usize> RepMin<Skipped<T, IGNORED, SKIP>, MIN> {
     /// Returns an iterator over all matched expressions by reference.
-    #[allow(clippy::needless_lifetimes)]
-    pub fn iter_matched<'n>(&'n self) -> Iter<'n, T, IGNORED, SKIP> {
+    pub fn iter_matched(&'_ self) -> Iter<'_, T, IGNORED, SKIP> {
         self.content.iter().map(|s| &s.matched)
     }
     /// Returns an iterator over all matched expressions by value.
@@ -170,8 +169,7 @@ impl<T, IGNORED, const SKIP: usize, const MIN: usize> RepMin<Skipped<T, IGNORED,
 }
 impl<T, const MIN: usize> RepMin<T, MIN> {
     /// Returns an iterator over all skipped or matched expressions by reference.
-    #[allow(clippy::needless_lifetimes)]
-    pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, T> {
+    pub fn iter_all(&'_ self) -> alloc::slice::Iter<'_, T> {
         self.content.iter()
     }
     /// Returns an iterator over all skipped or matched expressions by value.
@@ -214,12 +212,12 @@ impl<
         let mut tracker = Tracker::new(input);
 
         for i in 0..MAX {
-            match restore_on_err(stack, |stack| try_parse_unit(input, stack, &mut tracker, i)) {
-                Ok((next, matched)) => {
+            match restore_on_none(stack, |stack| try_parse_unit(input, stack, &mut tracker, i)) {
+                Some((next, matched)) => {
                     input = next;
                     vec.push(matched);
                 }
-                Err(_) => {
+                None => {
                     break;
                 }
             }
@@ -243,18 +241,18 @@ impl<
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let mut vec = Vec::new();
 
         for i in 0..MAX {
-            match restore_on_err(stack, |stack| try_parse_unit(input, stack, tracker, i)) {
-                Ok((next, matched)) => {
+            match restore_on_none(stack, |stack| try_parse_unit(input, stack, tracker, i)) {
+                Some((next, matched)) => {
                     input = next;
                     vec.push(matched);
                 }
-                Err(err) => {
+                None => {
                     if i < MIN {
-                        return Err(err);
+                        return None;
                     } else {
                         break;
                     }
@@ -262,15 +260,14 @@ impl<
             }
         }
 
-        Ok((input, Self { content: vec }))
+        Some((input, Self { content: vec }))
     }
 }
 impl<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize>
     RepMinMax<Skipped<T, IGNORED, SKIP>, MIN, MAX>
 {
     /// Returns an iterator over all matched expressions by reference.
-    #[allow(clippy::needless_lifetimes)]
-    pub fn iter_matched<'n>(&'n self) -> Iter<'n, T, IGNORED, SKIP> {
+    pub fn iter_matched(&'_ self) -> Iter<'_, T, IGNORED, SKIP> {
         self.content.iter().map(|s| &s.matched)
     }
     /// Returns an iterator over all matched expressions by value.
@@ -280,8 +277,7 @@ impl<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize>
 }
 impl<T, const MIN: usize, const MAX: usize> RepMinMax<T, MIN, MAX> {
     /// Returns an iterator over all skipped or matched expressions by reference.
-    #[allow(clippy::needless_lifetimes)]
-    pub fn iter_all<'n>(&'n self) -> alloc::slice::Iter<'n, T> {
+    pub fn iter_all(&'_ self) -> alloc::slice::Iter<'_, T> {
         self.content.iter()
     }
     /// Returns an iterator over all skipped or matched expressions by value.
@@ -312,7 +308,7 @@ fn try_parse_unit<
     stack: &mut Stack<Span<'i>>,
     tracker: &mut Tracker<'i, R>,
     i: usize,
-) -> Result<(Position<'i>, Skipped<T, Skip, SKIP>), ()> {
+) -> Option<(Position<'i>, Skipped<T, Skip, SKIP>)> {
     let skipped = core::array::from_fn(|_| {
         if i == 0 {
             Skip::default()
@@ -325,5 +321,5 @@ fn try_parse_unit<
     let (next, matched) = T::try_parse_with(input, stack, tracker)?;
     input = next;
     let res = Skipped { skipped, matched };
-    Ok((input, res))
+    Some((input, res))
 }

@@ -129,7 +129,6 @@ fn generate_typed(
 
     let parser_impl = if include_derive {
         quote! {
-            #[allow(clippy::all)]
             impl #impl_generics #pest_typed::TypedParser<Rule> for #name #ty_generics #where_clause {}
         }
     } else {

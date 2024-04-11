@@ -81,7 +81,7 @@ macro_rules! seq {
                 mut input: $pest_typed::Position<'i>,
                 stack: &mut $pest_typed::Stack<$pest_typed::Span<'i>>,
                 tracker: &mut $pest_typed::tracker::Tracker<'i, R>,
-            ) -> ::core::result::Result<($pest_typed::Position<'i>, Self), ()> {
+            ) -> ::core::option::Option<($pest_typed::Position<'i>, Self)> {
                 let content =
                 (
                     {
@@ -104,7 +104,7 @@ macro_rules! seq {
                     )*
                 );
 
-                Ok((input, Self::from(content)))
+                Some((input, Self::from(content)))
             }
         }
         impl<

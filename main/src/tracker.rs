@@ -151,18 +151,18 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     /// Record if the result doesn't match the state during calling `f`.
     #[inline]
-    pub(crate) fn record_during_with<T, E>(
+    pub(crate) fn record_during_with<T>(
         &mut self,
         pos: Position<'i>,
-        f: impl FnOnce(&mut Self) -> Result<(Position<'i>, T), E>,
+        f: impl FnOnce(&mut Self) -> Option<(Position<'i>, T)>,
         rule: R,
-    ) -> Result<(Position<'i>, T), E> {
+    ) -> Option<(Position<'i>, T)> {
         if let Some((_, _, has_children)) = self.stack.last_mut() {
             *has_children = true;
         }
         self.stack.push((rule, pos, false));
         let res = f(self);
-        let succeeded = res.is_ok();
+        let succeeded = res.is_some();
         let (_r, _pos, has_children) = self.stack.pop().unwrap();
         if !has_children {
             self.record(rule, pos, succeeded);
@@ -171,11 +171,11 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     /// Record if the result doesn't match the state during calling `f`.
     #[inline]
-    pub fn record_during<T: RuleWrapper<R>, E>(
+    pub fn record_during<T: RuleWrapper<R>>(
         &mut self,
         pos: Position<'i>,
-        f: impl FnOnce(&mut Self) -> Result<(Position<'i>, T), E>,
-    ) -> Result<(Position<'i>, T), E> {
+        f: impl FnOnce(&mut Self) -> Option<(Position<'i>, T)>,
+    ) -> Option<(Position<'i>, T)> {
         self.record_during_with(pos, f, T::RULE)
     }
     fn collect_to_message(self) -> String {
@@ -304,15 +304,17 @@ mod tests {
     fn negative() -> Result<(), ()> {
         let pos = Position::from_start("abc\ndef\nghi");
         let mut tracker = Tracker::<'_, Rule>::new(pos);
-        let _ = tracker.record_during(pos, |tracker| {
-            tracker.positive_during(|tracker| {
-                tracker.record_during(pos, |_| Ok((pos, rule_wrappers::Main)))
-            })?;
-            tracker.negative_during(|tracker| {
-                tracker.record_during(pos, |_| Ok((pos, rule_wrappers::Main)))
-            })?;
-            Ok((pos, rule_wrappers::Program))
-        })?;
+        let _ = tracker
+            .record_during(pos, |tracker| {
+                tracker.positive_during(|tracker| {
+                    tracker.record_during(pos, |_| Some((pos, rule_wrappers::Main)))
+                })?;
+                tracker.negative_during(|tracker| {
+                    tracker.record_during(pos, |_| Some((pos, rule_wrappers::Main)))
+                })?;
+                Some((pos, rule_wrappers::Program))
+            })
+            .ok_or(())?;
 
         assert_eq!(
             format!("{}", tracker.collect()),
@@ -330,23 +332,25 @@ mod tests {
     fn positive() -> Result<(), ()> {
         let pos = Position::from_start("abc\ndef\nghi");
         let mut tracker = Tracker::<'_, Rule>::new(pos);
-        let _ = tracker.record_during(pos, |tracker| {
-            let _ = tracker.positive_during(|tracker| {
-                if false {
-                    Ok((pos, rule_wrappers::SOI))
-                } else {
-                    tracker.record_during(pos, |_| Err(()))
-                }
-            });
-            let _ = tracker.negative_during(|tracker| {
-                if false {
-                    Ok((pos, rule_wrappers::SOI))
-                } else {
-                    tracker.record_during(pos, |_| Err(()))
-                }
-            });
-            Ok((pos, rule_wrappers::Program))
-        })?;
+        let _ = tracker
+            .record_during(pos, |tracker| {
+                let _ = tracker.positive_during(|tracker| {
+                    if false {
+                        Some((pos, rule_wrappers::SOI))
+                    } else {
+                        tracker.record_during(pos, |_| None)
+                    }
+                });
+                let _ = tracker.negative_during(|tracker| {
+                    if false {
+                        Some((pos, rule_wrappers::SOI))
+                    } else {
+                        tracker.record_during(pos, |_| None)
+                    }
+                });
+                Some((pos, rule_wrappers::Program))
+            })
+            .ok_or(())?;
 
         assert_eq!(
             format!("{}", tracker.collect()),
@@ -364,17 +368,19 @@ mod tests {
     fn unicode() -> Result<(), ()> {
         let mut pos = Position::from_start("αβψ\nδεφ\nγηι");
         let mut tracker = Tracker::<'_, Rule>::new(pos);
-        let _ = tracker.record_during(pos, |tracker| {
-            let suc = pos.match_string("α");
-            assert!(suc);
-            tracker.positive_during(|tracker| {
-                tracker.record_during(pos, |_| Ok((pos, rule_wrappers::Main)))
-            })?;
-            tracker.negative_during(|tracker| {
-                tracker.record_during(pos, |_| Ok((pos, rule_wrappers::Main)))
-            })?;
-            Ok((pos, rule_wrappers::Program))
-        })?;
+        let _ = tracker
+            .record_during(pos, |tracker| {
+                let suc = pos.match_string("α");
+                assert!(suc);
+                tracker.positive_during(|tracker| {
+                    tracker.record_during(pos, |_| Some((pos, rule_wrappers::Main)))
+                })?;
+                tracker.negative_during(|tracker| {
+                    tracker.record_during(pos, |_| Some((pos, rule_wrappers::Main)))
+                })?;
+                Some((pos, rule_wrappers::Program))
+            })
+            .ok_or(())?;
 
         assert_eq!(
             format!("{}", tracker.collect()),
@@ -392,19 +398,21 @@ mod tests {
     fn nested() -> Result<(), ()> {
         let mut pos = Position::from_start("αβψ\nδεφ\nγηι");
         let mut tracker = Tracker::<'_, Rule>::new(pos);
-        let _ = tracker.record_during(pos, |tracker| {
-            let suc = pos.match_string("α");
-            assert!(suc);
-            tracker.negative_during(|tracker| {
-                tracker.record_during(pos, |tracker| {
-                    tracker.negative_during(|tracker| {
-                        tracker.record_during(pos, |_| Ok((pos, rule_wrappers::Body)))
-                    })?;
-                    Ok((pos, rule_wrappers::Main))
-                })
-            })?;
-            Ok((pos, rule_wrappers::Program))
-        })?;
+        let _ = tracker
+            .record_during(pos, |tracker| {
+                let suc = pos.match_string("α");
+                assert!(suc);
+                tracker.negative_during(|tracker| {
+                    tracker.record_during(pos, |tracker| {
+                        tracker.negative_during(|tracker| {
+                            tracker.record_during(pos, |_| Some((pos, rule_wrappers::Body)))
+                        })?;
+                        Some((pos, rule_wrappers::Main))
+                    })
+                })?;
+                Some((pos, rule_wrappers::Program))
+            })
+            .ok_or(())?;
 
         assert_eq!(
             format!("{}", tracker.collect()),

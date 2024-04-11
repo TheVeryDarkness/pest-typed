@@ -51,11 +51,11 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<T> {
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         if input.match_string(Self::CONTENT) {
-            Ok((input, Self::from(())))
+            Some((input, Self::from(())))
         } else {
-            Err(())
+            None
         }
     }
 }
@@ -91,13 +91,13 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, T> {
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let start = input;
         if input.match_insensitive(Self::CONTENT) {
             let span = start.span(&input);
-            Ok((input, Self::from(span.as_str())))
+            Some((input, Self::from(span.as_str())))
         } else {
-            Err(())
+            None
         }
     }
 }
@@ -126,14 +126,14 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i,
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let start = input;
         match input.skip_until(Strings::CONTENT) {
             true => {
                 let span = start.span(&input);
-                Ok((input, Self::from(span)))
+                Some((input, Self::from(span)))
             }
-            false => Err(()),
+            false => None,
         }
     }
 }
@@ -149,14 +149,14 @@ impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, N> {
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let start = input;
         match input.skip(N) {
             true => {
                 let span = start.span(&input);
-                Ok((input, Self { span }))
+                Some((input, Self { span }))
             }
-            false => Err(()),
+            false => None,
         }
     }
 }
@@ -173,15 +173,15 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R> for Cha
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let start = input;
         match input.match_range(MIN..MAX) {
             true => {
                 let span = start.span(&input);
                 let content = span.as_str().chars().next().unwrap();
-                Ok((input, Self { content }))
+                Some((input, Self { content }))
             }
-            false => Err(()),
+            false => None,
         }
     }
 }
@@ -194,19 +194,19 @@ fn stack_slice<'i, 's, R: RuleType>(
     end: Option<i32>,
     stack: &'s Stack<Span<'i>>,
     tracker: &mut Tracker<'i, R>,
-) -> Result<core::slice::Iter<'s, Span<'i>>, ()> {
+) -> Option<core::slice::Iter<'s, Span<'i>>> {
     let range = match constrain_idxs(start, end, stack.len()) {
         Some(range) => range,
         None => {
             tracker.out_of_bound(input, start, end);
-            return Err(());
+            return None;
         }
     };
     // return true if an empty sequence is requested
     if range.end <= range.start {
-        return Ok(core::slice::Iter::default());
+        return Some(core::slice::Iter::default());
     }
-    Ok(stack[range].iter())
+    Some(stack[range].iter())
 }
 
 /// Match a part of the stack without popping.
@@ -216,17 +216,17 @@ fn peek_spans<'s, 'i: 's, R: RuleType>(
     input: Position<'i>,
     iter: impl Iterator<Item = &'s Span<'i>>,
     _tracker: &mut Tracker<'i, R>,
-) -> Result<(Position<'i>, Span<'i>), ()> {
+) -> Option<(Position<'i>, Span<'i>)> {
     let mut matching_pos = input;
     for span in iter {
         match matching_pos.match_string(span.as_str()) {
             true => (),
             false => {
-                return Err(());
+                return None;
             }
         }
     }
-    Ok((matching_pos, input.span(&matching_pos)))
+    Some((matching_pos, input.span(&matching_pos)))
 }
 
 /// Positive predicate.
@@ -258,17 +258,17 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         tracker.positive_during(|tracker| {
             stack.snapshot();
             match N::try_parse_with(input, stack, tracker) {
-                Ok((_, content)) => {
+                Some((_, content)) => {
                     stack.restore();
-                    Ok((input, Self::from(content)))
+                    Some((input, Self::from(content)))
                 }
-                Err(_) => {
+                None => {
                     stack.restore();
-                    Err(())
+                    None
                 }
             }
         })
@@ -295,17 +295,17 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         tracker.negative_during(|tracker| {
             stack.snapshot();
             match T::try_parse_with(input, stack, tracker) {
-                Ok(_) => {
+                Some(_) => {
                     stack.restore();
-                    Err(())
+                    None
                 }
-                Err(_) => {
+                None => {
                     stack.restore();
-                    Ok((input, Self::from(())))
+                    Some((input, Self::from(())))
                 }
             }
         })
@@ -324,14 +324,14 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let mut c: char = ' ';
         match input.match_char_by(|ch| {
             c = ch;
             true
         }) {
-            true => Ok((input, Self { content: c })),
-            false => Err(()),
+            true => Some((input, Self { content: c })),
+            false => None,
         }
     }
 }
@@ -345,11 +345,11 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         if input.at_start() {
-            Ok((input, Self))
+            Some((input, Self))
         } else {
-            Err(())
+            None
         }
     }
 }
@@ -365,11 +365,11 @@ impl<'i, R: RuleType> TypedNode<'i, R> for EOI {
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         if input.at_end() {
-            Ok((input, Self))
+            Some((input, Self))
         } else {
-            Err(())
+            None
         }
     }
 }
@@ -398,7 +398,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE {
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let (input, t) = if input.match_string("\r\n") {
             (input, NewLineType::CRLF)
         } else if input.match_string("\n") {
@@ -406,9 +406,9 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE {
         } else if input.match_string("\r") {
             (input, NewLineType::CR)
         } else {
-            return Err(());
+            return None;
         };
-        Ok((input, Self { content: t }))
+        Some((input, Self { content: t }))
     }
 }
 
@@ -426,10 +426,10 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let spans = stack[0..stack.len()].iter().rev();
         let (input, span) = peek_spans::<R>(input, spans, tracker)?;
-        Ok((input, Self { span }))
+        Some((input, Self { span }))
     }
 }
 
@@ -452,16 +452,16 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let start = input;
         match stack.peek() {
             Some(string) => match input.match_string(string.as_str()) {
-                true => Ok((input, Self::from(start.span(&input)))),
-                false => Err(()),
+                true => Some((input, Self::from(start.span(&input)))),
+                false => None,
             },
             None => {
                 tracker.empty_stack(input);
-                Err(())
+                None
             }
         }
     }
@@ -499,12 +499,12 @@ impl<'i, R: RuleType> TypedNode<'i, R> for DROP {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         match stack.pop() {
-            Some(_) => Ok((input, Self)),
+            Some(_) => Some((input, Self)),
             None => {
                 tracker.empty_stack(input);
-                Err(())
+                None
             }
         }
     }
@@ -528,15 +528,15 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         match stack.pop() {
             Some(span) => match input.match_string(span.as_str()) {
-                true => Ok((input, Self::from(span))),
-                false => Err(()),
+                true => Some((input, Self::from(span))),
+                false => None,
             },
             None => {
                 tracker.empty_stack(input);
-                Err(())
+                None
             }
         }
     }
@@ -560,10 +560,10 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let (input, res) = PEEK_ALL::try_parse_with(input, stack, tracker)?;
         while stack.pop().is_some() {}
-        Ok((input, Self::from(res.span)))
+        Some((input, Self::from(res.span)))
     }
 }
 
@@ -581,8 +581,8 @@ impl<'i, R: RuleType> TypedNode<'i, R> for AlwaysFail<'i> {
         _input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        Err(())
+    ) -> Option<(Position<'i>, Self)> {
+        None
     }
 }
 
@@ -606,8 +606,8 @@ impl<'i, R: RuleType> TypedNode<'i, R> for Empty<'i> {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
-        Ok(<Self as NeverFailedTypedNode<'i, R>>::parse_with(
+    ) -> Option<(Position<'i>, Self)> {
+        Some(<Self as NeverFailedTypedNode<'i, R>>::parse_with(
             input, stack,
         ))
     }
@@ -630,11 +630,11 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<T> {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let start = input;
         let (input, content) = T::try_parse_with(input, stack, tracker)?;
         stack.push(start.span(&input));
-        Ok((input, Self::from(content)))
+        Some((input, Self::from(content)))
     }
 }
 impl<T> Deref for Push<T> {
@@ -660,10 +660,10 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let spans = stack_slice(input, START, Some(END), stack, tracker)?;
         let (input, _) = peek_spans::<R>(input, spans, tracker)?;
-        Ok((input, Self))
+        Some((input, Self))
     }
 }
 
@@ -676,10 +676,10 @@ impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<START> {
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Result<(Position<'i>, Self), ()> {
+    ) -> Option<(Position<'i>, Self)> {
         let spans = stack_slice(input, START, None, stack, tracker)?;
         let (input, _) = peek_spans::<R>(input, spans, tracker)?;
-        Ok((input, Self))
+        Some((input, Self))
     }
 }
 
@@ -740,15 +740,15 @@ pub fn match_char_by(position: &mut Position<'_>, pred: impl FnOnce(char) -> boo
 }
 
 /// Restore on error.
-pub fn restore_on_err<'i, T, E>(
+pub fn restore_on_none<'i, T>(
     stack: &mut Stack<Span<'i>>,
-    f: impl FnOnce(&mut Stack<Span<'i>>) -> Result<T, E>,
-) -> Result<T, E> {
+    f: impl FnOnce(&mut Stack<Span<'i>>) -> Option<T>,
+) -> Option<T> {
     stack.snapshot();
     let res = f(stack);
     match res {
-        Ok(_) => stack.clear_snapshot(),
-        Err(_) => stack.restore(),
+        Some(_) => stack.clear_snapshot(),
+        None => stack.restore(),
     }
     res
 }

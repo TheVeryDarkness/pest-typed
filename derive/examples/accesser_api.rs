@@ -1,7 +1,8 @@
 extern crate alloc;
 use alloc::vec::Vec;
+use anyhow::Error;
 use core::{iter, result::Result};
-use pest_typed::{error::Error, ParsableTypedNode as _};
+use pest_typed::ParsableTypedNode as _;
 use pest_typed_derive::TypedParser;
 
 /// See https://datatracker.ietf.org/doc/html/rfc4180.html for CSV's format.
@@ -10,7 +11,7 @@ use pest_typed_derive::TypedParser;
 #[emit_rule_reference]
 struct Parser;
 
-fn main() -> Result<(), Error<Rule>> {
+fn main() -> Result<(), Error> {
     // Prepare input. Output syntax will depend on this.
     let input = "name,age\nTom,10\nJerry,20";
     // Parser output. We may need some extra operations to make it into a table.

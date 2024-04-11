@@ -1,3 +1,4 @@
+use anyhow::Error;
 use pest_typed::{ParsableTypedNode as _, Storage as _};
 use pest_typed_derive::{match_choices, TypedParser};
 
@@ -11,7 +12,7 @@ b3 = { "d" }
 #[emit_rule_reference]
 struct Parser;
 
-fn parse(input: &str) -> Result<(), pest_typed::error::Error<Rule>> {
+fn parse(input: &str) -> Result<(), Error> {
     let a = pairs::a::try_parse(input)?;
     let (str_a, var_b, c) = a.as_ref();
     assert_eq!(str_a.get_content(), "a");
@@ -42,7 +43,7 @@ fn parse(input: &str) -> Result<(), pest_typed::error::Error<Rule>> {
     Ok(())
 }
 
-fn main() -> Result<(), pest_typed::error::Error<Rule>> {
+fn main() -> Result<(), Error> {
     parse("abbbc")?;
     parse("abbbC")?;
     parse("accc")?;

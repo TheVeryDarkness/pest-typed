@@ -20,11 +20,6 @@ pub fn box_type() -> TokenStream {
     quote! { ::pest_typed::re_exported::Box }
 }
 
-/// `Result` in corresponding context.
-pub fn result_type() -> TokenStream {
-    quote! { ::pest_typed::re_exported::Result }
-}
-
 /// `Option` in corresponding context.
 pub fn option_type() -> TokenStream {
     quote! { ::pest_typed::re_exported::Option }
