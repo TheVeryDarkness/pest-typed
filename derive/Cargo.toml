@@ -33,3 +33,7 @@ pest_derive.workspace = true
 [[bench]]
 name = "basic_benchmark"
 harness = false
+
+[[bench]]
+name = "profiling"
+harness = false

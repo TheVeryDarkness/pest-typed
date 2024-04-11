@@ -22,18 +22,19 @@ pub mod json_pest {
 pub fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("sample-size-example");
     group.sample_size(10);
-    group.bench_function("json_typed", |b| {
-        b.iter(|| {
-            let json_file =
-                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/benches/Canada.json"));
-            let _ = json_typed::pairs::json::try_parse(json_file);
-        })
-    });
+    let s = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/benches/Canada.json"))
+        .unwrap();
+
     group.bench_function("json_pest", |b| {
         b.iter(|| {
-            let json_file =
-                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/benches/Canada.json"));
-            let pairs = json_pest::JsonParser::parse(json_pest::Rule::json, json_file).unwrap();
+            let json_file = &s;
+            let _ = json_pest::JsonParser::parse(json_pest::Rule::json, json_file).unwrap();
+        })
+    });
+    group.bench_function("json_typed", |b| {
+        b.iter(|| {
+            let json_file = &s;
+            let _ = json_typed::pairs::json::try_parse(json_file);
         })
     });
 }
