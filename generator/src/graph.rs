@@ -534,7 +534,7 @@ impl<'g> Output<'g> {
         tag_name: &Ident,
         inner: TokenStream,
         accesser: Accesser<'g>,
-    ) -> () {
+    ) {
         let entry = self.tagged_nodes.entry(rule_name.clone()).or_default();
         let entry = entry.entry(tag_name.clone()).or_default();
         entry.0.push(inner);
@@ -1393,7 +1393,6 @@ fn generate_builtin(
                 let id = ident($name);
                 builtins_without_lifetime.insert($name);
                 results.push(quote! {
-                    #[allow(non_camel_case_types)]
                     pub use #pest_typed::predefined_node::$def as #id;
                 });
             }
@@ -1404,7 +1403,6 @@ fn generate_builtin(
             if !defined.contains($name) && referenced.contains($name) {
                 let id = ident($name);
                 results.push(quote! {
-                    #[allow(non_camel_case_types)]
                     pub use #pest_typed::predefined_node::$def as #id;
                 });
             }

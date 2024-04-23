@@ -23,7 +23,7 @@ fn main() -> Result<(), Error> {
     // Therefore the return value type will be `(&row, Vec<&row>)`.
     let (first_row, following_rows) = file.row();
     // Join rows as a single iterator.
-    let rows = iter::once(first_row).chain(following_rows.into_iter());
+    let rows = iter::once(first_row).chain(following_rows);
     // Sheet.
     let table = rows
         .map(|row| {
@@ -32,7 +32,7 @@ fn main() -> Result<(), Error> {
             // Therefore the return value type will be `(&item, Vec<&item>)`.
             let (first_item, following_items) = row.item();
             // Join columns as a single iterator.
-            let items = iter::once(first_item).chain(following_items.into_iter());
+            let items = iter::once(first_item).chain(following_items);
             // Extract string from each cell.
             let row = items.map(|cell| cell.span.as_str()).collect::<Vec<_>>();
             row

@@ -326,10 +326,11 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
         _tracker: &mut Tracker<'i, R>,
     ) -> Option<(Position<'i>, Self)> {
         let mut c: char = ' ';
-        match input.match_char_by(|ch| {
+        let matcher = |ch| {
             c = ch;
             true
-        }) {
+        };
+        match input.match_char_by(matcher) {
             true => Some((input, Self { content: c })),
             false => None,
         }

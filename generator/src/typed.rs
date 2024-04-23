@@ -56,16 +56,25 @@ pub fn derive_typed_parser(
     let ast = unwrap_or_report(consume_rules(pairs));
     let optimized = optimize(ast);
 
+    let input = Input {
+        rules: optimized,
+        doc_comment,
+    };
+
     generate_typed(
         name,
         &generics,
         paths,
-        optimized,
-        &doc_comment,
+        &input,
         include_grammar,
         include_derive,
         config,
     )
+}
+
+struct Input {
+    rules: Vec<OptimizedRule>,
+    doc_comment: DocComment,
 }
 
 fn parse_typed_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>, Config) {
@@ -110,8 +119,7 @@ fn generate_typed(
     name: Ident,
     generics: &Generics,
     paths: Vec<PathBuf>,
-    rules: Vec<OptimizedRule>,
-    doc_comment: &DocComment,
+    input: &Input,
     include_grammar: bool,
     include_derive: bool,
     config: Config,
@@ -121,8 +129,9 @@ fn generate_typed(
     } else {
         quote!()
     };
-    let rule_enum = generate_enum(&rules, doc_comment);
-    let pairs = generate_typed_pair_from_rule(&rules, doc_comment, config);
+    let Input { rules, doc_comment } = input;
+    let rule_enum = generate_enum(rules, doc_comment);
+    let pairs = generate_typed_pair_from_rule(rules, doc_comment, config);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let pest_typed = pest_typed();

@@ -6,7 +6,7 @@ use std::iter::once;
 #[derive(TypedParser)]
 #[grammar = "examples/csv.pest"]
 #[emit_rule_reference]
-struct CSV;
+struct Csv;
 
 fn main() -> Result<(), Error> {
     let file = pairs::file::try_parse(
@@ -16,11 +16,11 @@ A,B,C
 "#,
     )?;
     let (first, following) = file.row();
-    let rows = once(first).chain(following.into_iter());
+    let rows = once(first).chain(following);
     let cells: Vec<_> = rows
         .map(|row| {
             let (first, following) = row.item();
-            let columns = once(first).chain(following.into_iter());
+            let columns = once(first).chain(following);
             let columns = columns.map(|item: &pairs::item<'_>| {
                 item.if_then(|escaped| {
                     let (_, content, _) = escaped.as_ref();

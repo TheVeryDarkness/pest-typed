@@ -1110,17 +1110,11 @@ pub mod rules_impl {
         #[allow(unused_imports)]
         use super::super::unicode::*;
         ::pest_typed::rule_eoi!(EOI, super::super::Rule);
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::ANY;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::DROP;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::PEEK_ALL;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::POP;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::POP_ALL;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::SOI;
     }
 }

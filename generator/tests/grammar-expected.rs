@@ -1988,39 +1988,22 @@ pub mod rules_impl {
         #[allow(unused_imports)]
         use super::super::unicode::*;
         ::pest_typed::rule_eoi!(EOI, super::super::Rule);
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::ASCII;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::ASCII_ALPHA;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::ASCII_ALPHANUMERIC;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::ASCII_ALPHA_LOWER;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::ASCII_ALPHA_UPPER;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::ASCII_BIN_DIGIT;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::ASCII_DIGIT;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::ASCII_HEX_DIGIT;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::ASCII_NONZERO_DIGIT;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::ASCII_OCT_DIGIT;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::DROP;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::NEWLINE;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::PEEK;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::PEEK_ALL;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::POP;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::POP_ALL;
-        #[allow(non_camel_case_types)]
         pub use pest_typed::predefined_node::SOI;
     }
 }

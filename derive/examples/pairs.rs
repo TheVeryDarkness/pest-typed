@@ -5,7 +5,7 @@ use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
 #[grammar = "examples/csv.pest"]
-struct CSV;
+struct Csv;
 
 fn main() -> Result<()> {
     let res = pairs::file::try_parse("a,b,c\nd,e,f")?;
