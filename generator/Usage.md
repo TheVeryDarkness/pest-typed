@@ -23,8 +23,10 @@ Attributes:
   |           `do_not_emit_span`            |     false     |                                                                                                        Never emit field `span` for rules.                                                                                                         |
   |     `truncate_accesser_at_node_tag`     |     true      |                                                              Generated [accesser functions](#accesser-functions) won't contain those referenced rules or tags inside a tagged node.                                                               |
   | `simulate_pair_api` (Currently ignored) |     false     |                                                                                                 Generate implementation of Pair for rule structs                                                                                                  |
+  |          `box_only_if_needed`           |     false     |                                                                                                   Wrap rule content in `Box` only if necessary.                                                                                                   |
   |              `no_warnings`              |     false     |                                                                                                          Suppress warnings in generator.                                                                                                          |
 
+  box_only_if_needed
   See [pest_typed_derive](https://docs.rs/pest_typed_derive/latest/pest_typed_derive/) for more examples.
 
 - Processing option:

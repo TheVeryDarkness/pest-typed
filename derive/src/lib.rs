@@ -210,6 +210,7 @@ use proc_macro::TokenStream;
         do_not_emit_span,
         truncate_accesser_at_node_tag,
         simulate_pair_api,
+        box_only_if_needed,
         no_warnings,
     )
 )]

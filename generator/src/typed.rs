@@ -102,6 +102,8 @@ fn parse_typed_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>,
             config.truncate_accesser_at_node_tag = get_bool(attr);
         } else if path.is_ident("simulate_pair_api") {
             config.simulate_pair_api = get_bool(attr);
+        } else if path.is_ident("box_only_if_needed") {
+            config.box_only_if_needed = get_bool(attr);
         } else if path.is_ident("no_warnings") {
             config.no_warnings = get_bool(attr);
         }
