@@ -332,10 +332,15 @@ impl<'g> Accesser<'g> {
         let accessers = self.accessers.iter().map(|(name, node)| {
             let id = ident(name);
             let (paths, types) = node.expand(root, config);
+            let content = if config.boxed {
+                quote! {&*self.content}
+            } else {
+                quote! {&self.content}
+            };
             let src = quote! {
                 #[allow(non_snake_case)]
                 pub fn #id<'s>(&'s self) -> #types {
-                    let res = &self.content;
+                    let res = #content;
                     #paths
                 }
             };
@@ -1008,7 +1013,7 @@ fn generate_graph<'g: 'f, 'f>(
             "Corresponds to expression: `{}`. {}",
             rule.expr, atomicity_doc
         );
-        let boxed = !not_boxed.contains(rule_name);
+        let boxed = !config.box_only_if_needed || !not_boxed.contains(rule_name);
         let rule_doc = doc.line_docs.get(rule_name).map(|s| s.as_str());
         let rule_config = RuleConfig {
             atomicity,

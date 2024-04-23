@@ -14,6 +14,7 @@ pub(crate) struct Config {
     pub do_not_emit_span: bool,
     pub truncate_accesser_at_node_tag: bool,
     pub simulate_pair_api: bool,
+    pub box_only_if_needed: bool,
     pub no_warnings: bool,
 }
 impl Default for Config {
@@ -24,6 +25,7 @@ impl Default for Config {
             do_not_emit_span: false,
             truncate_accesser_at_node_tag: true,
             simulate_pair_api: false,
+            box_only_if_needed: false,
             no_warnings: false,
         }
     }

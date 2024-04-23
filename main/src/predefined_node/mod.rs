@@ -740,13 +740,14 @@ pub fn match_char_by(position: &mut Position<'_>, pred: impl FnOnce(char) -> boo
 }
 
 /// Restore on error.
+#[inline]
 pub fn restore_on_none<'i, T>(
     stack: &mut Stack<Span<'i>>,
     f: impl FnOnce(&mut Stack<Span<'i>>) -> Option<T>,
 ) -> Option<T> {
     stack.snapshot();
     let res = f(stack);
-    match res {
+    match res.as_ref() {
         Some(_) => stack.clear_snapshot(),
         None => stack.restore(),
     }
