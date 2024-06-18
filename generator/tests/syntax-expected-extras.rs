@@ -1053,18 +1053,18 @@ pub mod rules_impl {
         #[allow(unused_imports)]
         use super::super::unicode::*;
         ::pest_typed::rule_eoi!(EOI, super::super::Rule);
-        pub use pest_typed::predefined_node::ANY;
-        pub use pest_typed::predefined_node::DROP;
-        pub use pest_typed::predefined_node::PEEK_ALL;
-        pub use pest_typed::predefined_node::POP;
-        pub use pest_typed::predefined_node::POP_ALL;
-        pub use pest_typed::predefined_node::SOI;
+        pub use ::pest_typed::predefined_node::ANY;
+        pub use ::pest_typed::predefined_node::DROP;
+        pub use ::pest_typed::predefined_node::PEEK_ALL;
+        pub use ::pest_typed::predefined_node::POP;
+        pub use ::pest_typed::predefined_node::POP_ALL;
+        pub use ::pest_typed::predefined_node::SOI;
     }
 }
 pub use rules_impl::rules;
 #[doc = "Used generics."]
 pub mod generics {
-    use pest_typed::predefined_node;
+    use ::pest_typed::predefined_node;
     #[doc = r" Skipped content."]
     pub type Skipped<'i> = predefined_node::Empty<'i>;
     pub use pest_typed::choices::Choice2;

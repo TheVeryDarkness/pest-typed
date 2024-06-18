@@ -104,10 +104,10 @@ pub mod unicode {
         }
     }
     impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for EMOJI {
-        type Iter = ::core::iter::Empty<&'n dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
+        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
         type IntoIter = ::core::iter::Empty<
             ::pest_typed::re_exported::Box<
-                dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
+                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
             >,
         >;
         fn iter_pairs(&'n self) -> Self::Iter {
@@ -152,10 +152,10 @@ pub mod unicode {
         }
     }
     impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for XID_CONTINUE {
-        type Iter = ::core::iter::Empty<&'n dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
+        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
         type IntoIter = ::core::iter::Empty<
             ::pest_typed::re_exported::Box<
-                dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
+                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
             >,
         >;
         fn iter_pairs(&'n self) -> Self::Iter {
@@ -200,10 +200,10 @@ pub mod unicode {
         }
     }
     impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for XID_START {
-        type Iter = ::core::iter::Empty<&'n dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
+        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
         type IntoIter = ::core::iter::Empty<
             ::pest_typed::re_exported::Box<
-                dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
+                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
             >,
         >;
         fn iter_pairs(&'n self) -> Self::Iter {
@@ -248,10 +248,10 @@ pub mod unicode {
         }
     }
     impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for ARABIC {
-        type Iter = ::core::iter::Empty<&'n dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
+        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
         type IntoIter = ::core::iter::Empty<
             ::pest_typed::re_exported::Box<
-                dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
+                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
             >,
         >;
         fn iter_pairs(&'n self) -> Self::Iter {
@@ -296,10 +296,10 @@ pub mod unicode {
         }
     }
     impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for HAN {
-        type Iter = ::core::iter::Empty<&'n dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
+        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
         type IntoIter = ::core::iter::Empty<
             ::pest_typed::re_exported::Box<
-                dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
+                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
             >,
         >;
         fn iter_pairs(&'n self) -> Self::Iter {
@@ -344,10 +344,10 @@ pub mod unicode {
         }
     }
     impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for HANGUL {
-        type Iter = ::core::iter::Empty<&'n dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
+        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
         type IntoIter = ::core::iter::Empty<
             ::pest_typed::re_exported::Box<
-                dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
+                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
             >,
         >;
         fn iter_pairs(&'n self) -> Self::Iter {
@@ -392,10 +392,10 @@ pub mod unicode {
         }
     }
     impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for HIRAGANA {
-        type Iter = ::core::iter::Empty<&'n dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
+        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
         type IntoIter = ::core::iter::Empty<
             ::pest_typed::re_exported::Box<
-                dyn::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
+                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
             >,
         >;
         fn iter_pairs(&'n self) -> Self::Iter {
@@ -1988,29 +1988,29 @@ pub mod rules_impl {
         #[allow(unused_imports)]
         use super::super::unicode::*;
         ::pest_typed::rule_eoi!(EOI, super::super::Rule);
-        pub use pest_typed::predefined_node::ASCII;
-        pub use pest_typed::predefined_node::ASCII_ALPHA;
-        pub use pest_typed::predefined_node::ASCII_ALPHANUMERIC;
-        pub use pest_typed::predefined_node::ASCII_ALPHA_LOWER;
-        pub use pest_typed::predefined_node::ASCII_ALPHA_UPPER;
-        pub use pest_typed::predefined_node::ASCII_BIN_DIGIT;
-        pub use pest_typed::predefined_node::ASCII_DIGIT;
-        pub use pest_typed::predefined_node::ASCII_HEX_DIGIT;
-        pub use pest_typed::predefined_node::ASCII_NONZERO_DIGIT;
-        pub use pest_typed::predefined_node::ASCII_OCT_DIGIT;
-        pub use pest_typed::predefined_node::DROP;
-        pub use pest_typed::predefined_node::NEWLINE;
-        pub use pest_typed::predefined_node::PEEK;
-        pub use pest_typed::predefined_node::PEEK_ALL;
-        pub use pest_typed::predefined_node::POP;
-        pub use pest_typed::predefined_node::POP_ALL;
-        pub use pest_typed::predefined_node::SOI;
+        pub use ::pest_typed::predefined_node::ASCII;
+        pub use ::pest_typed::predefined_node::ASCII_ALPHA;
+        pub use ::pest_typed::predefined_node::ASCII_ALPHANUMERIC;
+        pub use ::pest_typed::predefined_node::ASCII_ALPHA_LOWER;
+        pub use ::pest_typed::predefined_node::ASCII_ALPHA_UPPER;
+        pub use ::pest_typed::predefined_node::ASCII_BIN_DIGIT;
+        pub use ::pest_typed::predefined_node::ASCII_DIGIT;
+        pub use ::pest_typed::predefined_node::ASCII_HEX_DIGIT;
+        pub use ::pest_typed::predefined_node::ASCII_NONZERO_DIGIT;
+        pub use ::pest_typed::predefined_node::ASCII_OCT_DIGIT;
+        pub use ::pest_typed::predefined_node::DROP;
+        pub use ::pest_typed::predefined_node::NEWLINE;
+        pub use ::pest_typed::predefined_node::PEEK;
+        pub use ::pest_typed::predefined_node::PEEK_ALL;
+        pub use ::pest_typed::predefined_node::POP;
+        pub use ::pest_typed::predefined_node::POP_ALL;
+        pub use ::pest_typed::predefined_node::SOI;
     }
 }
 pub use rules_impl::rules;
 #[doc = "Used generics."]
 pub mod generics {
-    use pest_typed::predefined_node;
+    use ::pest_typed::predefined_node;
     #[doc = r" Skipped content."]
     pub type Skipped<'i> = predefined_node::AtomicRep<
         ::pest_typed::choices::Choice2<

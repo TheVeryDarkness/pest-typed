@@ -41,8 +41,9 @@ fn generate(name: &'static str) {
     writeln!(f, "{}", "#![allow(unused_parens)]").unwrap();
     writeln!(f, "{}", actual).unwrap();
     drop(f);
-    let output = std::process::Command::new("rustfmt")
-        .arg(&path_generated)
+    let output = std::process::Command::new("cargo")
+        .arg("fmt")
+        .arg("--all")
         .output()
         .unwrap();
     assert!(
