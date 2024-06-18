@@ -20,7 +20,7 @@
 
 use pest_typed::{
     iterators::{Pair, Token},
-    ParsableTypedNode,
+    ParsableTypedNode, Span,
 };
 use pest_typed_derive::TypedParser;
 
@@ -62,7 +62,9 @@ macro_rules! parses_to {
     ) => {
         let tokens = tokens!([$($names $tokens),*]);
         let (_, res) = pairs::$rule::try_parse_partial($input).unwrap();
+        let (_, res_) = pairs::$rule::try_parse_partial(Span::new_full($input)).unwrap();
         assert_eq!(res, res.clone());
+        assert_eq!(res, res_);
         let actual = vec![res.as_token_tree()];
         assert_eq!(
             actual,

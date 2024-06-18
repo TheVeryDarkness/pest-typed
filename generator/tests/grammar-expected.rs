@@ -82,11 +82,11 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for EMOJI {
         #[inline]
-        fn try_parse_partial_with(
-            mut input: ::pest_typed::Position<'i>,
+        fn try_parse_partial_with<I: ::pest_typed::Input<'i>>(
+            mut input: I,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
+        ) -> ::pest_typed::re_exported::Option<(I, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::EMOJI,
@@ -130,11 +130,11 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for XID_CONTINUE {
         #[inline]
-        fn try_parse_partial_with(
-            mut input: ::pest_typed::Position<'i>,
+        fn try_parse_partial_with<I: ::pest_typed::Input<'i>>(
+            mut input: I,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
+        ) -> ::pest_typed::re_exported::Option<(I, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::XID_CONTINUE,
@@ -178,11 +178,11 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for XID_START {
         #[inline]
-        fn try_parse_partial_with(
-            mut input: ::pest_typed::Position<'i>,
+        fn try_parse_partial_with<I: ::pest_typed::Input<'i>>(
+            mut input: I,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
+        ) -> ::pest_typed::re_exported::Option<(I, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::XID_START,
@@ -226,11 +226,11 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for ARABIC {
         #[inline]
-        fn try_parse_partial_with(
-            mut input: ::pest_typed::Position<'i>,
+        fn try_parse_partial_with<I: ::pest_typed::Input<'i>>(
+            mut input: I,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
+        ) -> ::pest_typed::re_exported::Option<(I, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::ARABIC,
@@ -274,11 +274,11 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for HAN {
         #[inline]
-        fn try_parse_partial_with(
-            mut input: ::pest_typed::Position<'i>,
+        fn try_parse_partial_with<I: ::pest_typed::Input<'i>>(
+            mut input: I,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
+        ) -> ::pest_typed::re_exported::Option<(I, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::HAN,
@@ -322,11 +322,11 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for HANGUL {
         #[inline]
-        fn try_parse_partial_with(
-            mut input: ::pest_typed::Position<'i>,
+        fn try_parse_partial_with<I: ::pest_typed::Input<'i>>(
+            mut input: I,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
+        ) -> ::pest_typed::re_exported::Option<(I, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::HANGUL,
@@ -370,11 +370,11 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for HIRAGANA {
         #[inline]
-        fn try_parse_partial_with(
-            mut input: ::pest_typed::Position<'i>,
+        fn try_parse_partial_with<I: ::pest_typed::Input<'i>>(
+            mut input: I,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
-        ) -> ::pest_typed::re_exported::Option<(::pest_typed::Position<'i>, Self)> {
+        ) -> ::pest_typed::re_exported::Option<(I, Self)> {
             match ::pest_typed::predefined_node::match_char_by(
                 &mut input,
                 ::pest_typed::unicode::HIRAGANA,

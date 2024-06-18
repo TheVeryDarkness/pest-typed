@@ -17,7 +17,7 @@ use crate::{
     predefined_node::{restore_on_none, Skipped},
     tracker::Tracker,
     wrapper::BoundWrapper,
-    NeverFailedTypedNode, Position, RuleType, Span, Stack, TypedNode,
+    Input, NeverFailedTypedNode, RuleType, Span, Stack, TypedNode,
 };
 use alloc::vec::Vec;
 
@@ -43,12 +43,14 @@ impl<T> Default for AtomicRep<T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for AtomicRep<T> {
-    fn parse_with(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
+    fn parse_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> (I, Self) {
         let mut vec = Vec::new();
         let mut tracker = Tracker::new(input);
 
         for _ in 0usize.. {
-            match restore_on_none(stack, |stack| T::try_parse_partial_with(input, stack, &mut tracker)) {
+            match restore_on_none(stack, |stack| {
+                T::try_parse_partial_with(input, stack, &mut tracker)
+            }) {
                 Some((next, matched)) => {
                     input = next;
                     vec.push(matched);
@@ -61,11 +63,11 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for Atomi
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for AtomicRep<T> {
     #[inline]
-    fn try_parse_partial_with(
-        input: Position<'i>,
+    fn try_parse_partial_with<I: Input<'i>>(
+        input: I,
         stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(Position<'i>, Self)> {
+    ) -> Option<(I, Self)> {
         Some(Self::parse_with(input, stack))
     }
 }
@@ -99,7 +101,7 @@ impl<
         const SKIP: usize,
     > NeverFailedTypedNode<'i, R> for RepMin<Skipped<T, Skip, SKIP>, 0>
 {
-    fn parse_with(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
+    fn parse_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> (I, Self) {
         let mut vec = Vec::new();
         let mut tracker = Tracker::new(input);
 
@@ -131,11 +133,11 @@ impl<
     > TypedNode<'i, R> for RepMin<Skipped<T, Skip, SKIP>, MIN>
 {
     #[inline]
-    fn try_parse_partial_with(
-        mut input: Position<'i>,
+    fn try_parse_partial_with<I: Input<'i>>(
+        mut input: I,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Option<(Position<'i>, Self)> {
+    ) -> Option<(I, Self)> {
         let mut vec = Vec::new();
 
         for i in 0usize.. {
@@ -206,7 +208,7 @@ impl<
     > NeverFailedTypedNode<'i, R> for RepMinMax<Skipped<T, Skip, SKIP>, 0, MAX>
 {
     #[inline]
-    fn parse_with(mut input: Position<'i>, stack: &mut Stack<Span<'i>>) -> (Position<'i>, Self) {
+    fn parse_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> (I, Self) {
         let mut vec = Vec::new();
 
         let mut tracker = Tracker::new(input);
@@ -237,11 +239,11 @@ impl<
     > TypedNode<'i, R> for RepMinMax<Skipped<T, Skip, SKIP>, MIN, MAX>
 {
     #[inline]
-    fn try_parse_partial_with(
-        mut input: Position<'i>,
+    fn try_parse_partial_with<I: Input<'i>>(
+        mut input: I,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
-    ) -> Option<(Position<'i>, Self)> {
+    ) -> Option<(I, Self)> {
         let mut vec = Vec::new();
 
         for i in 0..MAX {
@@ -299,16 +301,17 @@ pub type RepOnce<T, IGNORED, const SKIP: usize> = RepMin<Skipped<T, IGNORED, SKI
 
 fn try_parse_unit<
     'i,
+    I: Input<'i>,
     R: RuleType,
     T: TypedNode<'i, R>,
     Skip: NeverFailedTypedNode<'i, R>,
     const SKIP: usize,
 >(
-    mut input: Position<'i>,
+    mut input: I,
     stack: &mut Stack<Span<'i>>,
     tracker: &mut Tracker<'i, R>,
     i: usize,
-) -> Option<(Position<'i>, Skipped<T, Skip, SKIP>)> {
+) -> Option<(I, Skipped<T, Skip, SKIP>)> {
     let skipped = core::array::from_fn(|_| {
         if i == 0 {
             Skip::default()

@@ -12,7 +12,7 @@
 use crate::{
     error::{Error, ErrorVariant},
     position::Position,
-    RuleType, RuleWrapper,
+    Input, RuleType, RuleWrapper,
 };
 use alloc::{
     borrow::ToOwned,
@@ -22,7 +22,7 @@ use alloc::{
     vec,
     vec::Vec,
 };
-use core::cmp::Ordering;
+use core::{cmp::Ordering, marker::PhantomData};
 
 /// Some special errors that are not matching failures.
 pub enum SpecialError {
@@ -56,21 +56,24 @@ pub struct Tracker<'i, R: RuleType> {
     /// upper rule -> (positives, negatives)
     attempts: BTreeMap<Option<R>, Tracked<R>>,
     stack: Vec<(R, Position<'i>, bool)>,
+    phantom: PhantomData<&'i ()>,
 }
 impl<'i, R: RuleType> Tracker<'i, R> {
     /// Create an empty tracker for attempts.
-    pub fn new(pos: Position<'i>) -> Self {
+    pub fn new(pos: impl Input<'i>) -> Self {
         Self {
-            position: pos,
+            position: pos.as_position(),
             positive: true,
             attempts: BTreeMap::new(),
             stack: vec![],
+            phantom: PhantomData,
         }
     }
     fn clear(&mut self) {
         self.attempts.clear();
     }
-    fn prepare(&mut self, pos: Position<'i>) -> bool {
+    fn prepare(&mut self, pos: impl Input<'i>) -> bool {
+        let pos = pos.as_position();
         match pos.cmp(&self.position) {
             Ordering::Less => false,
             Ordering::Equal => true,
@@ -98,10 +101,11 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     fn get_entry<'s>(
         &'s mut self,
-        pos: &Position<'_>,
+        pos: impl Input<'i>,
     ) -> &'s mut (Vec<R>, Vec<R>, Vec<SpecialError>) {
         // Find lowest rule with the different position.
         let mut upper = None;
+        let pos = &pos.as_position();
         for (upper_rule, upper_pos, _) in self.stack.iter().rev() {
             if upper_pos != pos {
                 upper = Some(*upper_rule);
@@ -111,25 +115,23 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         self.attempts.entry(upper).or_default()
     }
     /// Report a repetition that exceeds the limit.
-    pub fn repeat_too_many_times(&mut self, pos: Position<'i>) {
+    pub fn repeat_too_many_times(&mut self, pos: impl Input<'i>) {
         if self.prepare(pos) {
-            self.get_entry(&pos)
-                .2
-                .push(SpecialError::RepeatTooManyTimes);
+            self.get_entry(pos).2.push(SpecialError::RepeatTooManyTimes);
         }
     }
     /// Reports a stack slice operation that is out of bound.
-    pub fn out_of_bound(&mut self, pos: Position<'i>, start: i32, end: Option<i32>) {
+    pub fn out_of_bound(&mut self, pos: impl Input<'i>, start: i32, end: Option<i32>) {
         if self.prepare(pos) {
-            self.get_entry(&pos)
+            self.get_entry(pos)
                 .2
                 .push(SpecialError::SliceOutOfBound(start, end));
         }
     }
     /// Reports accessing operations on empty stack.
-    pub fn empty_stack(&mut self, pos: Position<'i>) {
+    pub fn empty_stack(&mut self, pos: impl Input<'i>) {
         if self.prepare(pos) {
-            self.get_entry(&pos).2.push(SpecialError::EmptyStack);
+            self.get_entry(pos).2.push(SpecialError::EmptyStack);
         }
     }
     fn same_with_last(vec: &[R], rule: R) -> bool {
@@ -139,10 +141,10 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         }
     }
     #[inline]
-    fn record(&mut self, rule: R, pos: Position<'i>, succeeded: bool) {
+    fn record(&mut self, rule: R, pos: impl Input<'i>, succeeded: bool) {
         if self.prepare(pos) && succeeded != self.positive {
             let positive = self.positive;
-            let value = self.get_entry(&pos);
+            let value = self.get_entry(pos);
             let vec = if positive { &mut value.0 } else { &mut value.1 };
             if !Self::same_with_last(vec, rule) {
                 vec.push(rule);
@@ -151,16 +153,16 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     /// Record if the result doesn't match the state during calling `f`.
     #[inline]
-    pub(crate) fn record_during_with<T>(
+    pub(crate) fn record_during_with<T, I: Input<'i>>(
         &mut self,
-        pos: Position<'i>,
-        f: impl FnOnce(&mut Self) -> Option<(Position<'i>, T)>,
+        pos: I,
+        f: impl FnOnce(&mut Self) -> Option<(I, T)>,
         rule: R,
-    ) -> Option<(Position<'i>, T)> {
+    ) -> Option<(I, T)> {
         if let Some((_, _, has_children)) = self.stack.last_mut() {
             *has_children = true;
         }
-        self.stack.push((rule, pos, false));
+        self.stack.push((rule, pos.as_position(), false));
         let res = f(self);
         let succeeded = res.is_some();
         let (_r, _pos, has_children) = self.stack.pop().unwrap();
@@ -171,11 +173,11 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     /// Record if the result doesn't match the state during calling `f`.
     #[inline]
-    pub fn record_during<T: RuleWrapper<R>>(
+    pub fn record_during<T: RuleWrapper<R>, I: Input<'i>>(
         &mut self,
-        pos: Position<'i>,
-        f: impl FnOnce(&mut Self) -> Option<(Position<'i>, T)>,
-    ) -> Option<(Position<'i>, T)> {
+        pos: I,
+        f: impl FnOnce(&mut Self) -> Option<(I, T)>,
+    ) -> Option<(I, T)> {
         self.record_during_with(pos, f, T::RULE)
     }
     fn collect_to_message(self) -> String {

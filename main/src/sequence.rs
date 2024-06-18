@@ -77,11 +77,11 @@ macro_rules! seq {
             >
         {
             #[inline]
-            fn try_parse_partial_with(
-                mut input: $pest_typed::Position<'i>,
+            fn try_parse_partial_with<I: $crate::Input<'i>>(
+                mut input: I,
                 stack: &mut $pest_typed::Stack<$pest_typed::Span<'i>>,
                 tracker: &mut $pest_typed::tracker::Tracker<'i, R>,
-            ) -> ::core::option::Option<($pest_typed::Position<'i>, Self)> {
+            ) -> ::core::option::Option<(I, Self)> {
                 let content =
                 (
                     {

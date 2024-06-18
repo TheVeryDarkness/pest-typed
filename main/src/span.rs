@@ -12,7 +12,7 @@
 
 use core::fmt::{self, Write};
 use core::hash::{Hash, Hasher};
-use core::ops::{Bound, RangeBounds};
+use core::ops::{Bound, Range, RangeBounds};
 use core::ptr;
 use core::str;
 
@@ -45,6 +45,24 @@ impl<'i> Span<'i> {
     pub(crate) unsafe fn new_unchecked(input: &str, start: usize, end: usize) -> Span<'_> {
         debug_assert!(input.get(start..end).is_some());
         Span { input, start, end }
+    }
+
+    /// Create a new span that contains the entire input.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use pest_typed::Span;
+    /// let input = "Hello!";
+    /// let span = Span::new_full(input);
+    /// assert_eq!(span.as_str(), input);
+    /// ```
+    pub fn new_full(input: &'i str) -> Span<'i> {
+        Span {
+            input,
+            start: 0,
+            end: input.len(),
+        }
     }
 
     /// Attempts to create a new span. Will return `None` if `input[start..end]` is an invalid index
@@ -284,6 +302,187 @@ impl<'i> Span<'i> {
             span: self,
             pos: self.start,
         }
+    }
+
+    /// Skips `n` `char`s from the `Span` and returns `true` if the skip was possible or `false`
+    /// otherwise. If the return value is `false`, `start` will not be updated.
+    #[inline]
+    pub(crate) fn skip(&mut self, n: usize) -> bool {
+        let skipped = {
+            let mut len = 0;
+            // Position's pos is always a UTF-8 border.
+            let mut chars = self.input[self.start..self.end].chars();
+            for _ in 0..n {
+                if let Some(c) = chars.next() {
+                    len += c.len_utf8();
+                } else {
+                    return false;
+                }
+            }
+            len
+        };
+
+        self.start += skipped;
+        true
+    }
+
+    /// Skips until one of the given `strings` is found. If none of the `strings` can be found,
+    /// this function will return `false` but its `pos` will *still* be updated.
+    #[inline]
+    pub(crate) fn skip_until(&mut self, strings: &[&str]) -> bool {
+        #[cfg(not(feature = "memchr"))]
+        {
+            self.skip_until_basic(strings)
+        }
+        #[cfg(feature = "memchr")]
+        {
+            match strings {
+                [] => (),
+                [s1] => {
+                    if let Some(from) = memchr::memmem::find(
+                        &self.input.as_bytes()[self.start..self.end],
+                        s1.as_bytes(),
+                    ) {
+                        self.start += from;
+                        return true;
+                    }
+                }
+                [s1, s2] if !s1.is_empty() && !s2.is_empty() => {
+                    let b1 = s1.as_bytes()[0];
+                    let b2 = s2.as_bytes()[0];
+                    let miter = memchr::memchr2_iter(b1, b2, &self.input.as_bytes()[self.pos..]);
+                    for from in miter {
+                        let start = &self.input[self.pos + from..];
+                        if start.starts_with(s1) || start.starts_with(s2) {
+                            self.pos += from;
+                            return true;
+                        }
+                    }
+                }
+                [s1, s2, s3] if !s1.is_empty() && !s2.is_empty() && s3.is_empty() => {
+                    let b1 = s1.as_bytes()[0];
+                    let b2 = s2.as_bytes()[0];
+                    let b3 = s2.as_bytes()[0];
+                    let miter =
+                        memchr::memchr3_iter(b1, b2, b3, &self.input.as_bytes()[self.pos..]);
+                    for from in miter {
+                        let start = &self.input[self.pos + from..];
+                        if start.starts_with(s1) || start.starts_with(s2) || start.starts_with(s3) {
+                            self.pos += from;
+                            return true;
+                        }
+                    }
+                }
+                _ => {
+                    return self.skip_until_basic(strings);
+                }
+            }
+            self.pos = self.input.len();
+            false
+        }
+    }
+
+    #[inline]
+    fn skip_until_basic(&mut self, strings: &[&str]) -> bool {
+        // TODO: optimize with Aho-Corasick, e.g. https://crates.io/crates/daachorse?
+        for from in self.start..self.end {
+            let bytes = if let Some(string) = self.input.get(from..) {
+                string.as_bytes()
+            } else {
+                continue;
+            };
+
+            for slice in strings.iter() {
+                let to = slice.len();
+                if Some(slice.as_bytes()) == bytes.get(0..to) {
+                    self.start = from;
+                    return true;
+                }
+            }
+        }
+
+        self.start = self.end;
+        false
+    }
+
+    /// Matches the char at the `Position` against a specified character and returns `true` if a match
+    /// was made. If no match was made, returns `false`.
+    /// `pos` will not be updated in either case.
+    #[inline]
+    #[allow(dead_code)]
+    pub(crate) fn match_char(&self, c: char) -> bool {
+        matches!(self.input[self.start..self.end].chars().next(), Some(cc) if c == cc)
+    }
+
+    /// Matches the char at the `Position` against a filter function and returns `true` if a match
+    /// was made. If no match was made, returns `false` and `pos` will not be updated.
+    #[inline]
+    #[allow(dead_code)]
+    pub(crate) fn match_char_by<F>(&mut self, f: F) -> bool
+    where
+        F: FnOnce(char) -> bool,
+    {
+        if let Some(c) = self.input[self.start..self.end].chars().next() {
+            if f(c) {
+                self.start += c.len_utf8();
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    /// Matches `string` from the `Position` and returns `true` if a match was made or `false`
+    /// otherwise. If no match was made, `pos` will not be updated.
+    #[inline]
+    pub(crate) fn match_string(&mut self, string: &str) -> bool {
+        let to = self.start + string.len();
+
+        if self.end < to {
+            return false;
+        } else if Some(string.as_bytes()) == self.input.as_bytes().get(self.start..to) {
+            self.start = to;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Case-insensitively matches `string` from the `Position` and returns `true` if a match was
+    /// made or `false` otherwise. If no match was made, `pos` will not be updated.
+    #[inline]
+    pub(crate) fn match_insensitive(&mut self, string: &str) -> bool {
+        let matched = {
+            let slice = &self.input[self.start..self.end];
+            if let Some(slice) = slice.get(0..string.len()) {
+                slice.eq_ignore_ascii_case(string)
+            } else {
+                false
+            }
+        };
+
+        if matched {
+            self.start += string.len();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Matches `char` `range` from the `Position` and returns `true` if a match was made or `false`
+    /// otherwise. If no match was made, `pos` will not be updated.
+    #[inline]
+    pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
+        if let Some(c) = self.input[self.start..self.end].chars().next() {
+            if range.start <= c && c <= range.end {
+                self.start += c.len_utf8();
+                return true;
+            }
+        }
+
+        false
     }
 }
 

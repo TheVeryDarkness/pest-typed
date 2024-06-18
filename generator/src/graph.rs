@@ -1334,11 +1334,11 @@ fn generate_unicode(
                 }
                 impl<'i> #pest_typed::TypedNode<'i, #root::Rule> for #property_ident {
                     #[inline]
-                    fn try_parse_partial_with(
-                        mut input: #position<'i>,
+                    fn try_parse_partial_with<I: #pest_typed::Input<'i>>(
+                        mut input: I,
                         _stack: &mut #stack<#span<'i>>,
                         _tracker: &mut #tracker<'i, #root::Rule>,
-                    ) -> #option<(#position<'i>, Self)> {
+                    ) -> #option<(I, Self)> {
                         match #pest_typed::predefined_node::match_char_by(&mut input, #pest_unicode::#property_ident) {
                             Some(content) => {
                                 Some((input, Self::from(content)))

@@ -10,7 +10,7 @@
 //! Macros and functions for defining structs, most of which are [RuleStruct](crate::RuleStruct).
 
 use crate::{
-    predefined_node::EOI, tracker::Tracker, NeverFailedTypedNode, Position, RuleType, Span, Stack,
+    predefined_node::EOI, tracker::Tracker, Input, NeverFailedTypedNode, RuleType, Span, Stack,
     TypedNode,
 };
 
@@ -315,12 +315,12 @@ macro_rules! impl_parse {
     ($name:ident, $Rule:ty, $ignored:ty, true) => {
         impl<'i> $crate::ParsableTypedNode<'i, $Rule> for $name<'i, 1> {
             #[inline]
-            fn try_parse_with(
-                input: $crate::Position<'i>,
+            fn try_parse_with<I: $crate::Input<'i>>(
+                input: I,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
             ) -> ::core::option::Option<Self> {
-                $crate::rule::parse_without_ignore::<$Rule, Self>(
+                $crate::rule::parse_without_ignore::<I, $Rule, Self>(
                     input,
                     stack,
                     tracker,
@@ -332,12 +332,12 @@ macro_rules! impl_parse {
     ($name:ident, $Rule:ty, $ignored:ty, $non_true:tt) => {
         impl<'i> $crate::ParsableTypedNode<'i, $Rule> for $name<'i, 1> {
             #[inline]
-            fn try_parse_with(
-                input: $crate::Position<'i>,
+            fn try_parse_with<I: $crate::Input<'i>>(
+                input: I,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
             ) -> ::core::option::Option<Self> {
-                $crate::rule::parse::<$Rule, Self, $ignored>(input, stack, tracker, <$Rule>::EOI)
+                $crate::rule::parse::<I, $Rule, Self, $ignored>(input, stack, tracker, <$Rule>::EOI)
             }
         }
     };
@@ -359,11 +359,11 @@ macro_rules! impl_try_parse_with {
             for $name<'i, INHERITED>
         {
             #[inline]
-            fn try_parse_partial_with(
-                input: $crate::Position<'i>,
+            fn try_parse_partial_with<I: $crate::Input<'i>>(
+                input: I,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::option::Option<($crate::Position<'i>, Self)> {
+            ) -> ::core::option::Option<(I, Self)> {
                 let (input, content) = <$inner>::try_parse_partial_with(input, stack, tracker)?;
                 let content = content.into();
                 Some((
@@ -381,15 +381,15 @@ macro_rules! impl_try_parse_with {
             for $name<'i, INHERITED>
         {
             #[inline]
-            fn try_parse_partial_with(
-                input: $crate::Position<'i>,
+            fn try_parse_partial_with<I: $crate::Input<'i>>(
+                input: I,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::option::Option<($crate::Position<'i>, Self)> {
+            ) -> ::core::option::Option<(I, Self)> {
                 tracker.record_during(input, |tracker| {
                     let start = input;
                     let (input, _) = <$inner>::try_parse_partial_with(input, stack, tracker)?;
-                    let span = start.span(&input);
+                    let span = start.span(input);
                     Some((input, Self { span }))
                 })
             }
@@ -400,15 +400,15 @@ macro_rules! impl_try_parse_with {
             for $name<'i, INHERITED>
         {
             #[inline]
-            fn try_parse_partial_with(
-                input: $crate::Position<'i>,
+            fn try_parse_partial_with<I: $crate::Input<'i>>(
+                input: I,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
-            ) -> ::core::option::Option<($crate::Position<'i>, Self)> {
+            ) -> ::core::option::Option<(I, Self)> {
                 tracker.record_during(input, |tracker| {
                     let start = input;
                     let (input, content) = <$inner>::try_parse_partial_with(input, stack, tracker)?;
-                    let span = start.span(&input);
+                    let span = start.span(input);
                     let content = content.into();
                     Some((input, Self { content, span }))
                 })
@@ -679,12 +679,12 @@ macro_rules! rule_eoi {
             for $name<'i, INHERITED>
         {
             #[inline]
-            fn try_parse_with(
-                input: $crate::Position<'i>,
+            fn try_parse_with<I: $crate::Input<'i>>(
+                input: I,
                 stack: &mut $crate::Stack<$crate::Span<'i>>,
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
             ) -> ::core::option::Option<Self> {
-                $crate::rule::parse_without_ignore::<$Rule, Self>(
+                $crate::rule::parse_without_ignore::<I, $Rule, Self>(
                     input,
                     stack,
                     tracker,
@@ -703,11 +703,12 @@ macro_rules! rule_eoi {
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
 pub fn parse<
     'i,
+    I: Input<'i>,
     R: RuleType + 'i,
     _Self: TypedNode<'i, R>,
     IGNORED: NeverFailedTypedNode<'i, R>,
 >(
-    input: Position<'i>,
+    input: I,
     stack: &mut Stack<Span<'i>>,
     tracker: &mut Tracker<'i, R>,
     rule_eoi: R,
@@ -731,8 +732,8 @@ pub fn parse<
 /// Full parse as an atomic rule.
 ///
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
-pub fn parse_without_ignore<'i, R: RuleType + 'i, _Self: TypedNode<'i, R>>(
-    input: Position<'i>,
+pub fn parse_without_ignore<'i, I: Input<'i>, R: RuleType + 'i, _Self: TypedNode<'i, R>>(
+    input: I,
     stack: &mut Stack<Span<'i>>,
     tracker: &mut Tracker<'i, R>,
     rule_eoi: R,

@@ -40,6 +40,7 @@
     unused_qualifications,
     future_incompatible
 )]
+#![deny(unconditional_recursion)]
 
 extern crate alloc;
 #[cfg(feature = "std")]
@@ -65,14 +66,15 @@ pub mod tracker;
 mod typed_node;
 mod wrapper;
 pub use alloc::boxed::Box;
+mod input;
 
 // Below modules are copied from pest.
 mod parser_state;
 mod position;
 mod span;
 
-pub use pest::error;
-pub use pest::Stack;
+pub use input::{AsInput, Input};
+pub use pest::{error, Stack};
 pub use position::Position;
 pub use span::{merge_spans, Span};
 
