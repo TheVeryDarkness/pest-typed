@@ -1334,7 +1334,7 @@ fn generate_unicode(
                 }
                 impl<'i> #pest_typed::TypedNode<'i, #root::Rule> for #property_ident {
                     #[inline]
-                    fn try_parse_with(
+                    fn try_parse_partial_with(
                         mut input: #position<'i>,
                         _stack: &mut #stack<#span<'i>>,
                         _tracker: &mut #tracker<'i, #root::Rule>,

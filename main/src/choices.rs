@@ -165,17 +165,17 @@ macro_rules! choices {
                 for $name<$V0, $($V, )* >
             {
                 #[inline]
-                fn try_parse_with(
+                fn try_parse_partial_with(
                     input: $pest_typed::Position<'i>,
                     stack: &mut $pest_typed::Stack<$pest_typed::Span<'i>>,
                     tracker: &mut $pest_typed::tracker::Tracker<'i, R>,
                 ) -> ::core::option::Option<($pest_typed::Position<'i>, Self)> {
-                    let res = $pest_typed::predefined_node::restore_on_none(stack, |stack| $V0::try_parse_with(input, stack, tracker));
+                    let res = $pest_typed::predefined_node::restore_on_none(stack, |stack| $V0::try_parse_partial_with(input, stack, tracker));
                     if let Some((input, res)) = res {
                         return Some((input, Self::$v0(res)));
                     }
                     $(
-                        let res = $pest_typed::predefined_node::restore_on_none(stack, |stack| $V::try_parse_with(input, stack, tracker));
+                        let res = $pest_typed::predefined_node::restore_on_none(stack, |stack| $V::try_parse_partial_with(input, stack, tracker));
                         if let Some((input, res)) = res {
                             return Some((input, Self::$v(res)));
                         }

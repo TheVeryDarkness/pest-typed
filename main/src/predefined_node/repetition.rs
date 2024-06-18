@@ -48,7 +48,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for Atomi
         let mut tracker = Tracker::new(input);
 
         for _ in 0usize.. {
-            match restore_on_none(stack, |stack| T::try_parse_with(input, stack, &mut tracker)) {
+            match restore_on_none(stack, |stack| T::try_parse_partial_with(input, stack, &mut tracker)) {
                 Some((next, matched)) => {
                     input = next;
                     vec.push(matched);
@@ -61,7 +61,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for Atomi
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for AtomicRep<T> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -131,7 +131,7 @@ impl<
     > TypedNode<'i, R> for RepMin<Skipped<T, Skip, SKIP>, MIN>
 {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -237,7 +237,7 @@ impl<
     > TypedNode<'i, R> for RepMinMax<Skipped<T, Skip, SKIP>, MIN, MAX>
 {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -318,7 +318,7 @@ fn try_parse_unit<
             skipped
         }
     });
-    let (next, matched) = T::try_parse_with(input, stack, tracker)?;
+    let (next, matched) = T::try_parse_partial_with(input, stack, tracker)?;
     input = next;
     let res = Skipped { skipped, matched };
     Some((input, res))

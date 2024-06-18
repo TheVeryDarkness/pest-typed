@@ -82,7 +82,7 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for EMOJI {
         #[inline]
-        fn try_parse_with(
+        fn try_parse_partial_with(
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
@@ -130,7 +130,7 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for XID_CONTINUE {
         #[inline]
-        fn try_parse_with(
+        fn try_parse_partial_with(
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
@@ -178,7 +178,7 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for XID_START {
         #[inline]
-        fn try_parse_with(
+        fn try_parse_partial_with(
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
@@ -226,7 +226,7 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for ARABIC {
         #[inline]
-        fn try_parse_with(
+        fn try_parse_partial_with(
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
@@ -274,7 +274,7 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for HAN {
         #[inline]
-        fn try_parse_with(
+        fn try_parse_partial_with(
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
@@ -322,7 +322,7 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for HANGUL {
         #[inline]
-        fn try_parse_with(
+        fn try_parse_partial_with(
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,
@@ -370,7 +370,7 @@ pub mod unicode {
     }
     impl<'i> ::pest_typed::TypedNode<'i, super::Rule> for HIRAGANA {
         #[inline]
-        fn try_parse_with(
+        fn try_parse_partial_with(
             mut input: ::pest_typed::Position<'i>,
             _stack: &mut ::pest_typed::Stack<::pest_typed::Span<'i>>,
             _tracker: &mut ::pest_typed::tracker::Tracker<'i, super::Rule>,

@@ -47,7 +47,7 @@ impl<T: StringWrapper> From<()> for Str<T> {
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<T> {
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -87,7 +87,7 @@ impl<'i, T: StringWrapper> From<&'i str> for Insens<'i, T> {
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, T> {
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -122,7 +122,7 @@ impl<'i, Strings: StringArrayWrapper> From<Span<'i>> for Skip<'i, Strings> {
     }
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i, Strings> {
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -145,7 +145,7 @@ pub struct SkipChar<'i, const N: usize> {
     pub span: Span<'i>,
 }
 impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, N> {
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -169,7 +169,7 @@ pub struct CharRange<const MIN: char, const MAX: char> {
     pub content: char,
 }
 impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R> for CharRange<MIN, MAX> {
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -254,14 +254,14 @@ impl<N> DerefMut for Positive<N> {
     }
 }
 impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Option<(Position<'i>, Self)> {
         tracker.positive_during(|tracker| {
             stack.snapshot();
-            match N::try_parse_with(input, stack, tracker) {
+            match N::try_parse_partial_with(input, stack, tracker) {
                 Some((_, content)) => {
                     stack.restore();
                     Some((input, Self::from(content)))
@@ -291,14 +291,14 @@ impl<T> From<()> for Negative<T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Option<(Position<'i>, Self)> {
         tracker.negative_during(|tracker| {
             stack.snapshot();
-            match T::try_parse_with(input, stack, tracker) {
+            match T::try_parse_partial_with(input, stack, tracker) {
                 Some(_) => {
                     stack.restore();
                     None
@@ -320,7 +320,7 @@ pub struct ANY {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -342,7 +342,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
 pub struct SOI;
 impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -362,7 +362,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
 pub struct EOI;
 impl<'i, R: RuleType> TypedNode<'i, R> for EOI {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -395,7 +395,7 @@ pub struct NEWLINE {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -423,7 +423,7 @@ pub struct PEEK_ALL<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -449,7 +449,7 @@ impl<'i> From<Span<'i>> for PEEK<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -496,7 +496,7 @@ impl<T: Debug, Skip: Debug, const SKIP: usize> Debug for Skipped<T, Skip, SKIP> 
 pub struct DROP;
 impl<'i, R: RuleType> TypedNode<'i, R> for DROP {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -525,7 +525,7 @@ impl<'i> From<Span<'i>> for POP<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -557,12 +557,12 @@ impl<'i> From<Span<'i>> for POP_ALL<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Option<(Position<'i>, Self)> {
-        let (input, res) = PEEK_ALL::try_parse_with(input, stack, tracker)?;
+        let (input, res) = PEEK_ALL::try_parse_partial_with(input, stack, tracker)?;
         while stack.pop().is_some() {}
         Some((input, Self::from(res.span)))
     }
@@ -578,7 +578,7 @@ impl<'i> Default for AlwaysFail<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for AlwaysFail<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         _input: Position<'i>,
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -603,7 +603,7 @@ impl<'i, R: RuleType> NeverFailedTypedNode<'i, R> for Empty<'i> {
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for Empty<'i> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
@@ -627,13 +627,13 @@ impl<T> From<T> for Push<T> {
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<T> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Option<(Position<'i>, Self)> {
         let start = input;
-        let (input, content) = T::try_parse_with(input, stack, tracker)?;
+        let (input, content) = T::try_parse_partial_with(input, stack, tracker)?;
         stack.push(start.span(&input));
         Some((input, Self::from(content)))
     }
@@ -657,7 +657,7 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
     for PeekSlice2<START, END>
 {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -673,7 +673,7 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
 pub struct PeekSlice1<const START: i32>;
 impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<START> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,

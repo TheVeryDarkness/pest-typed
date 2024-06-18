@@ -77,7 +77,7 @@ macro_rules! seq {
             >
         {
             #[inline]
-            fn try_parse_with(
+            fn try_parse_partial_with(
                 mut input: $pest_typed::Position<'i>,
                 stack: &mut $pest_typed::Stack<$pest_typed::Span<'i>>,
                 tracker: &mut $pest_typed::tracker::Tracker<'i, R>,
@@ -86,7 +86,7 @@ macro_rules! seq {
                 (
                     {
                         let skipped = ::core::array::from_fn(|_| Skip::default());
-                        let (next, matched) = T0::try_parse_with(input, stack, tracker)?;
+                        let (next, matched) = T0::try_parse_partial_with(input, stack, tracker)?;
                         input = next;
                         $pest_typed::predefined_node::Skipped { skipped, matched }
                     },
@@ -97,7 +97,7 @@ macro_rules! seq {
                                 input = next;
                                 skipped
                             });
-                            let (next, matched) = $T::try_parse_with(input, stack, tracker)?;
+                            let (next, matched) = $T::try_parse_partial_with(input, stack, tracker)?;
                             input = next;
                             $pest_typed::predefined_node::Skipped { skipped, matched }
                         },

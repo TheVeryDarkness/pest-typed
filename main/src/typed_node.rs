@@ -30,8 +30,8 @@ pub trait TypedNode<'i, R: RuleType>
 where
     Self: Sized + Debug + Clone + PartialEq,
 {
-    /// Create typed node.
-    fn try_parse_with(
+    /// Try to create typed node.
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -40,8 +40,8 @@ where
 
 /// Node of concrete syntax tree.
 pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
-    /// Try to create typed node.
-    fn try_parse_with_until_end(
+    /// Try to create typed node until the end.
+    fn try_parse_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
@@ -52,7 +52,7 @@ pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
         let mut stack = Stack::new();
         let input = Position::from_start(input);
         let mut tracker = Tracker::new(input);
-        match Self::try_parse_with_until_end(input, &mut stack, &mut tracker) {
+        match Self::try_parse_with(input, &mut stack, &mut tracker) {
             Some(res) => Ok(res),
             None => Err(Box::new(tracker.collect())),
         }
@@ -63,7 +63,7 @@ pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
         let mut stack = Stack::new();
         let input = Position::from_start(input);
         let mut tracker = Tracker::new(input);
-        match Self::try_parse_with(input, &mut stack, &mut tracker) {
+        match Self::try_parse_partial_with(input, &mut stack, &mut tracker) {
             Some((input, res)) => Ok((input, res)),
             None => Err(Box::new(tracker.collect())),
         }
@@ -119,14 +119,14 @@ pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
 
 /// Match `[T; N]`.
 impl<'i, R: RuleType, T: TypedNode<'i, R>, const N: usize> TypedNode<'i, R> for [T; N] {
-    fn try_parse_with(
+    fn try_parse_partial_with(
         mut input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Option<(Position<'i>, Self)> {
         let mut vec = Vec::new();
         for _ in 0..N {
-            let (next, res) = T::try_parse_with(input, stack, tracker)?;
+            let (next, res) = T::try_parse_partial_with(input, stack, tracker)?;
             input = next;
             vec.push(res);
         }
@@ -141,13 +141,13 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const N: usize> TypedNode<'i, R> for 
 /// Match `(T1, T2)`.
 impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> TypedNode<'i, R> for (T1, T2) {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Option<(Position<'i>, Self)> {
-        let (input, t1) = T1::try_parse_with(input, stack, tracker)?;
-        let (input, t2) = T2::try_parse_with(input, stack, tracker)?;
+        let (input, t1) = T1::try_parse_partial_with(input, stack, tracker)?;
+        let (input, t2) = T2::try_parse_partial_with(input, stack, tracker)?;
         Some((input, (t1, t2)))
     }
 }
@@ -155,12 +155,14 @@ impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> TypedNode<'i, 
 /// Optionally match `T`.
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Option<T> {
     #[inline]
-    fn try_parse_with(
+    fn try_parse_partial_with(
         input: Position<'i>,
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Option<(Position<'i>, Self)> {
-        let res = restore_on_none(stack, |stack| T::try_parse_with(input, stack, tracker));
+        let res = restore_on_none(stack, |stack| {
+            T::try_parse_partial_with(input, stack, tracker)
+        });
         match res {
             Some((input, inner)) => Some((input, Some(inner))),
             None => Some((input, None)),
