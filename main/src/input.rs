@@ -24,11 +24,11 @@ pub trait Input<'i>: Copy {
     }
 
     /// Match a string.
-    fn match_string(&mut self, s: &'i str) -> bool;
+    fn match_string(&mut self, string: &'i str) -> bool;
     /// Match an string insensitively.
-    fn match_insensitive(&mut self, s: &'i str) -> bool;
+    fn match_insensitive(&mut self, string: &'i str) -> bool;
     /// Skip until one of several strings.
-    fn skip_until(&mut self, s: &'i [&'i str]) -> bool;
+    fn skip_until(&mut self, strings: &'i [&'i str]) -> bool;
     /// Skip several characters.
     fn skip(&mut self, n: usize) -> bool;
     /// Match a character in a range.
@@ -37,13 +37,9 @@ pub trait Input<'i>: Copy {
     fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool;
 
     /// Check if is at the start of the input.
-    fn at_start(&self) -> bool {
-        self.byte_offset() == 0
-    }
+    fn at_start(&self) -> bool;
     /// Check if is at the end of the input.
-    fn at_end(&self) -> bool {
-        self.byte_offset() == self.input().chars().count()
-    }
+    fn at_end(&self) -> bool;
 }
 
 impl<'i> Input<'i> for Position<'i> {
@@ -78,40 +74,250 @@ impl<'i> Input<'i> for Position<'i> {
     fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool {
         self.match_char_by(f)
     }
+
+    fn at_start(&self) -> bool {
+        self.at_start()
+    }
+
+    fn at_end(&self) -> bool {
+        self.at_end()
+    }
 }
 
-impl<'i> Input<'i> for Span<'i> {
+/// A part of input.
+#[derive(Clone, Copy)]
+pub struct SubInput1<'i> {
+    input: &'i str,
+    start: usize,
+    cursor: usize,
+}
+
+impl<'i> Input<'i> for SubInput1<'i> {
     fn byte_offset(&self) -> usize {
-        self.start()
+        self.cursor
     }
 
     fn input(&self) -> &'i str {
-        self.get_input()
+        self.input
     }
 
     fn match_string(&mut self, s: &'i str) -> bool {
-        self.match_string(s)
+        let end = self.cursor + s.len();
+        if Some(s) == self.input.get(self.cursor..end) {
+            self.cursor = end;
+            true
+        } else {
+            false
+        }
     }
 
     fn match_insensitive(&mut self, s: &'i str) -> bool {
-        self.match_insensitive(s)
+        let end = self.cursor + s.len();
+        if let Some(s_) = self.input.get(self.cursor..end) {
+            if s_.eq_ignore_ascii_case(s) {
+                self.cursor = end;
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
 
-    fn skip_until(&mut self, s: &'i [&'i str]) -> bool {
-        self.skip_until(s)
+    fn skip_until(&mut self, strings: &'i [&'i str]) -> bool {
+        for from in self.cursor..self.input.len() {
+            let bytes = if let Some(string) = self.input.get(from..) {
+                string.as_bytes()
+            } else {
+                continue;
+            };
+
+            for slice in strings.iter() {
+                let to = slice.len();
+                if Some(slice.as_bytes()) == bytes.get(0..to) {
+                    self.cursor = from;
+                    return true;
+                }
+            }
+        }
+
+        self.cursor = self.input.len();
+        false
     }
 
     fn skip(&mut self, n: usize) -> bool {
-        self.skip(n)
+        let skipped = {
+            let mut len = 0;
+            // Position's pos is always a UTF-8 border.
+            let mut chars = self.input[self.cursor..].chars();
+            for _ in 0..n {
+                if let Some(c) = chars.next() {
+                    len += c.len_utf8();
+                } else {
+                    return false;
+                }
+            }
+            len
+        };
+
+        self.cursor += skipped;
+        true
     }
 
     fn match_range(&mut self, range: Range<char>) -> bool {
-        self.match_range(range)
+        if let Some(c) = self.input[self.cursor..].chars().next() {
+            if range.start <= c && c <= range.end {
+                self.cursor += c.len_utf8();
+                return true;
+            }
+        }
+
+        false
     }
 
     fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool {
-        self.match_char_by(f)
+        if let Some(c) = self.input[self.cursor..].chars().next() {
+            if f(c) {
+                self.cursor += c.len_utf8();
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
+
+    fn at_start(&self) -> bool {
+        self.cursor == self.start
+    }
+
+    fn at_end(&self) -> bool {
+        self.cursor == self.input.len()
+    }
+}
+
+impl<'i> Input<'i> for SubInput2<'i> {
+    fn byte_offset(&self) -> usize {
+        self.cursor
+    }
+
+    fn input(&self) -> &'i str {
+        self.input
+    }
+
+    fn match_string(&mut self, string: &'i str) -> bool {
+        let to = self.cursor + string.len();
+
+        if self.end < to {
+            return false;
+        } else if Some(string.as_bytes()) == self.input.as_bytes().get(self.cursor..to) {
+            self.cursor = to;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn match_insensitive(&mut self, string: &'i str) -> bool {
+        let matched = {
+            let slice = &self.input[self.cursor..self.end];
+            if let Some(slice) = slice.get(0..string.len()) {
+                slice.eq_ignore_ascii_case(string)
+            } else {
+                false
+            }
+        };
+
+        if matched {
+            self.cursor += string.len();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn skip_until(&mut self, strings: &'i [&'i str]) -> bool {
+        for from in self.cursor..self.end {
+            let bytes = if let Some(string) = self.input.get(from..) {
+                string.as_bytes()
+            } else {
+                continue;
+            };
+
+            for slice in strings.iter() {
+                let to = slice.len();
+                if Some(slice.as_bytes()) == bytes.get(0..to) {
+                    self.cursor = from;
+                    return true;
+                }
+            }
+        }
+
+        self.cursor = self.end;
+        false
+    }
+
+    fn skip(&mut self, n: usize) -> bool {
+        let skipped = {
+            let mut len = 0;
+            // Position's pos is always a UTF-8 border.
+            let mut chars = self.input[self.cursor..self.end].chars();
+            for _ in 0..n {
+                if let Some(c) = chars.next() {
+                    len += c.len_utf8();
+                } else {
+                    return false;
+                }
+            }
+            len
+        };
+
+        self.cursor += skipped;
+        true
+    }
+
+    fn match_range(&mut self, range: Range<char>) -> bool {
+        if let Some(c) = self.input[self.cursor..self.end].chars().next() {
+            if range.start <= c && c <= range.end {
+                self.cursor += c.len_utf8();
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool {
+        if let Some(c) = self.input[self.cursor..self.end].chars().next() {
+            if f(c) {
+                self.cursor += c.len_utf8();
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    fn at_start(&self) -> bool {
+        self.cursor == self.start
+    }
+
+    fn at_end(&self) -> bool {
+        self.cursor == self.end
+    }
+}
+
+/// A part of input.
+#[derive(Clone, Copy)]
+pub struct SubInput2<'i> {
+    input: &'i str,
+    start: usize,
+    end: usize,
+    cursor: usize,
 }
 
 /// Convert to input.
@@ -130,6 +336,7 @@ impl<'i> AsInput<'i> for &'i String {
         Position::from_start(self)
     }
 }
+
 impl<'i> AsInput<'i> for &'i str {
     type Output = Position<'i>;
 
@@ -137,17 +344,35 @@ impl<'i> AsInput<'i> for &'i str {
         Position::from_start(self)
     }
 }
+
 impl<'i> AsInput<'i> for Position<'i> {
-    type Output = Position<'i>;
+    type Output = SubInput1<'i>;
 
     fn as_input(&self) -> Self::Output {
-        *self
+        let input = self.input;
+        let start = self.pos();
+        let cursor = start;
+        SubInput1 {
+            input,
+            start,
+            cursor,
+        }
     }
 }
+
 impl<'i> AsInput<'i> for Span<'i> {
-    type Output = Span<'i>;
+    type Output = SubInput2<'i>;
 
     fn as_input(&self) -> Self::Output {
-        *self
+        let input = self.get_input();
+        let start = self.start();
+        let end = self.end();
+        let cursor = start;
+        SubInput2 {
+            input,
+            start,
+            end,
+            cursor,
+        }
     }
 }

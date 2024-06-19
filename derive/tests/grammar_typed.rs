@@ -62,7 +62,8 @@ macro_rules! parses_to {
     ) => {
         let tokens = tokens!([$($names $tokens),*]);
         let (_, res) = pairs::$rule::try_parse_partial($input).unwrap();
-        let (_, res_) = pairs::$rule::try_parse_partial(Span::new_full($input)).unwrap();
+        let span = Span::new_full($input);
+        let (_, res_) = pairs::$rule::try_parse_partial(span).unwrap();
         assert_eq!(res, res.clone());
         assert_eq!(res, res_);
         let actual = vec![res.as_token_tree()];
