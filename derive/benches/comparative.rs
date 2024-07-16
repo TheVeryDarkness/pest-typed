@@ -1,12 +1,11 @@
 #![recursion_limit = "1024"]
 
-use std::iter::{once, repeat};
-
 use criterion::{criterion_group, criterion_main, Criterion};
 use pest::Parser;
 use pest_derive::Parser;
 use pest_typed::{Spanned, TypedParser};
 use pest_typed_derive::TypedParser;
+use std::iter::once;
 
 macro_rules! case {
     ($name:ident, $grammar:literal, $input:expr,) => {
@@ -106,11 +105,11 @@ table      =  { (cell ~ ("," ~ cell)* ~ ","? ~ NEWLINE)+ }"#,
 
 criterion_group!(
     benches,
-    // string_array::bench,
-    // char_range_array::bench,
-    // average_choices_array::bench,
-    // best_choices_array::bench,
-    // worst_choices_array::bench,
+    string_array::bench,
+    char_range_array::bench,
+    average_choices_array::bench,
+    best_choices_array::bench,
+    worst_choices_array::bench,
     table::bench,
 );
 criterion_main!(benches);
