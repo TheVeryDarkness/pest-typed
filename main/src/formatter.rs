@@ -661,6 +661,31 @@ mod span {
     }
 
     #[test]
+    fn display_span_single_line_far() {
+        let mut s = String::new();
+        for c in 0..1000u16 {
+            s.push_str(c.to_string().as_str());
+            s.push('\n');
+        }
+        //   0 -   9 -> 2 ->   20
+        //  10 -  99 -> 3 ->  270
+        // 100 - 999 -> 4 -> 3600
+        let msg = Span::new(&s, 290, 3889).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "     \
+     |    v
+ 100 | 99␊
+ 101 | 100␊
+     | ...
+ 999 | 998␊
+1000 | 999␊
+     |   ^
+"
+        );
+    }
+
+    #[test]
     fn display_span_unicode() {
         let msg = Span::new("ß\n∆\n中\n", 2, 10).unwrap().to_string();
         assert_eq!(
