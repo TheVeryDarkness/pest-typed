@@ -1,0 +1,110 @@
+#![recursion_limit = "1024"]
+
+use std::iter::repeat;
+
+use criterion::{criterion_group, criterion_main, Criterion};
+use pest::Parser;
+use pest_derive::Parser;
+use pest_typed::{Spanned, TypedParser};
+use pest_typed_derive::TypedParser;
+
+macro_rules! case {
+    ($name:ident, $grammar:literal, $input:expr,) => {
+        mod $name {
+            use super::*;
+
+            mod pest_typed {
+                use super::*;
+                #[derive(TypedParser)]
+                #[grammar_inline = $grammar]
+                pub struct Parser;
+            }
+
+            mod pest {
+                use super::*;
+                #[derive(Parser)]
+                #[grammar_inline = $grammar]
+                pub struct Parser;
+            }
+
+            pub fn bench(c: &mut Criterion) {
+                let mut group = c.benchmark_group(stringify!($name));
+                group.sample_size(10);
+                let s = $input;
+                println!("Input string has {} characters.", s.len());
+                group.bench_function("pest-typed-parse", |b| {
+                    b.iter(|| {
+                        let pair =
+                            pest_typed::Parser::try_parse::<pest_typed::rules::$name>(&s).unwrap();
+                        assert_eq!(pair.span().as_str().len(), s.len());
+                    })
+                });
+                group.bench_function("pest-parse", |b| {
+                    b.iter(|| {
+                        let mut pair = pest::Parser::parse(pest::Rule::$name, &s).unwrap();
+                        assert_eq!(pair.next().unwrap().as_span().as_str().len(), s.len());
+                    })
+                });
+                // group.bench_function("check", |b| {
+                //     b.iter(|| {
+                //         let _ = pest_typed::rules::$name::check(s).unwrap();
+                //     })
+                // });
+            }
+        }
+    };
+}
+
+case!(
+    string_array,
+    r#"string_array = { "0123456789"+ }"#,
+    "0123456789".repeat(100000),
+);
+
+case!(
+    char_range_array,
+    r#"char_range_array = { ('0'..'9')+ }"#,
+    "0123456789".repeat(100000),
+);
+
+case!(
+    average_choices_array,
+    r#"average_choices_array = { ("0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9")+ }"#,
+    "0123456789".repeat(100000),
+);
+
+case!(
+    best_choices_array,
+    r#"best_choices_array = { ("0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9")+ }"#,
+    "0".repeat(1000000),
+);
+
+case!(
+    worst_choices_array,
+    r#"worst_choices_array = { ("0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9")+ }"#,
+    "9".repeat(1000000),
+);
+
+case!(
+    table,
+    r#"
+WHITESPACE = _{ " " | "\t" }
+cell       = { ('0'..'9' | 'a'..'z' | 'A'..'Z')+ }
+table      = { ((cell ~ ",")+ ~ cell ~ ","? ~ NEWLINE) }"#,
+    ('a'..'z')
+        .into_iter()
+        .flat_map(|c| repeat(c).take(10000))
+        .map(|c| format!("{c},"))
+        .collect::<String>(),
+);
+
+criterion_group!(
+    benches,
+    string_array::bench,
+    char_range_array::bench,
+    average_choices_array::bench,
+    best_choices_array::bench,
+    worst_choices_array::bench,
+    table::bench,
+);
+criterion_main!(benches);
