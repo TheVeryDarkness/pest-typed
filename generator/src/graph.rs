@@ -9,7 +9,7 @@
 
 use crate::config::Config;
 use crate::docs::DocComment;
-use crate::types::{box_type, option_type, vec_type};
+use crate::types::{option_type, vec_type};
 use pest::unicode::unicode_property_names;
 use pest_meta::{
     ast::RuleType,
@@ -357,10 +357,6 @@ impl<'g> Accesser<'g> {
     }
 }
 
-fn position() -> TokenStream {
-    let pest = pest();
-    quote! {#pest::Position}
-}
 fn _bool() -> TokenStream {
     quote! {::core::primitive::bool}
 }
@@ -1200,7 +1196,7 @@ pub(crate) fn generate_typed_pair_from_rule(
                         quote! {}
                     };
                     target.push(quote! {
-                        pest_typed::#mac!(#generics_i, pest_typed, #mod_i #item, #(#types, #field, )*);
+                        pest_typed::#mac!(#generics_i, #mod_i #item, #(#types, #field, )*);
                     });
                 } else {
                     target.push(quote! {
@@ -1302,13 +1298,11 @@ fn generate_unicode(
     let pest_typed = pest_typed();
     let pest_unicode = pest_unicode();
     let option = option_type();
-    let position = position();
     let stack = stack();
     let span = _span();
     let char = _char();
     let tracker = tracker();
     let root = quote! {super};
-    let box_ = box_type();
 
     for property in unicode_property_names() {
         let property_ident: Ident = syn::parse_str(property).unwrap();
@@ -1356,16 +1350,8 @@ fn generate_unicode(
                             .finish()
                     }
                 }
-                impl<'i: 'n, 'n> #pest_typed::iterators::Pairs<'i, 'n, #root::Rule> for #property_ident {
-                    type Iter = ::core::iter::Empty<&'n dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule>>;
-                    type IntoIter = ::core::iter::Empty<#box_<dyn #pest_typed::iterators::Pair<'i, 'n, #root::Rule> + 'n>>;
-
-                    fn iter_pairs(&'n self) -> Self::Iter {
-                        ::core::iter::empty()
-                    }
-                    fn into_iter_pairs(self) -> Self::IntoIter {
-                        ::core::iter::empty()
-                    }
+                impl<'i> #pest_typed::iterators::Pairs<'i, #root::Rule> for #property_ident {
+                    fn for_self_or_each_child(&self, _f: &mut impl #pest_typed::re_exported::FnMut(#pest_typed::iterators::Token<'i, #root::Rule>)) {}
                 }
             });
         }

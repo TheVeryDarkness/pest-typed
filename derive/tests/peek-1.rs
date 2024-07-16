@@ -10,6 +10,7 @@
 use pest_typed::ParsableTypedNode;
 use pest_typed_derive::TypedParser;
 
+#[allow(dead_code)]
 #[derive(TypedParser)]
 #[grammar_inline = r#"
 main = { PUSH("foo") ~ PUSH("Foo") ~ PUSH("FOO") ~ PEEK[1..] ~ PEEK[1..2] }

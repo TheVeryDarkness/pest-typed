@@ -113,7 +113,8 @@ mod tests {
             x {}
         }
         .into();
-        let _: TokenStream = match_choices(input);
+        let tokens = match_choices(input);
+        assert_eq!(tokens.to_string(), "match x { }");
     }
     #[test]
     fn choice_1() {
@@ -125,7 +126,11 @@ mod tests {
             }
         }
         .into();
-        let _: TokenStream = match_choices(input);
+        let tokens = match_choices(input);
+        assert_eq!(
+            tokens.to_string(),
+            "match x { a => { println ! (\"{a}\") ; } }"
+        );
     }
     #[test]
     fn choice_2() {
@@ -136,6 +141,7 @@ mod tests {
             }
         }
         .into();
-        let _: TokenStream = match_choices(input);
+        let tokens = match_choices(input);
+        assert_eq!(tokens.to_string(), "match x { generics :: Choice2 :: _0 (a) => a - 1 , generics :: Choice2 :: _1 (b) => b + 1 , }");
     }
 }

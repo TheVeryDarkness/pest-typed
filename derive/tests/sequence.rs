@@ -11,6 +11,7 @@ use pest_typed::{ParsableTypedNode, Storage};
 use pest_typed_derive::TypedParser;
 use std::ops::Deref;
 
+#[allow(dead_code)]
 #[derive(TypedParser)]
 #[grammar_inline = r#"
 s1  = { "a" }

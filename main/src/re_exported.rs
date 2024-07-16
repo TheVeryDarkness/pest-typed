@@ -38,3 +38,5 @@ pub use ::std::vec::Vec;
 pub use ::alloc::vec;
 #[cfg(feature = "std")]
 pub use ::std::vec;
+
+pub use ::core::ops::FnMut;

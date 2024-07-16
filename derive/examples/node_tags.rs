@@ -1,5 +1,5 @@
 use anyhow::Error;
-use pest_typed::ParsableTypedNode as _;
+use pest_typed::TypedParser;
 use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
@@ -15,7 +15,7 @@ c  = { #a = item ~ ("," ~ #a = item)* }
 struct Parser;
 
 fn main() -> Result<(), Error> {
-    let a = pairs::a::try_parse("abbb")?;
+    let a = Parser::try_parse::<pairs::a>("abbb")?;
     // Tags enabled.
     #[cfg(feature = "grammar-extras")]
     {

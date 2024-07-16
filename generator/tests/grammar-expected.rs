@@ -103,18 +103,13 @@ pub mod unicode {
                 .finish()
         }
     }
-    impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for EMOJI {
-        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
-        type IntoIter = ::core::iter::Empty<
-            ::pest_typed::re_exported::Box<
-                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
-            >,
-        >;
-        fn iter_pairs(&'n self) -> Self::Iter {
-            ::core::iter::empty()
-        }
-        fn into_iter_pairs(self) -> Self::IntoIter {
-            ::core::iter::empty()
+    impl<'i> ::pest_typed::iterators::Pairs<'i, super::Rule> for EMOJI {
+        fn for_self_or_each_child(
+            &self,
+            _f: &mut impl ::pest_typed::re_exported::FnMut(
+                ::pest_typed::iterators::Token<'i, super::Rule>,
+            ),
+        ) {
         }
     }
     #[allow(non_camel_case_types)]
@@ -151,18 +146,13 @@ pub mod unicode {
                 .finish()
         }
     }
-    impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for XID_CONTINUE {
-        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
-        type IntoIter = ::core::iter::Empty<
-            ::pest_typed::re_exported::Box<
-                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
-            >,
-        >;
-        fn iter_pairs(&'n self) -> Self::Iter {
-            ::core::iter::empty()
-        }
-        fn into_iter_pairs(self) -> Self::IntoIter {
-            ::core::iter::empty()
+    impl<'i> ::pest_typed::iterators::Pairs<'i, super::Rule> for XID_CONTINUE {
+        fn for_self_or_each_child(
+            &self,
+            _f: &mut impl ::pest_typed::re_exported::FnMut(
+                ::pest_typed::iterators::Token<'i, super::Rule>,
+            ),
+        ) {
         }
     }
     #[allow(non_camel_case_types)]
@@ -199,18 +189,13 @@ pub mod unicode {
                 .finish()
         }
     }
-    impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for XID_START {
-        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
-        type IntoIter = ::core::iter::Empty<
-            ::pest_typed::re_exported::Box<
-                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
-            >,
-        >;
-        fn iter_pairs(&'n self) -> Self::Iter {
-            ::core::iter::empty()
-        }
-        fn into_iter_pairs(self) -> Self::IntoIter {
-            ::core::iter::empty()
+    impl<'i> ::pest_typed::iterators::Pairs<'i, super::Rule> for XID_START {
+        fn for_self_or_each_child(
+            &self,
+            _f: &mut impl ::pest_typed::re_exported::FnMut(
+                ::pest_typed::iterators::Token<'i, super::Rule>,
+            ),
+        ) {
         }
     }
     #[allow(non_camel_case_types)]
@@ -247,18 +232,13 @@ pub mod unicode {
                 .finish()
         }
     }
-    impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for ARABIC {
-        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
-        type IntoIter = ::core::iter::Empty<
-            ::pest_typed::re_exported::Box<
-                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
-            >,
-        >;
-        fn iter_pairs(&'n self) -> Self::Iter {
-            ::core::iter::empty()
-        }
-        fn into_iter_pairs(self) -> Self::IntoIter {
-            ::core::iter::empty()
+    impl<'i> ::pest_typed::iterators::Pairs<'i, super::Rule> for ARABIC {
+        fn for_self_or_each_child(
+            &self,
+            _f: &mut impl ::pest_typed::re_exported::FnMut(
+                ::pest_typed::iterators::Token<'i, super::Rule>,
+            ),
+        ) {
         }
     }
     #[allow(non_camel_case_types)]
@@ -295,18 +275,13 @@ pub mod unicode {
                 .finish()
         }
     }
-    impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for HAN {
-        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
-        type IntoIter = ::core::iter::Empty<
-            ::pest_typed::re_exported::Box<
-                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
-            >,
-        >;
-        fn iter_pairs(&'n self) -> Self::Iter {
-            ::core::iter::empty()
-        }
-        fn into_iter_pairs(self) -> Self::IntoIter {
-            ::core::iter::empty()
+    impl<'i> ::pest_typed::iterators::Pairs<'i, super::Rule> for HAN {
+        fn for_self_or_each_child(
+            &self,
+            _f: &mut impl ::pest_typed::re_exported::FnMut(
+                ::pest_typed::iterators::Token<'i, super::Rule>,
+            ),
+        ) {
         }
     }
     #[allow(non_camel_case_types)]
@@ -343,18 +318,13 @@ pub mod unicode {
                 .finish()
         }
     }
-    impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for HANGUL {
-        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
-        type IntoIter = ::core::iter::Empty<
-            ::pest_typed::re_exported::Box<
-                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
-            >,
-        >;
-        fn iter_pairs(&'n self) -> Self::Iter {
-            ::core::iter::empty()
-        }
-        fn into_iter_pairs(self) -> Self::IntoIter {
-            ::core::iter::empty()
+    impl<'i> ::pest_typed::iterators::Pairs<'i, super::Rule> for HANGUL {
+        fn for_self_or_each_child(
+            &self,
+            _f: &mut impl ::pest_typed::re_exported::FnMut(
+                ::pest_typed::iterators::Token<'i, super::Rule>,
+            ),
+        ) {
         }
     }
     #[allow(non_camel_case_types)]
@@ -391,18 +361,13 @@ pub mod unicode {
                 .finish()
         }
     }
-    impl<'i: 'n, 'n> ::pest_typed::iterators::Pairs<'i, 'n, super::Rule> for HIRAGANA {
-        type Iter = ::core::iter::Empty<&'n dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule>>;
-        type IntoIter = ::core::iter::Empty<
-            ::pest_typed::re_exported::Box<
-                dyn ::pest_typed::iterators::Pair<'i, 'n, super::Rule> + 'n,
-            >,
-        >;
-        fn iter_pairs(&'n self) -> Self::Iter {
-            ::core::iter::empty()
-        }
-        fn into_iter_pairs(self) -> Self::IntoIter {
-            ::core::iter::empty()
+    impl<'i> ::pest_typed::iterators::Pairs<'i, super::Rule> for HIRAGANA {
+        fn for_self_or_each_child(
+            &self,
+            _f: &mut impl ::pest_typed::re_exported::FnMut(
+                ::pest_typed::iterators::Token<'i, super::Rule>,
+            ),
+        ) {
         }
     }
 }

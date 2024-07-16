@@ -1,5 +1,5 @@
 use anyhow::Error;
-use pest_typed::ParsableTypedNode as _;
+use pest_typed::TypedParser;
 use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
@@ -9,7 +9,7 @@ use pest_typed_derive::TypedParser;
 struct Parser;
 
 fn main() -> Result<(), Error> {
-    let a = pairs::a::try_parse("abbbbbb")?;
+    let a = Parser::try_parse::<pairs::a>("abbbbbb")?;
     #[cfg(feature = "grammar-extras")]
     {
         // With node tags, one can access inner nodes more precisely without defining many rules.

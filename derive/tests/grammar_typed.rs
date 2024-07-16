@@ -19,11 +19,12 @@
 //! - [`sequence_non_atomic`].
 
 use pest_typed::{
-    iterators::{Pair, Token},
+    iterators::{Pair, ThinToken},
     ParsableTypedNode, Span,
 };
 use pest_typed_derive::TypedParser;
 
+#[allow(dead_code)]
 #[derive(TypedParser)]
 #[grammar = "tests/grammar.pest"]
 struct GrammarParser;
@@ -36,7 +37,7 @@ macro_rules! tokens {
 
 macro_rules! token {
     ($rule:ident ( $start:literal, $end:literal )) => {{
-        Token::<Rule> {
+        ThinToken::<Rule> {
             rule: Rule::$rule,
             start: $start,
             end: $end,
@@ -44,7 +45,7 @@ macro_rules! token {
         }
     }};
     ($rule:ident ( $start:literal, $end:literal, [ $( $names:ident $tokens:tt ),* $(,)* ] )) => {{
-        Token {
+        ThinToken {
             rule: Rule::$rule,
             start: $start,
             end: $end,
@@ -66,7 +67,7 @@ macro_rules! parses_to {
         let (_, res_) = pairs::$rule::try_parse_partial(span).unwrap();
         assert_eq!(res, res.clone());
         assert_eq!(res, res_);
-        let actual = vec![res.as_token_tree()];
+        let actual = vec![res.as_thin_token()];
         assert_eq!(
             actual,
             tokens,

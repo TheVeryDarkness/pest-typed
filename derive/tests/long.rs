@@ -10,6 +10,7 @@
 use pest_typed::ParsableTypedNode;
 use pest_typed_derive::TypedParser;
 
+#[allow(dead_code)]
 #[derive(TypedParser)]
 #[grammar_inline = r#"
 x = { "a" ~ "b" ~ "c" ~ "d" ~ "e" ~ "f" ~ "g" ~ "h" ~ "i" ~ "j" ~ "k" ~ "l" ~ "m" ~ "n" ~ "o" ~ "p" }

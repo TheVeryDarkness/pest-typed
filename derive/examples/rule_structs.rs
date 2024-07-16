@@ -1,5 +1,5 @@
 use anyhow::Error;
-use pest_typed::{ParsableTypedNode as _, RuleStruct, Span, Storage};
+use pest_typed::{RuleStruct, Span, Storage, TypedParser};
 use pest_typed_derive::{match_choices, TypedParser};
 
 #[derive(TypedParser)]
@@ -13,7 +13,7 @@ d = ${ "d" }
 struct Parser;
 
 fn parse(input: &'static str) -> Result<(), Error> {
-    let a = pairs::a::try_parse(input)?;
+    let a = Parser::try_parse::<pairs::a>(input)?;
     // With accesser API.
     // Call `b()` to get reference to `b`.
     // Call `c()` to get reference to `c`.

@@ -2,7 +2,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use anyhow::Error;
 use core::{iter, result::Result};
-use pest_typed::ParsableTypedNode as _;
+use pest_typed::TypedParser;
 use pest_typed_derive::TypedParser;
 
 /// See https://datatracker.ietf.org/doc/html/rfc4180.html for CSV's format.
@@ -15,7 +15,7 @@ fn main() -> Result<(), Error> {
     // Prepare input. Output syntax will depend on this.
     let input = "name,age\nTom,10\nJerry,20";
     // Parser output. We may need some extra operations to make it into a table.
-    let file = pairs::file::try_parse(input)?;
+    let file = Parser::try_parse::<pairs::file>(input)?;
     // Separate file by row. As pest don't have separator yet, this may be very common.
     // As `file` has 2 references to `row` in total,
     // return value type will also be a tuple with 2 elements.

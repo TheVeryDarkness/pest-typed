@@ -1,6 +1,6 @@
 use anyhow::Result;
 use indoc::indoc;
-use pest_typed::{iterators::PairTree, ParsableTypedNode};
+use pest_typed::{iterators::PairTree, TypedParser};
 use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
@@ -8,7 +8,7 @@ use pest_typed_derive::TypedParser;
 struct Csv;
 
 fn main() -> Result<()> {
-    let res = pairs::file::try_parse("a,b,c\nd,e,f")?;
+    let res = Csv::try_parse::<pairs::file>("a,b,c\nd,e,f")?;
     let mut buf = String::new();
     res.write_tree_to(&mut buf)?;
     assert_eq!(

@@ -1,5 +1,5 @@
 use anyhow::Error;
-use pest_typed::{ParsableTypedNode as _, Storage as _};
+use pest_typed::{Storage as _, TypedParser as _};
 use pest_typed_derive::{match_choices, TypedParser};
 
 #[derive(TypedParser)]
@@ -13,7 +13,7 @@ b3 = { "d" }
 struct Parser;
 
 fn parse(input: &str) -> Result<(), Error> {
-    let a = pairs::a::try_parse(input)?;
+    let a = Parser::try_parse::<pairs::a>(input)?;
     let (str_a, var_b, c) = a.as_ref();
     assert_eq!(str_a.get_content(), "a");
     match_choices!(var_b {

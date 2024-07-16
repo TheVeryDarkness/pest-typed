@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use pest_typed::{ParsableTypedNode, Storage};
+use pest_typed::{Storage, TypedParser};
 use pest_typed_derive::TypedParser;
 
 #[derive(TypedParser)]
@@ -44,21 +44,19 @@ macro_rules! matching {
 macro_rules! test {
     ($name:ident, $($input:literal)*) => {
         mod $name {
-            use super::pairs;
+            use super::{pairs, Parser};
             use pest_typed::{
                 iterators::{Pair, Pairs},
-                ParsableTypedNode,
+                TypedParser,
             };
             use anyhow::Error;
             const INPUT : &'static str = concat!($($input,)*);
             #[test]
             fn success() -> Result<(), Error> {
-                let res = pairs::$name::try_parse(INPUT)?;
+                let res = Parser::try_parse::<pairs::$name>(INPUT)?;
                 let span = res.span;
-                assert_eq!(span, res.iter_pairs().next().unwrap().span());
-                assert_eq!(span, res.clone().into_iter_pairs().next().unwrap().span());
-                assert!(res.inner().next().is_none());
-                assert!(res.clone().into_inner().next().is_none());
+                assert_eq!(span, res.self_or_children()[0].span);
+                assert!(res.children().is_empty());
                 assert_eq!(res, res.clone());
 
                 matching!(res, $($input)*);
@@ -69,7 +67,7 @@ macro_rules! test {
             fn failed() {
                 let mut buf = String::from(INPUT);
                 buf.pop();
-                pairs::$name::try_parse(buf.as_str()).unwrap_err();
+                Parser::try_parse::<pairs::$name>(buf.as_str()).unwrap_err();
             }
         }
     };
@@ -89,7 +87,7 @@ test!(c12, "a""b""c""d""e""f""g""h""i""j""k""l");
 
 #[test]
 fn choices() {
-    let c4 = pairs::c4::try_parse("abcd").unwrap();
+    let c4 = Parser::try_parse::<pairs::c4>("abcd").unwrap();
     let (_0, _1, _2, _3) = c4.as_ref();
     macro_rules! t {
         ($branch:ident) => {

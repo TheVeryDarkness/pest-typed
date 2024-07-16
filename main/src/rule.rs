@@ -25,19 +25,14 @@ use crate::{
 #[macro_export]
 macro_rules! impl_pairs_with_self {
     ($name:ident, $Rule:ty) => {
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            $crate::iterators::Pairs<'i, 'n, $Rule> for $name<'i, INHERITED>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::iterators::Pairs<'i, $Rule>
+            for $name<'i, INHERITED>
         {
-            type Iter = ::core::iter::Once<&'n dyn $crate::iterators::Pair<'i, 'n, $Rule>>;
-            type IntoIter = ::core::iter::Once<
-                $crate::re_exported::Box<dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n>,
-            >;
-
-            fn iter_pairs(&'n self) -> Self::Iter {
-                ::core::iter::once(self)
-            }
-            fn into_iter_pairs(self) -> Self::IntoIter {
-                ::core::iter::once($crate::re_exported::Box::new(self))
+            fn for_self_or_each_child(
+                &self,
+                f: &mut impl $crate::re_exported::FnMut($crate::iterators::Token<'i, $Rule>),
+            ) {
+                f($crate::iterators::Pair::<'i, $Rule>::as_token(self))
             }
         }
     };
@@ -55,28 +50,14 @@ macro_rules! impl_pairs_with_self {
 #[macro_export]
 macro_rules! impl_pairs_with_inner {
     ($name:ident, $Rule:ty, $inner:ty) => {
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            $crate::iterators::Pairs<'i, 'n, $Rule> for $name<'i, INHERITED>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::iterators::Pairs<'i, $Rule>
+            for $name<'i, INHERITED>
         {
-            type Iter =
-                $crate::re_exported::vec::IntoIter<&'n dyn $crate::iterators::Pair<'i, 'n, $Rule>>;
-            type IntoIter = $crate::re_exported::vec::IntoIter<
-                $crate::re_exported::Box<dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n>,
-            >;
-
-            fn iter_pairs(&'n self) -> Self::Iter {
-                let i =
-                    <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::iter_pairs(&self.content);
-                i.collect::<$crate::re_exported::Vec<_>>().into_iter()
-            }
-            fn into_iter_pairs(self) -> Self::IntoIter {
-                let i = self.content.into_iter_pairs();
-                /*
-                let i = <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::into_iter(
-                    self.content,
-                );
-                */
-                i.collect::<$crate::re_exported::Vec<_>>().into_iter()
+            fn for_self_or_each_child(
+                &self,
+                f: &mut impl $crate::re_exported::FnMut($crate::iterators::Token<'i, $Rule>),
+            ) {
+                self.content.for_self_or_each_child(f);
             }
         }
     };
@@ -154,29 +135,20 @@ macro_rules! impl_deref {
 #[macro_export]
 macro_rules! impl_pair_with_empty {
     ($name:ident, $Rule:ty, $rule:expr) => {
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> $crate::Spanned<'i, $Rule>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::Spanned<'i, $Rule>
             for $name<'i, INHERITED>
         {
             fn span(&self) -> $crate::Span<'i> {
                 self.span
             }
         }
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            $crate::iterators::Pair<'i, 'n, $Rule> for $name<'i, INHERITED>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::iterators::Pair<'i, $Rule>
+            for $name<'i, INHERITED>
         {
-            fn inner(
-                &'n self,
-            ) -> $crate::re_exported::vec::IntoIter<
-                &'n (dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n),
-            > {
-                $crate::re_exported::Vec::new().into_iter()
-            }
-            fn into_inner(
-                self,
-            ) -> $crate::re_exported::vec::IntoIter<
-                $crate::re_exported::Box<(dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n)>,
-            > {
-                $crate::re_exported::Vec::new().into_iter()
+            fn for_each_child(
+                &self,
+                f: impl $crate::re_exported::FnMut($crate::iterators::Token<'i, $Rule>),
+            ) {
             }
         }
     };
@@ -198,34 +170,24 @@ macro_rules! impl_pair_with_content {
         {
             type Inner = $inner;
         }
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> $crate::Spanned<'i, $Rule>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::Spanned<'i, $Rule>
             for $name<'i, INHERITED>
         {
             fn span(&self) -> $crate::Span<'i> {
                 self.span
             }
         }
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize>
-            $crate::iterators::Pair<'i, 'n, $Rule> for $name<'i, INHERITED>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::iterators::Pair<'i, $Rule>
+            for $name<'i, INHERITED>
         {
-            fn inner(
-                &'n self,
-            ) -> $crate::re_exported::vec::IntoIter<
-                &'n (dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n),
-            > {
-                let i =
-                    <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::iter_pairs(&self.content);
-                i.collect::<$crate::re_exported::Vec<_>>().into_iter()
-            }
-            fn into_inner(
-                self,
-            ) -> $crate::re_exported::vec::IntoIter<
-                $crate::re_exported::Box<(dyn $crate::iterators::Pair<'i, 'n, $Rule> + 'n)>,
-            > {
-                let i = <$inner as $crate::iterators::Pairs<'i, 'n, $Rule>>::into_iter_pairs(
-                    <Self as $crate::RuleStruct<$Rule>>::take_inner(self),
+            fn for_each_child(
+                &self,
+                mut f: impl $crate::re_exported::FnMut($crate::iterators::Token<'i, $Rule>),
+            ) {
+                $crate::iterators::Pairs::<'i, $Rule>::for_self_or_each_child(
+                    &self.content,
+                    &mut f,
                 );
-                i.collect::<$crate::re_exported::Vec<_>>().into_iter()
             }
         }
     };
@@ -242,7 +204,7 @@ macro_rules! impl_pair_with_content {
 #[macro_export]
 macro_rules! impl_rule_struct {
     ($name:ident, $Rule:ty, $inner:ty, true) => {
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> $crate::RuleStruct<'i, $Rule>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::RuleStruct<'i, $Rule>
             for $name<'i, INHERITED>
         {
             type Inner = $inner;
@@ -258,7 +220,7 @@ macro_rules! impl_rule_struct {
         }
     };
     ($name:ident, $Rule:ty, $inner:ty, false) => {
-        impl<'i: 'n, 'n, const INHERITED: ::core::primitive::usize> $crate::RuleStruct<'i, $Rule>
+        impl<'i, const INHERITED: ::core::primitive::usize> $crate::RuleStruct<'i, $Rule>
             for $name<'i, INHERITED>
         {
             type Inner = $inner;

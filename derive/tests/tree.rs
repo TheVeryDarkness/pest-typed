@@ -10,6 +10,7 @@
 use pest_typed::{iterators::PairTree, ParsableTypedNode};
 use pest_typed_derive::TypedParser;
 
+#[allow(dead_code)]
 #[derive(TypedParser)]
 #[grammar_inline = r#"
 main = { (pre? ~ val) ~ (mid ~ pre? ~ val)* }

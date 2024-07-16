@@ -12,6 +12,7 @@ use std::{collections::HashSet, ops::DerefMut};
 use pest_typed::{predefined_node::RepMin, ParsableTypedNode};
 use pest_typed_derive::TypedParser;
 
+#[allow(dead_code)]
 #[derive(TypedParser)]
 #[grammar_inline = r#"
 main = { PUSH(^"foo")* ~ " " ~ PEEK[1..] }

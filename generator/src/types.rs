@@ -15,11 +15,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-/// `Box` in corresponding context.
-pub fn box_type() -> TokenStream {
-    quote! { ::pest_typed::re_exported::Box }
-}
-
 /// `Option` in corresponding context.
 pub fn option_type() -> TokenStream {
     quote! { ::pest_typed::re_exported::Option }

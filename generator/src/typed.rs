@@ -199,7 +199,7 @@ mod tests {
                 truncate_accesser_at_node_tag: false,
                 simulate_pair_api: false,
                 box_only_if_needed: false,
-                no_warnings: true
+                no_warnings: true,
             }
         );
     }

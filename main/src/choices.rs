@@ -21,7 +21,7 @@ pub trait NextChoice {
 /// Generate choice helpers that can be used to traverse those branches.
 /// Automatically called by [`crate::choices!`].
 macro_rules! choices_helper {
-    ($pest_typed:ident, $name:ident, ($_V0:ident, $_v0:tt, $( $_V:ident, $_v:tt, )* ), $V0:ident, $v0:tt, $V1:ident, $v1:tt, $( $V:ident, $v:tt, )* ) => {
+    ($name:ident, ($_V0:ident, $_v0:tt, $( $_V:ident, $_v:tt, )* ), $V0:ident, $v0:tt, $V1:ident, $v1:tt, $( $V:ident, $v:tt, )* ) => {
         /// Choices.
         /// - `Ret`: Return value type.
         /// - `...`: Choices branches.
@@ -34,12 +34,12 @@ macro_rules! choices_helper {
             Res(Ret),
         }
 
-        impl<Ret, $V0, $V1, $($V, )*> $pest_typed::choices::NextChoice for $v0<Ret, $V0, $V1, $($V, )*> {
+        impl<Ret, $V0, $V1, $($V, )*> $crate::choices::NextChoice for $v0<Ret, $V0, $V1, $($V, )*> {
             type Next = $v1<Ret, $V1, $($V, )*>;
         }
         impl<Ret, $V0, $V1, $($V, )*> $v0<Ret, $V0, $V1, $($V, )*>
         {
-            pub fn else_if(self, f: impl FnOnce($V0) -> Ret) -> <Self as $pest_typed::choices::NextChoice>::Next {
+            pub fn else_if(self, f: impl FnOnce($V0) -> Ret) -> <Self as $crate::choices::NextChoice>::Next {
                 match self {
                     Self::$v0(c) => $v1::Res(f(c)),
                     Self::$v1(c) => $v1::$v1(c),
@@ -50,9 +50,9 @@ macro_rules! choices_helper {
                 }
             }
         }
-        $crate::choices_helper!($pest_typed, $name, ($_V0, $_v0, $( $_V, $_v, )* ), $V1, $v1, $( $V, $v, )* );
+        $crate::choices_helper!($name, ($_V0, $_v0, $( $_V, $_v, )* ), $V1, $v1, $( $V, $v, )* );
     };
-    ($pest_typed:ident, $name:ident, ($_V0:ident, $_v0:tt, $( $_V:ident, $_v:tt, )* ), $V0:ident, $v0:tt, ) => {
+    ($name:ident, ($_V0:ident, $_v0:tt, $( $_V:ident, $_v:tt, )* ), $V0:ident, $v0:tt, ) => {
         pub enum $v0<Ret, $V0> {
             $v0($V0),
             Res(Ret),
@@ -69,36 +69,11 @@ macro_rules! choices_helper {
 }
 
 #[macro_export]
-/// Generate an iterator type that implements [`core::iter::Iterator`] for choices.
-/// Automatically called by [`crate::choices!`].
-macro_rules! choices_iter {
-    ($name:ident, $pest_typed:ident, $iter_type:ident, $iter_func:ident, $item:ty, $V0:ident, $v0:tt, $( $V:ident, $v:tt, )* ) => {
-        pub enum $iter_type<'i, 'n, R: $pest_typed::RuleType, $V0: $pest_typed::iterators::Pairs<'i, 'n, R>, $($V: $pest_typed::iterators::Pairs<'i, 'n, R>, )* > {
-            $v0($V0::$iter_type),
-            $(
-                $v($V::$iter_type),
-            )*
-        }
-        impl<'i: 'n, 'n, R: $pest_typed::RuleType + 'n, $V0: $pest_typed::iterators::Pairs<'i, 'n, R>, $($V: $pest_typed::iterators::Pairs<'i, 'n, R>, )* >
-            ::core::iter::Iterator for $iter_type<'i, 'n, R, $V0, $($V, )*>
-        {
-            type Item = $item;
-            fn next(&mut self) -> Option<<Self as ::core::iter::Iterator>::Item> {
-                match self {
-                    Self::$v0($v0) => $v0.next(),
-                    $(Self::$v($v) => $v.next(), )*
-                }
-            }
-        }
-    };
-}
-
-#[macro_export]
 /// Generate choices with given type name and variant names.
 ///
 /// Also traverse helpers by calling [`choices_helper`] and iterators by calling [`choices_iter`].
 macro_rules! choices {
-    ($name:ident, $pest_typed:ident, $mod:ident, $number:literal, $V0:ident, $v0:tt, $( $V:ident, $v:tt, )* ) => {
+    ($name:ident, $mod:ident, $number:literal, $V0:ident, $v0:tt, $( $V:ident, $v:tt, )* ) => {
         pub use $mod::$name;
         #[doc = ::core::stringify!(Types for choices type [$name].)]
         pub mod $mod {
@@ -161,21 +136,21 @@ macro_rules! choices {
                     }
                 )*
             }
-            impl<'i, R: $pest_typed::RuleType, $V0: $pest_typed::TypedNode<'i, R>, $($V: $pest_typed::TypedNode<'i, R>, )* > $pest_typed::TypedNode<'i, R>
+            impl<'i, R: $crate::RuleType, $V0: $crate::TypedNode<'i, R>, $($V: $crate::TypedNode<'i, R>, )* > $crate::TypedNode<'i, R>
                 for $name<$V0, $($V, )* >
             {
                 #[inline]
                 fn try_parse_partial_with<I: $crate::Input<'i>>(
                     input: I,
-                    stack: &mut $pest_typed::Stack<$pest_typed::Span<'i>>,
-                    tracker: &mut $pest_typed::tracker::Tracker<'i, R>,
+                    stack: &mut $crate::Stack<$crate::Span<'i>>,
+                    tracker: &mut $crate::tracker::Tracker<'i, R>,
                 ) -> ::core::option::Option<(I, Self)> {
-                    let res = $pest_typed::predefined_node::restore_on_none(stack, |stack| $V0::try_parse_partial_with(input, stack, tracker));
+                    let res = $crate::predefined_node::restore_on_none(stack, |stack| $V0::try_parse_partial_with(input, stack, tracker));
                     if let Some((input, res)) = res {
                         return Some((input, Self::$v0(res)));
                     }
                     $(
-                        let res = $pest_typed::predefined_node::restore_on_none(stack, |stack| $V::try_parse_partial_with(input, stack, tracker));
+                        let res = $crate::predefined_node::restore_on_none(stack, |stack| $V::try_parse_partial_with(input, stack, tracker));
                         if let Some((input, res)) = res {
                             return Some((input, Self::$v(res)));
                         }
@@ -184,28 +159,18 @@ macro_rules! choices {
                 }
             }
             impl<
-                'i: 'n,
-                'n,
-                R: $pest_typed::RuleType + 'i,
-                $V0: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>,
-                $($V: $pest_typed::TypedNode<'i, R> + $pest_typed::iterators::Pairs<'i, 'n, R>, )*
-            > $pest_typed::iterators::Pairs<'i, 'n, R> for $name<$V0, $($V, )* >
+                'i,
+                R: $crate::RuleType + 'i,
+                $V0: $crate::TypedNode<'i, R> + $crate::iterators::Pairs<'i, R>,
+                $($V: $crate::TypedNode<'i, R> + $crate::iterators::Pairs<'i, R>, )*
+            > $crate::iterators::Pairs<'i, R> for $name<$V0, $($V, )* >
             {
-                type Iter = iterators::Iter<'i, 'n, R, $V0, $($V, )*>;
-                type IntoIter = iterators::IntoIter<'i, 'n, R, $V0, $($V, )*>;
-
-                fn iter_pairs(&'n self) -> Self::Iter {
+                fn for_self_or_each_child(&self, f: &mut impl FnMut($crate::iterators::Token<'i, R>)) {
                     match self {
-                        Self::$v0($v0) => Self::Iter::$v0($v0.iter_pairs()),
+                        Self::$v0($v0) =>$v0.for_self_or_each_child(f),
                         $(
-                            Self::$v($v) => Self::Iter::$v($v.iter_pairs()),
+                            Self::$v($v) => $v.for_self_or_each_child(f),
                         )*
-                    }
-                }
-                fn into_iter_pairs(self) -> Self::IntoIter {
-                    match self {
-                        Self::$v0($v0) => Self::IntoIter::$v0($v0.into_iter_pairs()),
-                        $(Self::$v($v) => Self::IntoIter::$v($v.into_iter_pairs()), )*
                     }
                 }
             }
@@ -222,11 +187,7 @@ macro_rules! choices {
                 }
             }
             mod helper {
-                $crate::choices_helper!($pest_typed, $name, ($V0, $v0, $( $V, $v, )* ), $V0, $v0, $( $V, $v, )* );
-            }
-            mod iterators {
-                $crate::choices_iter!($name, $pest_typed, Iter, iter, &'n (dyn $pest_typed::iterators::Pair<'i, 'n, R>), $V0, $v0, $( $V, $v, )* );
-                $crate::choices_iter!($name, $pest_typed, IntoIter, into_iter, $pest_typed::Box<dyn $pest_typed::iterators::Pair<'i, 'n, R> + 'n>, $V0, $v0, $( $V, $v, )* );
+                $crate::choices_helper!($name, ($V0, $v0, $( $V, $v, )* ), $V0, $v0, $( $V, $v, )* );
             }
         }
     };
@@ -234,28 +195,25 @@ macro_rules! choices {
 
 // Choices helper and iterator.
 
-choices!(Choice2, crate, choice2, 2, T0, _0, T1, _1,);
-choices!(Choice3, crate, choice3, 3, T0, _0, T1, _1, T2, _2,);
-choices!(Choice4, crate, choice4, 4, T0, _0, T1, _1, T2, _2, T3, _3,);
-choices!(Choice5, crate, choice5, 5, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4,);
-choices!(Choice6, crate, choice6, 6, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5,);
-choices!(Choice7, crate, choice7, 7, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6,);
+choices!(Choice2, choice2, 2, T0, _0, T1, _1,);
+choices!(Choice3, choice3, 3, T0, _0, T1, _1, T2, _2,);
+choices!(Choice4, choice4, 4, T0, _0, T1, _1, T2, _2, T3, _3,);
+choices!(Choice5, choice5, 5, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4,);
+choices!(Choice6, choice6, 6, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5,);
+choices!(Choice7, choice7, 7, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6,);
+choices!(Choice8, choice8, 8, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,);
 choices!(
-    Choice8, crate, choice8, 8, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
+    Choice9, choice9, 9, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7, T8, _8,
 );
 choices!(
-    Choice9, crate, choice9, 9, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7, T8,
-    _8,
+    Choice10, choice10, 10, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7, T8, _8,
+    T9, _9,
 );
 choices!(
-    Choice10, crate, choice10, 10, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
-    T8, _8, T9, _9,
+    Choice11, choice11, 11, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7, T8, _8,
+    T9, _9, T10, _10,
 );
 choices!(
-    Choice11, crate, choice11, 11, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
-    T8, _8, T9, _9, T10, _10,
-);
-choices!(
-    Choice12, crate, choice12, 12, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7,
-    T8, _8, T9, _9, T10, _10, T11, _11,
+    Choice12, choice12, 12, T0, _0, T1, _1, T2, _2, T3, _3, T4, _4, T5, _5, T6, _6, T7, _7, T8, _8,
+    T9, _9, T10, _10, T11, _11,
 );

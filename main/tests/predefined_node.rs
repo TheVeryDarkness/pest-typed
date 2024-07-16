@@ -143,8 +143,8 @@ mod tests {
         assert_eq!(format(&rep1), format(&rep2));
         assert_eq!(format(&rep1), format(&rep3));
 
-        for i in rep1.clone().into_inner() {
-            assert_eq!(i.rule(), Rule::Foo);
+        for i in rep1.clone().children() {
+            assert_eq!(i.rule, Rule::Foo);
         }
 
         // White spaces and comments aren't filtered out.
@@ -194,15 +194,12 @@ mod tests {
         assert_eq!(collect(&rep1), collect(&rep3));
         assert_eq!(collect(&rep1), collect(&rep4));
 
-        assert_eq!(rep1.clone().into_iter_pairs().count(), 1);
-        assert_eq!(
-            rep1.clone().into_iter_pairs().next().unwrap().rule(),
-            Rule::RepFoo
-        );
+        assert_eq!(rep1.clone().self_or_children().len(), 1);
+        assert_eq!(rep1.clone().self_or_children()[0].rule, Rule::RepFoo);
 
         {
             let mut buf = String::new();
-            rep3.iterate_level_order(|p, _depth, _queue| writeln!(buf, "{}", p.span().as_str()))
+            rep3.iterate_level_order(|p, _depth| writeln!(buf, "{}", p.span.as_str()))
                 .unwrap();
             assert_eq!(buf, "Foo foo\tfoo\n \n\t\n");
             assert_eq!(
@@ -339,13 +336,10 @@ mod tests {
         for i in baz.iter() {
             let (neg, any) = i;
             assert_eq!(
-                <Negative<_> as Pairs<'_, '_, Rule>>::into_iter_pairs(neg.clone()).count(),
+                <Negative<_> as Pairs<'_, Rule>>::self_or_children(neg).len(),
                 0
             );
-            assert_eq!(
-                <ANY as Pairs<'_, '_, Rule>>::into_iter_pairs(any.clone()).count(),
-                0
-            );
+            assert_eq!(<ANY as Pairs<'_, Rule>>::self_or_children(any).len(), 0);
         }
         let _ = not_foo_bar::<1>::try_parse("Foofoo").unwrap_err();
         let _ = not_foo_bar::<1>::try_parse("bazfoo").unwrap_err();

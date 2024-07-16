@@ -16,18 +16,18 @@ use crate::{
         POP, POP_ALL, SOI,
     },
     typed_node::{RuleStorage, RuleStruct, Spanned},
-    StringArrayWrapper, StringWrapper, TypedNode,
+    Span, StringArrayWrapper, StringWrapper, TypedNode,
 };
-use alloc::{boxed, collections::VecDeque, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, collections::VecDeque, string::String, vec::Vec};
 use core::{
-    iter::{self, empty, once, Chain, FlatMap, Iterator},
+    iter::{once, Iterator},
     mem::swap,
 };
 use pest::RuleType;
 
 /// Token.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Token<R: RuleType> {
+pub struct ThinToken<R: RuleType> {
     /// Rule.
     pub rule: R,
     /// Start position.
@@ -38,54 +38,81 @@ pub struct Token<R: RuleType> {
     pub children: Vec<Self>,
 }
 
-/// Simulate [`pest::iterators::Pairs`].
-pub trait Pairs<'i: 'n, 'n, R: RuleType + 'n> {
-    /// Iterator type that iterate on inner pairs by reference.
-    type Iter: Iterator<Item = &'n (dyn Pair<'i, 'n, R>)>;
-    /// Iterator type that iterate on inner pairs by value.
-    type IntoIter: Iterator<Item = boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
-    /// Iterate on inner pairs by reference. Returns [`Pairs::Iter`].
-    fn iter_pairs(&'n self) -> Self::Iter;
-    /// Iterate on inner pairs by value. Returns [`Pairs::IntoIter`].
-    fn into_iter_pairs(self) -> Self::IntoIter;
+/// Token.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Token<'i, R: RuleType> {
+    /// Rule.
+    pub rule: R,
+    /// Span.
+    pub span: Span<'i>,
+    /// Children.
+    pub children: Vec<Self>,
 }
 
-/// Simulate [`pest::iterators::Pair`].
-pub trait Pair<'i: 'n, 'n, R: RuleType + 'n>: Spanned<'i, R> + RuleStorage<R> {
-    /// Collect inner pairs' [`Pairs::Iter`] and make them into a [`vec::IntoIter`].
-    fn inner(&'n self) -> vec::IntoIter<&'n (dyn Pair<'i, 'n, R>)>;
-    /// Collect inner pairs' [`Pairs::IntoIter`] and make them into a [`vec::IntoIter`].
-    fn into_inner(self) -> vec::IntoIter<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
-    /// As tokens.
-    ///
-    /// Call [`Pair::inner`] recursively.
-    fn as_token_tree(&'n self) -> Token<R> {
-        let children = self.inner().map(|p| p.as_token_tree()).collect();
-        Token::<R> {
-            rule: self.rule(),
-            start: self.span().start(),
-            end: self.span().end(),
+impl<'i, R: RuleType> Token<'i, R> {
+    /// To [`ThinToken`].
+    pub fn to_thin(&self) -> ThinToken<R> {
+        let rule = self.rule;
+        let start = self.span.start();
+        let end = self.span.end();
+        let children = self.children.iter().map(|c| c.to_thin()).collect();
+        ThinToken {
+            rule,
+            start,
+            end,
             children,
         }
     }
 }
 
-fn iterate_level_order<'i: 'n, 'n, R: RuleType + 'n, E>(
-    p: &'n impl Pair<'i, 'n, R>,
-    mut f: impl FnMut(
-        &'n (dyn Pair<'i, 'n, R>),
-        usize,
-        &VecDeque<&dyn Pair<'i, 'n, R>>,
-    ) -> Result<(), E>,
+/// Simulate [`pest::iterators::Pairs`].
+pub trait Pairs<'i, R: RuleType> {
+    /// For each inner pair by reference if this is a container, otherwise for self.
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>));
+    /// Collect inner pairs and make them into a [`Vec`].
+    fn self_or_children(&self) -> Vec<Token<'i, R>> {
+        let mut children = Vec::new();
+        self.for_self_or_each_child(&mut |token| children.push(token));
+        children
+    }
+}
+
+/// Simulate [`pest::iterators::Pair`].
+pub trait Pair<'i, R: RuleType>: Spanned<'i, R> + RuleStorage<R> {
+    /// Iterate over all inner children.
+    fn for_each_child(&self, f: impl FnMut(Token<'i, R>));
+    /// Collect inner [Token]s and make them into a [`Vec`].
+    fn children(&self) -> Vec<Token<'i, R>> {
+        let mut children = Vec::new();
+        self.for_each_child(|token| children.push(token));
+        children
+    }
+    /// As [Token]s. Call [`Pair::children`] inside.
+    fn as_token(&self) -> Token<'i, R> {
+        let children = self.children();
+        Token::<R> {
+            rule: self.rule(),
+            span: self.span(),
+            children,
+        }
+    }
+    /// As [Token]s. Call [`Pair::children`] inside.
+    fn as_thin_token(&self) -> ThinToken<R> {
+        self.as_token().to_thin()
+    }
+}
+
+fn iterate_level_order<'i, R: RuleType, E>(
+    p: &impl Pair<'i, R>,
+    mut f: impl FnMut(&Token<'i, R>, usize) -> Result<(), E>,
 ) -> Result<(), E> {
-    let mut queue: VecDeque<&'n (dyn Pair<'i, 'n, R>)> = VecDeque::new();
+    let mut queue: VecDeque<Token<'i, R>> = VecDeque::new();
     let mut next = VecDeque::new();
-    queue.push_back(p);
+    queue.push_back(p.as_token());
     loop {
         while let Some(p) = queue.pop_front() {
-            let mut children = p.inner().collect::<VecDeque<_>>();
-            f(p, queue.len(), &children)?;
-            next.append(&mut children);
+            f(&p, queue.len())?;
+            next.extend(p.children);
         }
         swap(&mut queue, &mut next);
         if queue.is_empty() {
@@ -94,25 +121,20 @@ fn iterate_level_order<'i: 'n, 'n, R: RuleType + 'n, E>(
     }
 }
 /// Pre-order traversal
-fn iterate_pre_order<'i: 'n, 'n, R: RuleType + 'n, E>(
-    p: &'n impl Pair<'i, 'n, R>,
-    mut f: impl FnMut(
-        &'n (dyn Pair<'i, 'n, R>),
-        usize,
-        &VecDeque<&dyn Pair<'i, 'n, R>>,
-    ) -> Result<(), E>,
+fn iterate_pre_order<'i, R: RuleType, E>(
+    p: &impl Pair<'i, R>,
+    mut f: impl FnMut(&Token<'i, R>, usize) -> Result<(), E>,
 ) -> Result<(), E> {
-    let mut stack: Vec<VecDeque<&'n (dyn Pair<'i, 'n, R>)>> = Vec::new();
+    let mut stack: Vec<VecDeque<Token<'i, R>>> = Vec::new();
 
-    let root: &'n (dyn Pair<'i, 'n, R>) = p;
-    stack.push(VecDeque::<&'n (dyn Pair<'i, 'n, R>)>::from_iter(once(root)));
+    let root: Token<'i, R> = p.as_token();
+    stack.push(VecDeque::<Token<'i, R>>::from_iter(once(root)));
 
     loop {
         if let Some(parent) = stack.last_mut() {
             if let Some(first) = parent.pop_front() {
-                let children = first.inner().collect::<VecDeque<_>>();
-                f(first, stack.len() - 1, &children)?;
-                stack.push(children);
+                f(&first, stack.len() - 1)?;
+                stack.push(first.children.into());
             } else {
                 stack.pop();
             }
@@ -124,95 +146,68 @@ fn iterate_pre_order<'i: 'n, 'n, R: RuleType + 'n, E>(
 
 /// Write the tree to.
 fn write_tree_to<'i: 'n, 'n, R: RuleType + 'n>(
-    p: &'n impl Pair<'i, 'n, R>,
+    p: &'n impl Pair<'i, R>,
     buf: &mut impl core::fmt::Write,
 ) -> core::fmt::Result {
-    iterate_pre_order(p, |p, depth, children| {
-        if children.is_empty() {
+    iterate_pre_order(p, |p, depth| {
+        if p.children.is_empty() {
             buf.write_fmt(format_args!(
                 "{}{:?} {:?}\n",
                 &"    ".repeat(depth),
-                p.rule(),
-                p.span().as_str()
+                p.rule,
+                p.span.as_str(),
             ))
         } else {
-            buf.write_fmt(format_args!("{}{:?}\n", &"    ".repeat(depth), p.rule()))
+            buf.write_fmt(format_args!("{}{:?}\n", &"    ".repeat(depth), p.rule))
         }
     })
 }
 
 /// A trait to traverse the pair as the root of a tree.
-pub trait PairTree<'i: 'n, 'n, R: RuleType + 'n>: Pair<'i, 'n, R> + Sized {
+pub trait PairTree<'i, R: RuleType>: Pair<'i, R> + Sized {
     /// Level order traversal
     fn iterate_level_order<E>(
-        &'n self,
-        f: impl FnMut(
-            &'n (dyn Pair<'i, 'n, R>),
-            usize,
-            &VecDeque<&dyn Pair<'i, 'n, R>>,
-        ) -> Result<(), E>,
+        &self,
+        f: impl FnMut(&Token<'i, R>, usize) -> Result<(), E>,
     ) -> Result<(), E> {
         iterate_level_order(self, f)
     }
     /// Pre-order traversal
     fn iterate_pre_order<E>(
-        &'n self,
-        f: impl FnMut(
-            &'n (dyn Pair<'i, 'n, R>),
-            usize,
-            &VecDeque<&dyn Pair<'i, 'n, R>>,
-        ) -> Result<(), E>,
+        &self,
+        f: impl FnMut(&Token<'i, R>, usize) -> Result<(), E>,
     ) -> Result<(), E> {
         iterate_pre_order(self, f)
     }
 
     /// Write the tree to the `buf`.
-    fn write_tree_to(&'n self, buf: &mut impl core::fmt::Write) -> core::fmt::Result {
+    fn write_tree_to(&self, buf: &mut impl core::fmt::Write) -> core::fmt::Result {
         write_tree_to(self, buf)
     }
 
     /// Format as a tree.
-    fn format_as_tree(&'n self) -> Result<String, core::fmt::Error> {
+    fn format_as_tree(&self) -> Result<String, core::fmt::Error> {
         let mut buf = String::new();
         self.write_tree_to(&mut buf)?;
         Ok(buf)
     }
 }
 
-impl<'i: 'n, 'n, R: RuleType + 'n, T: RuleStruct<'i, R> + Pairs<'i, 'n, R> + Pair<'i, 'n, R>>
-    PairTree<'i, 'n, R> for T
-{
-}
+impl<'i, R: RuleType, T: RuleStruct<'i, R> + Pairs<'i, R> + Pair<'i, R>> PairTree<'i, R> for T {}
 
 macro_rules! impl_empty {
     ($node:ty, $($tt:tt)*) => {
-        impl<'i: 'n, 'n, R: RuleType + 'n, $($tt)*> Pairs<'i, 'n, R> for $node {
-            type Iter = iter::Empty<&'n (dyn Pair<'i, 'n, R>)>;
-            type IntoIter = iter::Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
-
-            fn iter_pairs(&'n self) -> Self::Iter {
-                empty()
-            }
-            fn into_iter_pairs(self) -> Self::IntoIter {
-                empty()
-            }
+        impl<'i, R: RuleType, $($tt)*> Pairs<'i, R> for $node {
+            fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<'i, R>)) {}
         }
     };
 }
 
 macro_rules! impl_forward_inner {
     ($node:ident) => {
-        impl<'i: 'n, 'n, R: RuleType + 'n, T: TypedNode<'i, R> + Pairs<'i, 'n, R>> Pairs<'i, 'n, R>
-            for $node<T>
-        {
-            type Iter = T::Iter;
-            type IntoIter = T::IntoIter;
-
-            fn iter_pairs(&'n self) -> Self::Iter {
-                self.content.iter_pairs()
-            }
-            fn into_iter_pairs(self) -> Self::IntoIter {
-                self.content.into_iter_pairs()
+        impl<'i, R: RuleType, T: TypedNode<'i, R> + Pairs<'i, R>> Pairs<'i, R> for $node<T> {
+            fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+                self.content.for_self_or_each_child(f)
             }
         }
     };
@@ -228,115 +223,55 @@ impl_empty!(CharRange<MIN, MAX>, const MIN: char, const MAX: char);
 impl_empty!(Positive<T>, T: TypedNode<'i, R>);
 impl_empty!(Negative<T>, T: TypedNode<'i, R>);
 
-impl<'i: 'n, 'n, R: RuleType + 'n, T1: Pairs<'i, 'n, R>, T2: Pairs<'i, 'n, R>> Pairs<'i, 'n, R>
-    for (T1, T2)
-{
-    type Iter = Chain<T1::Iter, T2::Iter>;
-    type IntoIter = Chain<T1::IntoIter, T2::IntoIter>;
-
-    fn iter_pairs(&'n self) -> Self::Iter {
-        self.0.iter_pairs().chain(self.1.iter_pairs())
-    }
-    fn into_iter_pairs(self) -> Self::IntoIter {
-        self.0.into_iter_pairs().chain(self.1.into_iter_pairs())
+impl<'i, R: RuleType, T1: Pairs<'i, R>, T2: Pairs<'i, R>> Pairs<'i, R> for (T1, T2) {
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+        self.0.for_self_or_each_child(f);
+        self.1.for_self_or_each_child(f);
     }
 }
 
-impl<'i: 'n, 'n, R: RuleType + 'n, T: Pairs<'i, 'n, R> + 'n, const N: usize> Pairs<'i, 'n, R>
-    for [T; N]
-{
-    type Iter = FlatMap<
-        core::slice::Iter<'n, T>,
-        <T as Pairs<'i, 'n, R>>::Iter,
-        fn(&'n T) -> <T as Pairs<'i, 'n, R>>::Iter,
-    >;
-    type IntoIter = FlatMap<
-        core::array::IntoIter<T, N>,
-        <T as Pairs<'i, 'n, R>>::IntoIter,
-        fn(T) -> <T as Pairs<'i, 'n, R>>::IntoIter,
-    >;
-
-    fn iter_pairs(&'n self) -> Self::Iter {
+impl<'i, R: RuleType, T: Pairs<'i, R>, const N: usize> Pairs<'i, R> for [T; N] {
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
         self.as_slice()
             .iter()
-            .flat_map(|i| <T as Pairs<'i, 'n, R>>::iter_pairs(i))
-    }
-    fn into_iter_pairs(self) -> Self::IntoIter {
-        <Self as IntoIterator>::into_iter(self).flat_map(|i| i.into_iter_pairs())
+            .for_each(|n| n.for_self_or_each_child(f))
     }
 }
 
-impl<'i: 'n, 'n, R: RuleType + 'n, T: TypedNode<'i, R> + Pairs<'i, 'n, R>> Pairs<'i, 'n, R>
-    for Option<T>
-{
-    type Iter = Maybe<&'n (dyn Pair<'i, 'n, R>), T::Iter>;
-    type IntoIter = Maybe<boxed::Box<dyn Pair<'i, 'n, R> + 'n>, T::IntoIter>;
-
-    fn iter_pairs(&'n self) -> Self::Iter {
-        match &self {
-            Some(inner) => Maybe(Some(inner.iter_pairs())),
-            None => Maybe(None),
-        }
+impl<'i, R: RuleType, T: TypedNode<'i, R> + Pairs<'i, R>> Pairs<'i, R> for Box<T> {
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+        self.as_ref().for_self_or_each_child(f)
     }
-    fn into_iter_pairs(self) -> Self::IntoIter {
-        match self {
-            Some(inner) => Maybe(Some(inner.into_iter_pairs())),
-            None => Maybe(None),
+}
+
+impl<'i, R: RuleType, T: TypedNode<'i, R> + Pairs<'i, R>> Pairs<'i, R> for Option<T> {
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+        if let Some(node) = self {
+            node.for_self_or_each_child(f)
         }
     }
 }
 
-impl<
-        'i: 'n,
-        'n,
-        R: RuleType + 'n,
-        T: Pairs<'i, 'n, R>,
-        Skip: Pairs<'i, 'n, R> + 'n,
-        const SKIP: usize,
-    > Pairs<'i, 'n, R> for Skipped<T, Skip, SKIP>
+impl<'i, R: RuleType, T: Pairs<'i, R>, Skip: Pairs<'i, R>, const SKIP: usize> Pairs<'i, R>
+    for Skipped<T, Skip, SKIP>
 {
-    type Iter = Chain<<[Skip; SKIP] as Pairs<'i, 'n, R>>::Iter, T::Iter>;
-    type IntoIter = Chain<<[Skip; SKIP] as Pairs<'i, 'n, R>>::IntoIter, T::IntoIter>;
-    fn iter_pairs(&'n self) -> Self::Iter {
-        self.skipped.iter_pairs().chain(self.matched.iter_pairs())
-    }
-    fn into_iter_pairs(self) -> Self::IntoIter {
-        self.skipped
-            .into_iter_pairs()
-            .chain(self.matched.into_iter_pairs())
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+        self.skipped.for_self_or_each_child(f);
+        self.matched.for_self_or_each_child(f);
     }
 }
 
 macro_rules! impl_with_vec {
     ($name:ident, $(const $args:ident : $t:ty,)*) => {
         impl<
-                'i: 'n,
-                'n,
-                R: RuleType + 'n,
-                T: Pairs<'i, 'n, R> + 'n,
+                'i,
+                R: RuleType,
+                T: Pairs<'i, R>,
                 $(const $args: $t, )*
-            > Pairs<'i, 'n, R> for $name<T, $($args, )*>
+            > Pairs<'i, R> for $name<T, $($args, )*>
         {
-            type Iter = FlatMap<
-                core::slice::Iter<'n, T>,
-                T::Iter,
-                fn(&'n T) -> T::Iter,
-            >;
-            type IntoIter = FlatMap<
-                vec::IntoIter<T>,
-                T::IntoIter,
-                fn(T) -> T::IntoIter,
-            >;
-
-            fn iter_pairs(&'n self) -> Self::Iter {
-                self.content
-                    .iter()
-                    .flat_map(|i| i.iter_pairs())
-            }
-            fn into_iter_pairs(self) -> Self::IntoIter {
-                self.content
-                    .into_iter()
-                    .flat_map(|i| i.into_iter_pairs())
+            fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+                self.content.iter().for_each(|n| n.for_self_or_each_child(f));
             }
         }
     };
@@ -348,31 +283,15 @@ impl_with_vec!(AtomicRep,);
 
 macro_rules! impl_without_lifetime {
     ($id: ident) => {
-        impl<'i: 'n, 'n, R: RuleType + 'n> Pairs<'i, 'n, R> for $id {
-            type Iter = iter::Empty<&'n (dyn Pair<'i, 'n, R>)>;
-            type IntoIter = iter::Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
-
-            fn iter_pairs(&'n self) -> Self::Iter {
-                empty()
-            }
-            fn into_iter_pairs(self) -> Self::IntoIter {
-                empty()
-            }
+        impl<'i, R: RuleType> Pairs<'i, R> for $id {
+            fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<'i, R>)) {}
         }
     };
 }
 macro_rules! impl_with_lifetime {
     ($id: ident) => {
-        impl<'i: 'n, 'n, R: RuleType + 'n> Pairs<'i, 'n, R> for $id<'i> {
-            type Iter = iter::Empty<&'n (dyn Pair<'i, 'n, R>)>;
-            type IntoIter = iter::Empty<boxed::Box<dyn Pair<'i, 'n, R> + 'n>>;
-
-            fn iter_pairs(&'n self) -> Self::Iter {
-                empty()
-            }
-            fn into_iter_pairs(self) -> Self::IntoIter {
-                empty()
-            }
+        impl<'i, R: RuleType> Pairs<'i, R> for $id<'i> {
+            fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<'i, R>)) {}
         }
     };
 }
