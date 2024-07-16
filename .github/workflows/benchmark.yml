@@ -20,7 +20,7 @@ jobs:
       - name: Track base branch benchmarks with Bencher
         run: |
           bencher run \
-          --project pest-typed \
+          --project pest_typed \
           --token '${{ secrets.BENCHER_API_TOKEN }}' \
           --branch ${{ github.ref_name }} \
           --testbed ubuntu-latest \
