@@ -30,14 +30,13 @@ criterion = "0.5.1"
 pest.workspace = true
 pest_derive.workspace = true
 
-# Disabled as we can't finish this in an hour.
+# Disabled as we can't finish these in an hour.
 # [[bench]]
 # name = "basic_benchmark"
 # harness = false
-
-[[bench]]
-name = "profiling"
-harness = false
+# [[bench]]
+# name = "profiling"
+# harness = false
 
 [[bench]]
 name = "comparative"
