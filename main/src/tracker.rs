@@ -55,7 +55,7 @@ pub struct Tracker<'i, R: RuleType> {
     positive: bool,
     /// upper rule -> (positives, negatives)
     attempts: BTreeMap<Option<R>, Tracked<R>>,
-    stack: Vec<(R, Position<'i>, bool)>,
+    stack: Vec<(R, usize, bool)>,
     phantom: PhantomData<&'i ()>,
 }
 impl<'i, R: RuleType> Tracker<'i, R> {
@@ -73,6 +73,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         self.attempts.clear();
     }
     fn prepare(&mut self, pos: impl Input<'i>) -> bool {
+        debug_assert_eq!(pos.input(), self.position.input());
         let pos = pos.as_position();
         match pos.cmp(&self.position) {
             Ordering::Less => false,
@@ -105,7 +106,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     ) -> &'s mut (Vec<R>, Vec<R>, Vec<SpecialError>) {
         // Find lowest rule with the different position.
         let mut upper = None;
-        let pos = &pos.as_position();
+        let pos = &pos.byte_offset();
         for (upper_rule, upper_pos, _) in self.stack.iter().rev() {
             if upper_pos != pos {
                 upper = Some(*upper_rule);
@@ -162,7 +163,8 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         if let Some((_, _, has_children)) = self.stack.last_mut() {
             *has_children = true;
         }
-        self.stack.push((rule, pos.as_position(), false));
+        debug_assert_eq!(pos.input(), self.position.input());
+        self.stack.push((rule, pos.byte_offset(), false));
         let res = f(self);
         let succeeded = res.is_some();
         let (_r, _pos, has_children) = self.stack.pop().unwrap();
