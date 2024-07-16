@@ -1,5 +1,7 @@
 # Statically Typed Pest
 
+[![codecov](https://codecov.io/gh/TheVeryDarkness/pest-typed/graph/badge.svg?token=A4L7TXP5DF)](https://codecov.io/gh/TheVeryDarkness/pest-typed)
+
 [Pest](https://pest.rs) provides a elegant and convenient way to implement a parser. However, it's not convenient to consume its output as the syntax tree is not statically tagged.
 
 This motivates me to develop a statically typed version of pest based on current version of pest.
