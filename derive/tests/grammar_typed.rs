@@ -1045,6 +1045,34 @@ fn asciis() {
 }
 
 #[test]
+fn emojis() {
+    parses_to! {
+        parser: GrammarParser,
+        input: "😀",
+        rule: Rule::emoji,
+        tokens: [
+            emoji(0, 4)
+        ]
+    };
+    parses_to! {
+        parser: GrammarParser,
+        input: "123",
+        rule: Rule::emoji,
+        tokens: [
+            emoji(0, 3)
+        ]
+    };
+    parses_to! {
+        parser: GrammarParser,
+        input: "😀😃😄",
+        rule: Rule::emoji,
+        tokens: [
+            emoji(0, 12)
+        ]
+    };
+}
+
+#[test]
 fn newline() {
     parses_to! {
         parser: GrammarParser,

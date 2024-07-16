@@ -51,7 +51,6 @@ pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
     fn try_parse(input: impl AsInput<'i>) -> Result<Self, Box<Error<R>>> {
         let mut stack = Stack::new();
         let input = input.as_input();
-        let input = input.as_position();
         let mut tracker = Tracker::new(input);
         match Self::try_parse_with(input, &mut stack, &mut tracker) {
             Some(res) => Ok(res),
@@ -80,7 +79,6 @@ pub trait NeverFailedParsableTypedNode<'i, R: RuleType>: NeverFailedTypedNode<'i
     fn parse(input: impl AsInput<'i>) -> Self {
         let mut stack = Stack::new();
         let input = input.as_input();
-        let input = input.as_position();
         Self::parse_with_until_end(input, &mut stack)
     }
     /// Parse the whole input into given typed node.

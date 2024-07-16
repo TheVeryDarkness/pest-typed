@@ -15,10 +15,10 @@ use std::ops::Deref;
 #[allow(dead_code)]
 #[derive(TypedParser)]
 #[grammar_inline = r#"
-WHITESPACE = { " " }
-COMMENT    = { "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
-main       = { "x"* }
-program    = { SOI ~ main ~ EOI }
+WHITESPACE = @{ " " }
+COMMENT    = @{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+main       =  { "x"* }
+program    =  { SOI ~ main ~ EOI }
 "#]
 struct Parser;
 
@@ -28,6 +28,12 @@ fn comment() -> Result<(), Error> {
     assert_eq!(vec.iter_matched().len(), 3);
     assert_eq!(vec.deref().clone().into_iter_matched().len(), 3);
     Ok(())
+}
+
+#[test]
+#[should_panic]
+fn in_complete_comment() {
+    let _ = pairs::main::try_parse("x x x /*x").unwrap_or_else(|err| panic!("{}", err));
 }
 
 #[test]

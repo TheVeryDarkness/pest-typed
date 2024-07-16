@@ -35,6 +35,8 @@ pub trait Input<'i>: Copy {
     fn match_range(&mut self, range: Range<char>) -> bool;
     /// Match a character by a predicate.
     fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool;
+    /// Progress to next character.
+    fn next(&mut self) -> Option<char>;
 
     /// Check if is at the start of the input.
     fn at_start(&self) -> bool;
@@ -73,6 +75,14 @@ impl<'i> Input<'i> for Position<'i> {
 
     fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool {
         self.match_char_by(f)
+    }
+
+    fn next(&mut self) -> Option<char> {
+        let c = self.input[self.byte_offset()..].chars().next();
+        if let Some(_) = c {
+            self.skip(1);
+        }
+        c
     }
 
     fn at_start(&self) -> bool {
@@ -189,6 +199,14 @@ impl<'i> Input<'i> for SubInput1<'i> {
         }
     }
 
+    fn next(&mut self) -> Option<char> {
+        let c = self.input[self.cursor..].chars().next();
+        if let Some(c) = c {
+            self.cursor += c.len_utf8();
+        }
+        c
+    }
+
     fn at_start(&self) -> bool {
         self.cursor == self.start
     }
@@ -300,6 +318,14 @@ impl<'i> Input<'i> for SubInput2<'i> {
         } else {
             false
         }
+    }
+
+    fn next(&mut self) -> Option<char> {
+        let c = self.input[self.cursor..self.end].chars().next();
+        if let Some(c) = c {
+            self.cursor += c.len_utf8();
+        }
+        c
     }
 
     fn at_start(&self) -> bool {

@@ -133,7 +133,7 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i,
                 let span = start.span(input);
                 Some((input, Self::from(span)))
             }
-            false => None,
+            false => Some((input, Self::from(start.span(input)))), // return the original input if not found
         }
     }
 }
@@ -325,15 +325,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
         _stack: &mut Stack<Span<'i>>,
         _tracker: &mut Tracker<'i, R>,
     ) -> Option<(I, Self)> {
-        let mut c: char = ' ';
-        let matcher = |ch| {
-            c = ch;
-            true
-        };
-        match input.match_char_by(matcher) {
-            true => Some((input, Self { content: c })),
-            false => None,
-        }
+        input.next().map(|c| (input, Self { content: c }))
     }
 }
 
