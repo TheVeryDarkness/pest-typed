@@ -1,6 +1,6 @@
 use crate::{Position, Span};
 use alloc::string::String;
-use core::ops::Range;
+use core::{ops::Range, str::Chars};
 
 /// Input.
 pub trait Input<'i>: Copy {
@@ -9,6 +9,13 @@ pub trait Input<'i>: Copy {
     /// Get the full input.
     fn input(&self) -> &'i str;
 
+    /// Get unconsumed characters.
+    fn get(&self) -> &'i str;
+    /// Get characters.
+    fn chars(&self) -> Chars<'i> {
+        self.get().chars()
+    }
+
     /// Get line number and column number.
     // fn line_col(&self) -> (usize, usize);
     /// Get current line.
@@ -16,7 +23,7 @@ pub trait Input<'i>: Copy {
 
     /// To position.
     fn as_position(&self) -> Position<'i> {
-        Position::new(self.input(), self.byte_offset()).unwrap()
+        unsafe { Position::new_unchecked(self.input(), self.byte_offset()) }
     }
     /// Create a [Span].
     fn span(&self, end: Self) -> Span<'i> {
@@ -24,73 +31,150 @@ pub trait Input<'i>: Copy {
     }
 
     /// Match a string.
-    fn match_string(&mut self, string: &'i str) -> bool;
+    fn match_string(&mut self, string: &'i str) -> bool {
+        let res = self.get().starts_with(string);
+        if res {
+            unsafe { *self.cursor() += string.len() };
+        }
+        res
+    }
     /// Match an string insensitively.
-    fn match_insensitive(&mut self, string: &'i str) -> bool;
+    fn match_insensitive(&mut self, string: &'i str) -> bool {
+        let len = string.len();
+        if let Some(prefix) = self.get().get(..len) {
+            if prefix.eq_ignore_ascii_case(string) {
+                unsafe { *self.cursor() += len };
+                return true;
+            }
+        }
+        false
+    }
     /// Skip until one of several strings.
-    fn skip_until(&mut self, strings: &'i [&'i str]) -> bool;
+    fn skip_until(&mut self, strings: &'i [&'i str]) -> bool {
+        for from in self.byte_offset()..self.end() {
+            let bytes = if let Some(string) = self.input().get(from..) {
+                string.as_bytes()
+            } else {
+                continue;
+            };
+
+            for slice in strings.iter() {
+                let to = slice.len();
+                if Some(slice.as_bytes()) == bytes.get(0..to) {
+                    unsafe { *self.cursor() = from };
+                    return true;
+                }
+            }
+        }
+
+        unsafe { *self.cursor() = self.end() };
+        false
+    }
     /// Skip several characters.
-    fn skip(&mut self, n: usize) -> bool;
+    fn skip(&mut self, n: usize) -> bool {
+        let skipped = {
+            let mut len = 0;
+            let mut chars = self.chars();
+            for _ in 0..n {
+                if let Some(c) = chars.next() {
+                    len += c.len_utf8();
+                } else {
+                    return false;
+                }
+            }
+            len
+        };
+
+        unsafe { *self.cursor() += skipped };
+        true
+    }
     /// Match a character in a range.
-    fn match_range(&mut self, range: Range<char>) -> bool;
+    fn match_range(&mut self, range: Range<char>) -> bool {
+        if let Some(c) = self.chars().next() {
+            if range.start <= c && c <= range.end {
+                unsafe { *self.cursor() += c.len_utf8() };
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
     /// Match a character by a predicate.
-    fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool;
+    fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool {
+        if let Some(c) = self.chars().next() {
+            if f(c) {
+                unsafe { *self.cursor() += c.len_utf8() };
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
     /// Progress to next character.
-    fn next(&mut self) -> Option<char>;
+    fn next(&mut self) -> Option<char> {
+        let c = self.chars().next();
+        if let Some(c) = c {
+            unsafe { *self.cursor() += c.len_utf8() };
+        }
+        c
+    }
+
+    /// Get the cursor.
+    unsafe fn cursor(&mut self) -> &mut usize;
+
+    /// Get the start of the input.
+    fn start(&self) -> usize;
+    /// Get the end of the input.
+    fn end(&self) -> usize;
 
     /// Check if is at the start of the input.
-    fn at_start(&self) -> bool;
+    fn at_start(&self) -> bool {
+        self.byte_offset() == self.start()
+    }
     /// Check if is at the end of the input.
-    fn at_end(&self) -> bool;
+    fn at_end(&self) -> bool {
+        self.byte_offset() == self.end()
+    }
 }
 
 impl<'i> Input<'i> for Position<'i> {
     fn byte_offset(&self) -> usize {
-        self.pos()
+        self.pos
     }
 
     fn input(&self) -> &'i str {
         self.input
     }
 
-    fn match_string(&mut self, s: &'i str) -> bool {
-        self.match_string(s)
-    }
-
-    fn match_insensitive(&mut self, s: &'i str) -> bool {
-        self.match_insensitive(s)
-    }
-
-    fn skip_until(&mut self, s: &'i [&'i str]) -> bool {
-        self.skip_until(s)
-    }
-
-    fn skip(&mut self, n: usize) -> bool {
-        self.skip(n)
-    }
-
-    fn match_range(&mut self, range: Range<char>) -> bool {
-        self.match_range(range)
-    }
-
-    fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool {
-        self.match_char_by(f)
+    fn get(&self) -> &'i str {
+        if cfg!(debug_assertions) {
+            &self.input[self.pos..]
+        } else {
+            unsafe { self.input.get_unchecked(self.pos..) }
+        }
     }
 
     fn next(&mut self) -> Option<char> {
-        let c = self.input[self.byte_offset()..].chars().next();
+        let c = self.chars().next();
         if let Some(_) = c {
             self.skip(1);
         }
         c
     }
 
-    fn at_start(&self) -> bool {
-        self.at_start()
+    unsafe fn cursor(&mut self) -> &mut usize {
+        &mut self.pos
     }
 
-    fn at_end(&self) -> bool {
-        self.at_end()
+    fn start(&self) -> usize {
+        0
+    }
+    fn end(&self) -> usize {
+        self.input.len()
     }
 }
 
@@ -111,108 +195,23 @@ impl<'i> Input<'i> for SubInput1<'i> {
         self.input
     }
 
-    fn match_string(&mut self, s: &'i str) -> bool {
-        let end = self.cursor + s.len();
-        if Some(s) == self.input.get(self.cursor..end) {
-            self.cursor = end;
-            true
+    fn get(&self) -> &'i str {
+        if cfg!(debug_assertions) {
+            &self.input[self.cursor..]
         } else {
-            false
+            unsafe { self.input.get_unchecked(self.cursor..) }
         }
     }
 
-    fn match_insensitive(&mut self, s: &'i str) -> bool {
-        let end = self.cursor + s.len();
-        if let Some(s_) = self.input.get(self.cursor..end) {
-            if s_.eq_ignore_ascii_case(s) {
-                self.cursor = end;
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        }
+    unsafe fn cursor(&mut self) -> &mut usize {
+        &mut self.cursor
     }
 
-    fn skip_until(&mut self, strings: &'i [&'i str]) -> bool {
-        for from in self.cursor..self.input.len() {
-            let bytes = if let Some(string) = self.input.get(from..) {
-                string.as_bytes()
-            } else {
-                continue;
-            };
-
-            for slice in strings.iter() {
-                let to = slice.len();
-                if Some(slice.as_bytes()) == bytes.get(0..to) {
-                    self.cursor = from;
-                    return true;
-                }
-            }
-        }
-
-        self.cursor = self.input.len();
-        false
+    fn start(&self) -> usize {
+        self.start
     }
-
-    fn skip(&mut self, n: usize) -> bool {
-        let skipped = {
-            let mut len = 0;
-            // Position's pos is always a UTF-8 border.
-            let mut chars = self.input[self.cursor..].chars();
-            for _ in 0..n {
-                if let Some(c) = chars.next() {
-                    len += c.len_utf8();
-                } else {
-                    return false;
-                }
-            }
-            len
-        };
-
-        self.cursor += skipped;
-        true
-    }
-
-    fn match_range(&mut self, range: Range<char>) -> bool {
-        if let Some(c) = self.input[self.cursor..].chars().next() {
-            if range.start <= c && c <= range.end {
-                self.cursor += c.len_utf8();
-                return true;
-            }
-        }
-
-        false
-    }
-
-    fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool {
-        if let Some(c) = self.input[self.cursor..].chars().next() {
-            if f(c) {
-                self.cursor += c.len_utf8();
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    }
-
-    fn next(&mut self) -> Option<char> {
-        let c = self.input[self.cursor..].chars().next();
-        if let Some(c) = c {
-            self.cursor += c.len_utf8();
-        }
-        c
-    }
-
-    fn at_start(&self) -> bool {
-        self.cursor == self.start
-    }
-
-    fn at_end(&self) -> bool {
-        self.cursor == self.input.len()
+    fn end(&self) -> usize {
+        self.input.len()
     }
 }
 
@@ -225,115 +224,23 @@ impl<'i> Input<'i> for SubInput2<'i> {
         self.input
     }
 
-    fn match_string(&mut self, string: &'i str) -> bool {
-        let to = self.cursor + string.len();
-
-        if self.end < to {
-            return false;
-        } else if Some(string.as_bytes()) == self.input.as_bytes().get(self.cursor..to) {
-            self.cursor = to;
-            true
+    fn get(&self) -> &'i str {
+        if cfg!(debug_assertions) {
+            &self.input[self.cursor..self.end]
         } else {
-            false
+            unsafe { self.input.get_unchecked(self.cursor..self.end) }
         }
     }
 
-    fn match_insensitive(&mut self, string: &'i str) -> bool {
-        let matched = {
-            let slice = &self.input[self.cursor..self.end];
-            if let Some(slice) = slice.get(0..string.len()) {
-                slice.eq_ignore_ascii_case(string)
-            } else {
-                false
-            }
-        };
-
-        if matched {
-            self.cursor += string.len();
-            true
-        } else {
-            false
-        }
+    unsafe fn cursor(&mut self) -> &mut usize {
+        &mut self.cursor
     }
 
-    fn skip_until(&mut self, strings: &'i [&'i str]) -> bool {
-        for from in self.cursor..self.end {
-            let bytes = if let Some(string) = self.input.get(from..) {
-                string.as_bytes()
-            } else {
-                continue;
-            };
-
-            for slice in strings.iter() {
-                let to = slice.len();
-                if Some(slice.as_bytes()) == bytes.get(0..to) {
-                    self.cursor = from;
-                    return true;
-                }
-            }
-        }
-
-        self.cursor = self.end;
-        false
+    fn start(&self) -> usize {
+        self.start
     }
-
-    fn skip(&mut self, n: usize) -> bool {
-        let skipped = {
-            let mut len = 0;
-            // Position's pos is always a UTF-8 border.
-            let mut chars = self.input[self.cursor..self.end].chars();
-            for _ in 0..n {
-                if let Some(c) = chars.next() {
-                    len += c.len_utf8();
-                } else {
-                    return false;
-                }
-            }
-            len
-        };
-
-        self.cursor += skipped;
-        true
-    }
-
-    fn match_range(&mut self, range: Range<char>) -> bool {
-        if let Some(c) = self.input[self.cursor..self.end].chars().next() {
-            if range.start <= c && c <= range.end {
-                self.cursor += c.len_utf8();
-                return true;
-            }
-        }
-
-        false
-    }
-
-    fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool {
-        if let Some(c) = self.input[self.cursor..self.end].chars().next() {
-            if f(c) {
-                self.cursor += c.len_utf8();
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    }
-
-    fn next(&mut self) -> Option<char> {
-        let c = self.input[self.cursor..self.end].chars().next();
-        if let Some(c) = c {
-            self.cursor += c.len_utf8();
-        }
-        c
-    }
-
-    fn at_start(&self) -> bool {
-        self.cursor == self.start
-    }
-
-    fn at_end(&self) -> bool {
-        self.cursor == self.end
+    fn end(&self) -> usize {
+        self.end
     }
 }
 

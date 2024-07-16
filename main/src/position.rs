@@ -28,7 +28,7 @@ pub struct Position<'i> {
     /// # Safety:
     ///
     /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
-    pos: usize,
+    pub(crate) pos: usize,
 }
 
 impl<'i> Position<'i> {
