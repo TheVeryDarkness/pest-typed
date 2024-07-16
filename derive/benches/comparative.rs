@@ -89,12 +89,29 @@ case!(
     table,
     r#"
 WHITESPACE = _{ " " | "\t" }
-cell       =  { ('0'..'9' | 'a'..'z' | 'A'..'Z')+ }
+cell       = @{ ('0'..'9' | 'a'..'z' | 'A'..'Z')+ }
 table      =  { (cell ~ ("," ~ cell)* ~ ","? ~ NEWLINE)+ }"#,
     ('a'..'z')
         .into_iter()
         .flat_map(|c| once(c)
             .chain(", ".chars())
+            .cycle()
+            .take(30)
+            .chain("\n".chars()))
+        .cycle()
+        .take(31 * 10000)
+        .collect(),
+);
+
+case!(
+    compact_table,
+    r#"
+compact_cell       = @{ ('0'..'9' | 'a'..'z' | 'A'..'Z')+ }
+compact_table      =  { (compact_cell ~ ("," ~ compact_cell)* ~ ","? ~ NEWLINE)+ }"#,
+    ('a'..'z')
+        .into_iter()
+        .flat_map(|c| once(c)
+            .chain(",".chars())
             .cycle()
             .take(30)
             .chain("\n".chars()))
@@ -111,5 +128,6 @@ criterion_group!(
     best_choices_array::bench,
     worst_choices_array::bench,
     table::bench,
+    compact_table::bench,
 );
 criterion_main!(benches);
