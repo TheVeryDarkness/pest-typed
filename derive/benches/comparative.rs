@@ -1,6 +1,6 @@
 #![recursion_limit = "1024"]
 
-use std::iter::repeat;
+use std::iter::{once, repeat};
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use pest::Parser;
@@ -30,18 +30,19 @@ macro_rules! case {
             pub fn bench(c: &mut Criterion) {
                 let mut group = c.benchmark_group(stringify!($name));
                 group.sample_size(10);
-                let s = $input;
+                let s: String = $input;
                 println!("Input string has {} characters.", s.len());
                 group.bench_function("pest-typed-parse", |b| {
                     b.iter(|| {
-                        let pair =
-                            pest_typed::Parser::try_parse::<pest_typed::rules::$name>(&s).unwrap();
+                        let pair = pest_typed::Parser::try_parse::<pest_typed::rules::$name>(&s)
+                            .unwrap_or_else(|err| panic!("{}", err));
                         assert_eq!(pair.span().as_str().len(), s.len());
                     })
                 });
                 group.bench_function("pest-parse", |b| {
                     b.iter(|| {
-                        let mut pair = pest::Parser::parse(pest::Rule::$name, &s).unwrap();
+                        let mut pair = pest::Parser::parse(pest::Rule::$name, &s)
+                            .unwrap_or_else(|err| panic!("{}", err));
                         assert_eq!(pair.next().unwrap().as_span().as_str().len(), s.len());
                     })
                 });
@@ -89,22 +90,27 @@ case!(
     table,
     r#"
 WHITESPACE = _{ " " | "\t" }
-cell       = { ('0'..'9' | 'a'..'z' | 'A'..'Z')+ }
-table      = { ((cell ~ ",")+ ~ cell ~ ","? ~ NEWLINE) }"#,
+cell       =  { ('0'..'9' | 'a'..'z' | 'A'..'Z')+ }
+table      =  { (cell ~ ("," ~ cell)* ~ ","? ~ NEWLINE)+ }"#,
     ('a'..'z')
         .into_iter()
-        .flat_map(|c| repeat(c).take(10000))
-        .map(|c| format!("{c},"))
-        .collect::<String>(),
+        .flat_map(|c| once(c)
+            .chain(", ".chars())
+            .cycle()
+            .take(30)
+            .chain("\n".chars()))
+        .cycle()
+        .take(31 * 10000)
+        .collect(),
 );
 
 criterion_group!(
     benches,
-    string_array::bench,
-    char_range_array::bench,
-    average_choices_array::bench,
-    best_choices_array::bench,
-    worst_choices_array::bench,
+    // string_array::bench,
+    // char_range_array::bench,
+    // average_choices_array::bench,
+    // best_choices_array::bench,
+    // worst_choices_array::bench,
     table::bench,
 );
 criterion_main!(benches);
