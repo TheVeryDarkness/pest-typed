@@ -29,7 +29,7 @@ pub fn pest_typed() -> TokenStream {
 }
 
 fn pest_unicode() -> TokenStream {
-    quote! {::pest_typed::unicode}
+    quote! {::pest_typed::predefined_node::unicode}
 }
 
 fn ident(s: &str) -> Ident {
@@ -371,14 +371,6 @@ fn _i32() -> TokenStream {
 }
 fn _str() -> TokenStream {
     quote! {::core::primitive::str}
-}
-fn stack() -> TokenStream {
-    let pest = pest();
-    quote! {#pest::Stack}
-}
-fn tracker() -> TokenStream {
-    let pest = pest();
-    quote! {#pest::tracker::Tracker}
 }
 fn _span() -> TokenStream {
     let pest = pest();
@@ -1295,67 +1287,26 @@ fn generate_unicode(
     without_lifetime: &mut BTreeSet<&'static str>,
 ) -> TokenStream {
     let mut results = vec![];
-    let pest_typed = pest_typed();
     let pest_unicode = pest_unicode();
-    let option = option_type();
-    let stack = stack();
-    let span = _span();
-    let char = _char();
-    let tracker = tracker();
-    let root = quote! {super};
+
+    let mut used_unicode = BTreeSet::new();
 
     for property in unicode_property_names() {
         let property_ident: Ident = syn::parse_str(property).unwrap();
         // insert manually for #property substitution
 
-        let doc = format!("Auto generated. Unicode property {}.", property);
-
         if !rule_names.contains(property) && referenced.contains(property) {
             without_lifetime.insert(property);
-            results.push(quote! {
-                #[allow(non_camel_case_types)]
-                #[doc = #doc]
-                #[derive(Clone, Hash, PartialEq, Eq)]
-                pub struct #property_ident {
-                    pub content: #char,
-                }
-                impl ::core::convert::From<#char> for #property_ident {
-                    fn from(content: #char) -> Self {
-                        Self {
-                            content,
-                        }
-                    }
-                }
-                impl<'i> #pest_typed::TypedNode<'i, #root::Rule> for #property_ident {
-                    #[inline]
-                    fn try_parse_partial_with<I: #pest_typed::Input<'i>>(
-                        mut input: I,
-                        _stack: &mut #stack<#span<'i>>,
-                        _tracker: &mut #tracker<'i, #root::Rule>,
-                    ) -> #option<(I, Self)> {
-                        match #pest_typed::predefined_node::match_char_by(&mut input, #pest_unicode::#property_ident) {
-                            Some(content) => {
-                                Some((input, Self::from(content)))
-                            }
-                            None => {
-                                None
-                            }
-                        }
-                    }
-                }
-                impl ::core::fmt::Debug for #property_ident {
-                    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                        f.debug_struct(#property)
-                            .field("content", &self.content)
-                            .finish()
-                    }
-                }
-                impl<'i> #pest_typed::iterators::Pairs<'i, #root::Rule> for #property_ident {
-                    fn for_self_or_each_child(&self, _f: &mut impl #pest_typed::re_exported::FnMut(#pest_typed::iterators::Token<'i, #root::Rule>)) {}
-                }
-            });
+            used_unicode.insert(property_ident);
         }
     }
+    if !used_unicode.is_empty() {
+        results.push(quote! {
+            #[allow(unused_imports)]
+            pub use #pest_unicode::{#(#used_unicode),*};
+        });
+    }
+
     quote! {
         #(#results)*
     }

@@ -60,6 +60,22 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for Atomi
         }
         (input, Self { content: vec })
     }
+
+    fn check_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> I {
+        let mut tracker = Tracker::new(input);
+
+        for _ in 0usize.. {
+            match restore_on_none(stack, |stack| {
+                T::try_check_partial_with(input, stack, &mut tracker)
+            }) {
+                Some(next) => {
+                    input = next;
+                }
+                None => break,
+            }
+        }
+        input
+    }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for AtomicRep<T> {
     #[inline]
@@ -69,6 +85,14 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for AtomicRep<T> {
         _tracker: &mut Tracker<'i, R>,
     ) -> Option<(I, Self)> {
         Some(Self::parse_with(input, stack))
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        Some(Self::check_with(input, stack))
     }
 }
 impl<T> Deref for AtomicRep<T> {
@@ -116,6 +140,22 @@ impl<
         }
         (input, Self { content: vec })
     }
+
+    fn check_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> I {
+        let mut tracker = Tracker::new(input);
+
+        for i in 0usize.. {
+            match restore_on_none(stack, |stack| {
+                try_check_unit::<I, R, T, Skip, SKIP>(input, stack, &mut tracker, i)
+            }) {
+                Some(next) => {
+                    input = next;
+                }
+                None => break,
+            }
+        }
+        input
+    }
 }
 impl<T> Default for RepMin<T, 0> {
     fn default() -> Self {
@@ -157,6 +197,30 @@ impl<
         }
 
         Some((input, Self { content: vec }))
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        mut input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        for i in 0usize.. {
+            match restore_on_none(stack, |stack| {
+                try_check_unit::<I, R, T, Skip, SKIP>(input, stack, tracker, i)
+            }) {
+                Some(next) => {
+                    input = next;
+                }
+                None => {
+                    if i < MIN {
+                        return None;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        Some(input)
     }
 }
 impl<T, IGNORED, const SKIP: usize, const MIN: usize> RepMin<Skipped<T, IGNORED, SKIP>, MIN> {
@@ -227,6 +291,25 @@ impl<
 
         (input, Self { content: vec })
     }
+
+    fn check_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> I {
+        let mut tracker = Tracker::new(input);
+
+        for i in 0..MAX {
+            match restore_on_none(stack, |stack| {
+                try_check_unit::<I, R, T, Skip, SKIP>(input, stack, &mut tracker, i)
+            }) {
+                Some(next) => {
+                    input = next;
+                }
+                None => {
+                    break;
+                }
+            }
+        }
+
+        input
+    }
 }
 impl<
         'i,
@@ -263,6 +346,33 @@ impl<
         }
 
         Some((input, Self { content: vec }))
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        let mut input = input;
+
+        for i in 0..MAX {
+            match restore_on_none(stack, |stack| {
+                try_check_unit::<I, R, T, Skip, SKIP>(input, stack, tracker, i)
+            }) {
+                Some(next) => {
+                    input = next;
+                }
+                None => {
+                    if i < MIN {
+                        return None;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
+        Some(input)
     }
 }
 impl<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize>
@@ -325,4 +435,28 @@ fn try_parse_unit<
     input = next;
     let res = Skipped { skipped, matched };
     Some((input, res))
+}
+
+fn try_check_unit<
+    'i,
+    I: Input<'i>,
+    R: RuleType,
+    T: TypedNode<'i, R>,
+    Skip: NeverFailedTypedNode<'i, R>,
+    const SKIP: usize,
+>(
+    mut input: I,
+    stack: &mut Stack<Span<'i>>,
+    tracker: &mut Tracker<'i, R>,
+    i: usize,
+) -> Option<I> {
+    for _ in 0..SKIP {
+        if i > 0 {
+            let next = Skip::check_with(input, stack);
+            input = next;
+        }
+    }
+    let next = T::try_check_partial_with(input, stack, tracker)?;
+    input = next;
+    Some(input)
 }

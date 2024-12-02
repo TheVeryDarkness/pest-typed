@@ -336,6 +336,15 @@ macro_rules! impl_try_parse_with {
                     },
                 ))
             }
+            #[inline]
+            fn try_check_partial_with<I: $crate::Input<'i>>(
+                input: I,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::option::Option<I> {
+                let input = <$inner>::try_check_partial_with(input, stack, tracker)?;
+                Some(input)
+            }
         }
     };
     ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Span) => {
@@ -354,6 +363,23 @@ macro_rules! impl_try_parse_with {
                     let span = start.span(input);
                     Some((input, Self { span }))
                 })
+            }
+            #[inline]
+            fn try_check_partial_with<I: $crate::Input<'i>>(
+                input: I,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::option::Option<I> {
+                tracker.record_during_with(
+                    input,
+                    |tracker| {
+                        let start = input;
+                        let input = <$inner>::try_check_partial_with(input, stack, tracker)?;
+                        let span = start.span(input);
+                        Some(input)
+                    },
+                    <Self as $crate::RuleWrapper<$Rule>>::RULE,
+                )
             }
         }
     };
@@ -374,6 +400,23 @@ macro_rules! impl_try_parse_with {
                     let content = content.into();
                     Some((input, Self { content, span }))
                 })
+            }
+            #[inline]
+            fn try_check_partial_with<I: $crate::Input<'i>>(
+                input: I,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::option::Option<I> {
+                tracker.record_during_with(
+                    input,
+                    |tracker| {
+                        let start = input;
+                        let input = <$inner>::try_check_partial_with(input, stack, tracker)?;
+                        let span = start.span(input);
+                        Some(input)
+                    },
+                    <Self as $crate::RuleWrapper<$Rule>>::RULE,
+                )
             }
         }
     };

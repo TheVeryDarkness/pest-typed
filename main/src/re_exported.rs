@@ -40,3 +40,5 @@ pub use ::alloc::vec;
 pub use ::std::vec;
 
 pub use ::core::ops::FnMut;
+
+pub use ::core::primitive::char;

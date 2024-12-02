@@ -56,6 +56,7 @@ pub use wrapper::{
 
 pub mod choices;
 mod formatter;
+mod input;
 pub mod iterators;
 mod pratt;
 pub mod predefined_node;
@@ -65,8 +66,8 @@ pub mod sequence;
 pub mod tracker;
 mod typed_node;
 mod wrapper;
+
 pub use alloc::boxed::Box;
-mod input;
 
 // Below modules are copied from pest.
 mod parser_state;

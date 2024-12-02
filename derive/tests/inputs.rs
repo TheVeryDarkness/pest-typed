@@ -1,4 +1,4 @@
-use pest_typed::{Input, ParsableTypedNode, Position, Span, Spanned as _};
+use pest_typed::{ParsableTypedNode, Position, Span, Spanned as _};
 use pest_typed_derive::TypedParser;
 
 #[allow(dead_code)]

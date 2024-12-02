@@ -74,6 +74,26 @@ macro_rules! seq {
 
                 Some((input, Self::from(content)))
             }
+            #[inline]
+            fn try_check_partial_with<I: $crate::Input<'i>>(
+                mut input: I,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, R>,
+            ) -> ::core::option::Option<I> {
+                {
+                    let next = T0::try_check_partial_with(input, stack, tracker)?;
+                    input = next;
+                }
+                $(
+                    {
+                        let next = Skip::check_with(input, stack);
+                        let next = $T::try_check_partial_with(next, stack, tracker)?;
+                        input = next;
+                    }
+                )*
+
+                Some(input)
+            }
         }
         impl<
                 'i,

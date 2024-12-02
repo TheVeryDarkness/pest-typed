@@ -21,8 +21,10 @@ where
     Self: Sized + Debug + Clone + PartialEq + Default,
 {
     /// Create typed node.
-    /// `ATOMIC` refers to the external status, and it can be overriden by rule definition.
     fn parse_with<I: Input<'i>>(input: I, stack: &mut Stack<Span<'i>>) -> (I, Self);
+
+    /// Check how much input can be matched.
+    fn check_with<I: Input<'i>>(input: I, stack: &mut Stack<Span<'i>>) -> I;
 }
 
 /// Node of concrete syntax tree.
@@ -36,6 +38,13 @@ where
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Option<(I, Self)>;
+
+    /// Check whether the typed node match some prefix of the input.
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I>;
 }
 
 /// Node of concrete syntax tree.
@@ -136,6 +145,19 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>, const N: usize> TypedNode<'i, R> for 
             Err(_) => None,
         }
     }
+
+    #[inline]
+    fn try_check_partial_with<I: Input<'i>>(
+        mut input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        for _ in 0..N {
+            let next = T::try_check_partial_with(input, stack, tracker)?;
+            input = next;
+        }
+        Some(input)
+    }
 }
 
 /// Match `(T1, T2)`.
@@ -149,6 +171,16 @@ impl<'i, R: RuleType, T1: TypedNode<'i, R>, T2: TypedNode<'i, R>> TypedNode<'i, 
         let (input, t1) = T1::try_parse_partial_with(input, stack, tracker)?;
         let (input, t2) = T2::try_parse_partial_with(input, stack, tracker)?;
         Some((input, (t1, t2)))
+    }
+
+    #[inline]
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        let input = T1::try_check_partial_with(input, stack, tracker)?;
+        T2::try_check_partial_with(input, stack, tracker)
     }
 }
 
@@ -167,5 +199,15 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Option<T> {
             Some((input, inner)) => Some((input, Some(inner))),
             None => Some((input, None)),
         }
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        restore_on_none(stack, |stack| {
+            T::try_check_partial_with(input, stack, tracker)
+        })
     }
 }

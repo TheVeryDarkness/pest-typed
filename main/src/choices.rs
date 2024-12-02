@@ -157,6 +157,25 @@ macro_rules! choices {
                     )*
                     None
                 }
+
+                #[inline]
+                fn try_check_partial_with<I: $crate::Input<'i>>(
+                    input: I,
+                    stack: &mut $crate::Stack<$crate::Span<'i>>,
+                    tracker: &mut $crate::tracker::Tracker<'i, R>,
+                ) -> ::core::option::Option<I> {
+                    let res = $crate::predefined_node::restore_on_none(stack, |stack| $V0::try_check_partial_with(input, stack, tracker));
+                    if let Some(input) = res {
+                        return Some(input);
+                    }
+                    $(
+                        let res = $crate::predefined_node::restore_on_none(stack, |stack| $V::try_check_partial_with(input, stack, tracker));
+                        if let Some(input) = res {
+                            return Some(input);
+                        }
+                    )*
+                    None
+                }
             }
             impl<
                 'i,

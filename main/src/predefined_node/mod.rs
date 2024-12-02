@@ -12,6 +12,7 @@
 //! Normally you don't need to reference this module by yourself.
 
 mod repetition;
+pub mod unicode;
 
 use super::{parser_state::constrain_idxs, Stack};
 use super::{
@@ -58,6 +59,18 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<T> {
             None
         }
     }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        mut input: I,
+        _stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        if input.match_string(Self::CONTENT) {
+            Some(input)
+        } else {
+            None
+        }
+    }
 }
 
 /// Match given string case insensitively.
@@ -100,6 +113,18 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, T> {
             None
         }
     }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        mut input: I,
+        _stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        if input.match_insensitive(Self::CONTENT) {
+            Some(input)
+        } else {
+            None
+        }
+    }
 }
 
 /// Skips until one of the given strings.
@@ -136,6 +161,17 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i,
             false => Some((input, Self::from(start.span(input)))), // return the original input if not found
         }
     }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        mut input: I,
+        _stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        match input.skip_until(Strings::CONTENT) {
+            true => Some(input),
+            false => None,
+        }
+    }
 }
 
 /// Skip `n` characters if there are.
@@ -156,6 +192,17 @@ impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, N> {
                 let span = start.span(input);
                 Some((input, Self { span }))
             }
+            false => None,
+        }
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        mut input: I,
+        _stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        match input.skip(N) {
+            true => Some(input),
             false => None,
         }
     }
@@ -181,6 +228,17 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R> for Cha
                 let content = span.as_str().chars().next().unwrap();
                 Some((input, Self { content }))
             }
+            false => None,
+        }
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        mut input: I,
+        _stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        match input.match_range(MIN..MAX) {
+            true => Some(input),
             false => None,
         }
     }
@@ -273,6 +331,26 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
             }
         })
     }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        tracker.positive_during(|tracker| {
+            stack.snapshot();
+            match N::try_check_partial_with(input, stack, tracker) {
+                Some(next) => {
+                    stack.restore();
+                    Some(next)
+                }
+                None => {
+                    stack.restore();
+                    None
+                }
+            }
+        })
+    }
 }
 
 /// Negative predicate.
@@ -298,7 +376,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
     ) -> Option<(I, Self)> {
         tracker.negative_during(|tracker| {
             stack.snapshot();
-            match T::try_parse_partial_with(input, stack, tracker) {
+            match T::try_check_partial_with(input, stack, tracker) {
                 Some(_) => {
                     stack.restore();
                     None
@@ -306,6 +384,26 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
                 None => {
                     stack.restore();
                     Some((input, Self::from(())))
+                }
+            }
+        })
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        tracker.negative_during(|tracker| {
+            stack.snapshot();
+            match T::try_check_partial_with(input, stack, tracker) {
+                Some(_) => {
+                    stack.restore();
+                    None
+                }
+                None => {
+                    stack.restore();
+                    Some(input)
                 }
             }
         })
@@ -327,6 +425,14 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
     ) -> Option<(I, Self)> {
         input.next().map(|c| (input, Self { content: c }))
     }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        mut input: I,
+        _stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        input.next().map(|_| input)
+    }
 }
 
 /// Match the start of input.
@@ -341,6 +447,18 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
     ) -> Option<(I, Self)> {
         if input.at_start() {
             Some((input, Self))
+        } else {
+            None
+        }
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        _stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        if input.at_start() {
+            Some(input)
         } else {
             None
         }
@@ -361,6 +479,18 @@ impl<'i, R: RuleType> TypedNode<'i, R> for EOI {
     ) -> Option<(I, Self)> {
         if input.at_end() {
             Some((input, Self))
+        } else {
+            None
+        }
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        _stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        if input.at_end() {
+            Some(input)
         } else {
             None
         }
@@ -403,6 +533,18 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE {
         };
         Some((input, Self { content: t }))
     }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        mut input: I,
+        _stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        if input.match_string("\r\n") || input.match_string("\n") || input.match_string("\r") {
+            Some(input)
+        } else {
+            None
+        }
+    }
 }
 
 /// Peek all spans in stack reversely.
@@ -423,6 +565,16 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
         let spans = stack[0..stack.len()].iter().rev();
         let (input, span) = peek_spans::<I, R>(input, spans, tracker)?;
         Some((input, Self { span }))
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        let spans = stack[0..stack.len()].iter().rev();
+        let (input, _) = peek_spans::<I, R>(input, spans, tracker)?;
+        Some(input)
     }
 }
 
@@ -450,6 +602,23 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
         match stack.peek() {
             Some(string) => match input.match_string(string.as_str()) {
                 true => Some((input, Self::from(start.span(input)))),
+                false => None,
+            },
+            None => {
+                tracker.empty_stack(input);
+                None
+            }
+        }
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        mut input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        match stack.peek() {
+            Some(string) => match input.match_string(string.as_str()) {
+                true => Some(input),
                 false => None,
             },
             None => {
@@ -501,6 +670,20 @@ impl<'i, R: RuleType> TypedNode<'i, R> for DROP {
             }
         }
     }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        match stack.pop() {
+            Some(_) => Some(input),
+            None => {
+                tracker.empty_stack(input);
+                None
+            }
+        }
+    }
 }
 
 /// Match and pop the top span of the stack.
@@ -525,6 +708,23 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
         match stack.pop() {
             Some(span) => match input.match_string(span.as_str()) {
                 true => Some((input, Self::from(span))),
+                false => None,
+            },
+            None => {
+                tracker.empty_stack(input);
+                None
+            }
+        }
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        mut input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        match stack.pop() {
+            Some(span) => match input.match_string(span.as_str()) {
+                true => Some(input),
                 false => None,
             },
             None => {
@@ -558,6 +758,16 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
         while stack.pop().is_some() {}
         Some((input, Self::from(res.span)))
     }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        let input = PEEK_ALL::try_check_partial_with(input, stack, tracker)?;
+        while stack.pop().is_some() {}
+        Some(input)
+    }
 }
 
 /// Always fail.
@@ -577,6 +787,14 @@ impl<'i, R: RuleType> TypedNode<'i, R> for AlwaysFail<'i> {
     ) -> Option<(I, Self)> {
         None
     }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        _input: I,
+        _stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        None
+    }
 }
 
 /// Empty.
@@ -592,6 +810,10 @@ impl<'i, R: RuleType> NeverFailedTypedNode<'i, R> for Empty<'i> {
     fn parse_with<I: Input<'i>>(input: I, _stack: &mut Stack<Span<'i>>) -> (I, Self) {
         (input, Self::default())
     }
+
+    fn check_with<I: Input<'i>>(input: I, _stack: &mut Stack<Span<'i>>) -> I {
+        input
+    }
 }
 impl<'i, R: RuleType> TypedNode<'i, R> for Empty<'i> {
     #[inline]
@@ -601,6 +823,16 @@ impl<'i, R: RuleType> TypedNode<'i, R> for Empty<'i> {
         _tracker: &mut Tracker<'i, R>,
     ) -> Option<(I, Self)> {
         Some(<Self as NeverFailedTypedNode<'i, R>>::parse_with(
+            input, stack,
+        ))
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        Some(<Self as NeverFailedTypedNode<'i, R>>::check_with(
             input, stack,
         ))
     }
@@ -628,6 +860,17 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<T> {
         let (input, content) = T::try_parse_partial_with(input, stack, tracker)?;
         stack.push(start.span(input));
         Some((input, Self::from(content)))
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        let start = input;
+        let next = T::try_check_partial_with(input, stack, tracker)?;
+        stack.push(start.span(next));
+        Some(next)
     }
 }
 impl<T> Deref for Push<T> {
@@ -658,6 +901,16 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
         let (input, _) = peek_spans::<I, R>(input, spans, tracker)?;
         Some((input, Self))
     }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        let spans = stack_slice(input, START, Some(END), stack, tracker)?;
+        let (input, _) = peek_spans::<I, R>(input, spans, tracker)?;
+        Some(input)
+    }
 }
 
 /// Match `[START..]` in top-to-bottom order of the stack.
@@ -673,6 +926,16 @@ impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<START> {
         let spans = stack_slice(input, START, None, stack, tracker)?;
         let (input, _) = peek_spans::<I, R>(input, spans, tracker)?;
         Some((input, Self))
+    }
+
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        let spans = stack_slice(input, START, None, stack, tracker)?;
+        let (input, _) = peek_spans::<I, R>(input, spans, tracker)?;
+        Some(input)
     }
 }
 

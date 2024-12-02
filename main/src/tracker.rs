@@ -154,12 +154,12 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     /// Record if the result doesn't match the state during calling `f`.
     #[inline]
-    pub(crate) fn record_during_with<T, I: Input<'i>>(
+    pub fn record_during_with<Ret, I: Input<'i>>(
         &mut self,
         pos: I,
-        f: impl FnOnce(&mut Self) -> Option<(I, T)>,
+        f: impl FnOnce(&mut Self) -> Option<Ret>,
         rule: R,
-    ) -> Option<(I, T)> {
+    ) -> Option<Ret> {
         if let Some((_, _, has_children)) = self.stack.last_mut() {
             *has_children = true;
         }
