@@ -380,7 +380,7 @@ macro_rules! impl_try_parse_with {
             ) -> ::core::option::Option<(I, Self)> {
                 tracker.record_during(input, |tracker| {
                     let start = input;
-                    let (input, _) = <$inner>::try_parse_partial_with(input, stack, tracker)?;
+                    let input = <$inner>::try_check_partial_with(input, stack, tracker)?;
                     let span = start.span(input);
                     Some((input, Self { span }))
                 })
