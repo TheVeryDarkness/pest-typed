@@ -169,7 +169,7 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i,
     ) -> Option<I> {
         match input.skip_until(Strings::CONTENT) {
             true => Some(input),
-            false => None,
+            false => Some(input),
         }
     }
 }
