@@ -580,7 +580,7 @@ pub mod rules_impl {
         impl<'i, const INHERITED: ::core::primitive::usize> r#CaseInsensitive<'i, INHERITED> {}
         :: pest_typed :: rule ! (r#CharRange , "Corresponds to expression: `('0'..'9')`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#CharRange , super :: super :: generics :: CharRange :: < '0' , '9' > , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Both , true);
         impl<'i, const INHERITED: ::core::primitive::usize> r#CharRange<'i, INHERITED> {}
-        :: pest_typed :: rule ! (r#Any , "Corresponds to expression: `ANY`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#Any , super :: super :: rules :: r#ANY , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Expression , true);
+        :: pest_typed :: rule ! (r#Any , "Corresponds to expression: `ANY`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#Any , super :: super :: rules :: r#ANY , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Both , true);
         impl<'i, const INHERITED: ::core::primitive::usize> r#Any<'i, INHERITED> {
             #[doc = "A helper function to access [`ANY`]."]
             #[allow(non_snake_case)]
