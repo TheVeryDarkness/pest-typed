@@ -20,10 +20,6 @@ use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use std::collections::{btree_map, BTreeMap, BTreeSet};
 use syn::Index;
 
-pub fn pest() -> TokenStream {
-    quote! {::pest_typed}
-}
-
 pub fn pest_typed() -> TokenStream {
     quote! {::pest_typed}
 }
@@ -371,10 +367,6 @@ fn _i32() -> TokenStream {
 }
 fn _str() -> TokenStream {
     quote! {::core::primitive::str}
-}
-fn _span() -> TokenStream {
-    let pest = pest();
-    quote! {#pest::Span}
 }
 
 #[derive(Clone, Copy)]

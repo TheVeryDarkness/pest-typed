@@ -340,9 +340,9 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
         tracker.positive_during(|tracker| {
             stack.snapshot();
             match N::try_check_partial_with(input, stack, tracker) {
-                Some(next) => {
+                Some(_) => {
                     stack.restore();
-                    Some(next)
+                    Some(input)
                 }
                 None => {
                     stack.restore();
@@ -868,9 +868,9 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<T> {
         tracker: &mut Tracker<'i, R>,
     ) -> Option<I> {
         let start = input;
-        let next = T::try_check_partial_with(input, stack, tracker)?;
-        stack.push(start.span(next));
-        Some(next)
+        let input = T::try_check_partial_with(input, stack, tracker)?;
+        stack.push(start.span(input));
+        Some(input)
     }
 }
 impl<T> Deref for Push<T> {

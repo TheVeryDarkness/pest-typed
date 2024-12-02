@@ -77,6 +77,34 @@ pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
             None => Err(Box::new(tracker.collect())),
         }
     }
+
+    /// Check whether the typed node match the whole input.
+    fn try_check_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        tracker: &mut Tracker<'i, R>,
+    ) -> bool;
+    /// Check whether the typed node match the whole input.
+    fn try_check(input: impl AsInput<'i>) -> Result<(), Box<Error<R>>> {
+        let mut stack = Stack::new();
+        let input = input.as_input();
+        let mut tracker = Tracker::new(input);
+        match Self::try_check_with(input, &mut stack, &mut tracker) {
+            true => Ok(()),
+            false => Err(Box::new(tracker.collect())),
+        }
+    }
+    /// Try to parse the whole input into given typed node.
+    /// A rule is not atomic by default.
+    fn try_check_partial<I: AsInput<'i>>(input: I) -> Result<I::Output, Box<Error<R>>> {
+        let mut stack = Stack::new();
+        let input = input.as_input();
+        let mut tracker = Tracker::new(input);
+        match Self::try_check_partial_with(input, &mut stack, &mut tracker) {
+            Some(input) => Ok(input),
+            None => Err(Box::new(tracker.collect())),
+        }
+    }
 }
 
 /// Node of concrete syntax tree.
@@ -206,8 +234,11 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Option<T> {
         stack: &mut Stack<Span<'i>>,
         tracker: &mut Tracker<'i, R>,
     ) -> Option<I> {
-        restore_on_none(stack, |stack| {
+        match restore_on_none(stack, |stack| {
             T::try_check_partial_with(input, stack, tracker)
-        })
+        }) {
+            Some(input) => Some(input),
+            None => Some(input),
+        }
     }
 }

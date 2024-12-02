@@ -94,4 +94,10 @@ pub trait TypedParser<R: RuleType> {
     fn parse<'i, T: NeverFailedParsableTypedNode<'i, R>>(input: &'i str) -> T {
         T::parse(input)
     }
+    /// Check whether a `&str` can be parsed into a tree starting from T.
+    fn try_check<'i, T: ParsableTypedNode<'i, R>>(
+        input: &'i str,
+    ) -> Result<(), Box<error::Error<R>>> {
+        T::try_check(input)
+    }
 }

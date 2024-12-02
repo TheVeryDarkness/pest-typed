@@ -289,6 +289,19 @@ macro_rules! impl_parse {
                     <$Rule>::EOI,
                 )
             }
+            #[inline]
+            fn try_check_with<I: $crate::Input<'i>>(
+                input: I,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::primitive::bool {
+                $crate::rule::check_without_ignore::<I, $Rule, Self>(
+                    input,
+                    stack,
+                    tracker,
+                    <$Rule>::EOI,
+                )
+            }
         }
     };
     ($name:ident, $Rule:ty, $ignored:ty, $non_true:tt) => {
@@ -300,6 +313,14 @@ macro_rules! impl_parse {
                 tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
             ) -> ::core::option::Option<Self> {
                 $crate::rule::parse::<I, $Rule, Self, $ignored>(input, stack, tracker, <$Rule>::EOI)
+            }
+            #[inline]
+            fn try_check_with<I: $crate::Input<'i>>(
+                input: I,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::primitive::bool {
+                $crate::rule::check::<I, $Rule, Self, $ignored>(input, stack, tracker, <$Rule>::EOI)
             }
         }
     };
@@ -410,9 +431,7 @@ macro_rules! impl_try_parse_with {
                 tracker.record_during_with(
                     input,
                     |tracker| {
-                        let start = input;
                         let input = <$inner>::try_check_partial_with(input, stack, tracker)?;
-                        let span = start.span(input);
                         Some(input)
                     },
                     <Self as $crate::RuleWrapper<$Rule>>::RULE,
@@ -696,6 +715,19 @@ macro_rules! rule_eoi {
                     <$Rule>::EOI,
                 )
             }
+            #[inline]
+            fn try_check_with<I: $crate::Input<'i>>(
+                input: I,
+                stack: &mut $crate::Stack<$crate::Span<'i>>,
+                tracker: &mut $crate::tracker::Tracker<'i, $Rule>,
+            ) -> ::core::primitive::bool {
+                $crate::rule::check_without_ignore::<I, $Rule, Self>(
+                    input,
+                    stack,
+                    tracker,
+                    <$Rule>::EOI,
+                )
+            }
         }
         $crate::impl_deref!($name, $crate::predefined_node::EOI, Expression);
         $crate::impl_pairs_with_self!($name, $Rule);
@@ -734,6 +766,35 @@ pub fn parse<
     Some(res)
 }
 
+/// Check as a non-atomic rule.
+///
+/// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
+pub fn check<
+    'i,
+    I: Input<'i>,
+    R: RuleType + 'i,
+    _Self: TypedNode<'i, R>,
+    IGNORED: NeverFailedTypedNode<'i, R>,
+>(
+    input: I,
+    stack: &mut Stack<Span<'i>>,
+    tracker: &mut Tracker<'i, R>,
+    rule_eoi: R,
+) -> bool {
+    let input = match _Self::try_check_partial_with(input, stack, tracker) {
+        Some(input) => input,
+        None => return false,
+    };
+    let (input, _) = IGNORED::parse_with(input, stack);
+    tracker
+        .record_during_with(
+            input,
+            |tracker| EOI::try_check_partial_with(input, stack, tracker),
+            rule_eoi,
+        )
+        .is_some()
+}
+
 /// Full parse as an atomic rule.
 ///
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
@@ -756,4 +817,26 @@ pub fn parse_without_ignore<'i, I: Input<'i>, R: RuleType + 'i, _Self: TypedNode
         None => return None,
     };
     Some(res)
+}
+
+/// Check without auto-skipped parsing expressions.
+///
+/// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
+pub fn check_without_ignore<'i, I: Input<'i>, R: RuleType + 'i, _Self: TypedNode<'i, R>>(
+    input: I,
+    stack: &mut Stack<Span<'i>>,
+    tracker: &mut Tracker<'i, R>,
+    rule_eoi: R,
+) -> bool {
+    let input = match _Self::try_check_partial_with(input, stack, tracker) {
+        Some(input) => input,
+        None => return false,
+    };
+    tracker
+        .record_during_with(
+            input,
+            |tracker| EOI::try_parse_partial_with(input, stack, tracker),
+            rule_eoi,
+        )
+        .is_some()
 }

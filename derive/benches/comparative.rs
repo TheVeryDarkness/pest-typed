@@ -38,6 +38,12 @@ macro_rules! case {
                         assert_eq!(pair.span().as_str().len(), s.len());
                     })
                 });
+                group.bench_function("pest-typed-check", |b| {
+                    b.iter(|| {
+                        let _pair = pest_typed::Parser::try_check::<pest_typed::rules::$name>(&s)
+                            .unwrap_or_else(|err| panic!("{}", err));
+                    })
+                });
                 group.bench_function("pest-parse", |b| {
                     b.iter(|| {
                         let mut pair = pest::Parser::parse(pest::Rule::$name, &s)

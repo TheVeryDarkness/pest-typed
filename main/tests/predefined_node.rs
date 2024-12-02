@@ -77,6 +77,7 @@ mod tests {
     #[test]
     fn string() {
         assert_eq!(<StrFoo<'_, 0> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
+        StrFoo::try_check("foo").unwrap();
         let s = StrFoo::try_parse("foo").unwrap();
         assert_eq!(s.content.get_content(), "foo");
         assert_eq!(
@@ -87,11 +88,14 @@ mod tests {
 
     #[test]
     fn range() {
+        WHITESPACE::try_check(" ").unwrap();
         let whitespace = WHITESPACE::try_parse(" ").unwrap();
         assert_eq!(
             format!("{:?}", whitespace),
             "WHITESPACE { span: Span { str: \" \", start: 0, end: 1 } }"
         );
+
+        COMMENT::try_check("\t").unwrap();
         let comment = COMMENT::try_parse("\t").unwrap();
         assert_eq!(
             format!("{:?}", comment),
@@ -111,6 +115,7 @@ mod tests {
             Empty<'i>,
             false
         );
+        tmp::try_check(" ").unwrap();
         tmp::try_parse(" \t  ").unwrap();
     }
 
@@ -127,9 +132,22 @@ mod tests {
             false
         );
 
-        let rep1 = R::try_parse("foofoofoo").unwrap();
-        let rep2 = R::try_parse("foo foo foo").unwrap();
-        let rep3 = R::try_parse("foo foo\tfoo").unwrap();
+        R::try_check("foo").unwrap();
+
+        let inputs = [
+            "foofoofoo",
+            "foo foo foo",
+            "foo foo\tfoo",
+            "foofoofoo",
+            "foo foo foo",
+            "foo foo\tfoo",
+        ];
+        for input in inputs {
+            R::try_check(input).unwrap();
+        }
+
+        let [rep1, rep2, rep3, ..] = inputs.map(|s| R::try_parse(s).unwrap());
+
         let _ = R::try_parse("").unwrap();
         assert_ne!(rep1, rep2);
         assert_ne!(rep1, rep3);
@@ -176,10 +194,8 @@ mod tests {
             false
         );
 
-        let rep1 = R::try_parse("fooFoofoo").unwrap();
-        let rep2 = R::try_parse("foo Foo foo").unwrap();
-        let rep3 = R::try_parse("Foo foo\tfoo").unwrap();
-        let rep4 = R::try_parse("Foofoofoo").unwrap();
+        let inputs = ["fooFoofoo", "foo Foo foo", "Foo foo\tfoo", "Foofoofoo"];
+        let [rep1, rep2, rep3, rep4] = inputs.map(|s| R::try_parse(s).unwrap());
         assert_ne!(rep1, rep2);
         assert_ne!(rep1, rep3);
         assert_ne!(rep1, rep4);
@@ -436,6 +452,7 @@ mod tests {
         let mut set = HashSet::new();
         let foos = ["foofoo", "foo", "foofoofoo"];
         for input in foos {
+            Rep_0_3::try_check(input).unwrap();
             let r = Rep_0_3::try_parse(input).unwrap();
             for s in r.iter_matched() {
                 set.insert(s.clone());
@@ -460,9 +477,10 @@ mod tests {
             [Insens<'i, Foo>; 2],
             false
         );
-        Rep_2::try_parse("").unwrap_err();
-        Rep_2::try_parse("foo").unwrap_err();
-        Rep_2::try_parse("foofoofoo").unwrap_err();
+        for input in ["", "foo", "foofoofoo"] {
+            Rep_2::try_check(input).unwrap_err();
+            Rep_2::try_parse(input).unwrap_err();
+        }
         let arr = Rep_2::try_parse("foofoo").unwrap();
         assert_eq!(
             format!("{:?}", arr),
