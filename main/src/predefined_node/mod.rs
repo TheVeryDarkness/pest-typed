@@ -47,7 +47,7 @@ impl<T: StringWrapper> From<()> for Str<T> {
         }
     }
 }
-impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Str<T> {
+impl<'i, R: RuleType, T: StringWrapper + 'static> TypedNode<'i, R> for Str<T> {
     fn try_parse_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
