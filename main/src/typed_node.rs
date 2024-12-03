@@ -156,6 +156,7 @@ pub trait RuleStruct<'i, R: RuleType>: RuleStorage<R> {
 
 /// Match `[T; N]`.
 impl<'i, R: RuleType, T: TypedNode<'i, R>, const N: usize> TypedNode<'i, R> for [T; N] {
+    #[inline]
     fn try_parse_partial_with<I: Input<'i>>(
         mut input: I,
         stack: &mut Stack<Span<'i>>,

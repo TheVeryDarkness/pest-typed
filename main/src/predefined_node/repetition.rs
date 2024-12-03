@@ -87,6 +87,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for AtomicRep<T> {
         Some(Self::parse_with(input, stack))
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
@@ -199,6 +200,7 @@ impl<
         Some((input, Self { content: vec }))
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         mut input: I,
         stack: &mut Stack<Span<'i>>,
@@ -348,6 +350,7 @@ impl<
         Some((input, Self { content: vec }))
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,

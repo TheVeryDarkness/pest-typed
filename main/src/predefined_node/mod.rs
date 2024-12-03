@@ -48,6 +48,7 @@ impl<T: StringWrapper> From<()> for Str<T> {
     }
 }
 impl<'i, R: RuleType, T: StringWrapper + 'static> TypedNode<'i, R> for Str<T> {
+    #[inline]
     fn try_parse_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -60,6 +61,7 @@ impl<'i, R: RuleType, T: StringWrapper + 'static> TypedNode<'i, R> for Str<T> {
         }
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -100,6 +102,7 @@ impl<'i, T: StringWrapper> From<&'i str> for Insens<'i, T> {
     }
 }
 impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, T> {
+    #[inline]
     fn try_parse_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -114,6 +117,7 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, T> {
         }
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -147,6 +151,7 @@ impl<'i, Strings: StringArrayWrapper> From<Span<'i>> for Skip<'i, Strings> {
     }
 }
 impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i, Strings> {
+    #[inline]
     fn try_parse_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -162,6 +167,7 @@ impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i,
         }
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -181,6 +187,7 @@ pub struct SkipChar<'i, const N: usize> {
     pub span: Span<'i>,
 }
 impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, N> {
+    #[inline]
     fn try_parse_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -196,6 +203,7 @@ impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, N> {
         }
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -216,6 +224,7 @@ pub struct CharRange<const MIN: char, const MAX: char> {
     pub content: char,
 }
 impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R> for CharRange<MIN, MAX> {
+    #[inline]
     fn try_parse_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -232,6 +241,7 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R> for Cha
         }
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -312,6 +322,7 @@ impl<N> DerefMut for Positive<N> {
     }
 }
 impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
+    #[inline]
     fn try_parse_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
@@ -332,6 +343,7 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
         })
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
@@ -369,6 +381,7 @@ impl<T> From<()> for Negative<T> {
     }
 }
 impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
+    #[inline]
     fn try_parse_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
@@ -389,6 +402,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
         })
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
@@ -426,6 +440,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
         input.next().map(|c| (input, Self { content: c }))
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -452,6 +467,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
         }
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -484,6 +500,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for EOI {
         }
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -534,6 +551,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE {
         Some((input, Self { content: t }))
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         mut input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -567,6 +585,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
         Some((input, Self { span }))
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
@@ -611,6 +630,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
         }
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         mut input: I,
         stack: &mut Stack<Span<'i>>,
@@ -671,6 +691,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for DROP {
         }
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
@@ -717,6 +738,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
         }
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         mut input: I,
         stack: &mut Stack<Span<'i>>,
@@ -759,6 +781,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
         Some((input, Self::from(res.span)))
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
@@ -788,6 +811,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for AlwaysFail<'i> {
         None
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         _input: I,
         _stack: &mut Stack<Span<'i>>,
@@ -827,6 +851,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for Empty<'i> {
         ))
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
@@ -862,6 +887,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<T> {
         Some((input, Self::from(content)))
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
@@ -902,6 +928,7 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
         Some((input, Self))
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
@@ -928,6 +955,7 @@ impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<START> {
         Some((input, Self))
     }
 
+    #[inline]
     fn try_check_partial_with<I: Input<'i>>(
         input: I,
         stack: &mut Stack<Span<'i>>,
