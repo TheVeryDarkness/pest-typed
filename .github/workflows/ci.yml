@@ -1,4 +1,9 @@
-on: [push]
+on:
+  push:
+    branches:
+      - "*" # Run benchmarks on all branches.
+  schedule:
+    - cron: "0 0 1 * 0" # Run tests the first day of every month at midnight.
 
 name: Build, Lint and Test
 
