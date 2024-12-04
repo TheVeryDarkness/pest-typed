@@ -1680,7 +1680,7 @@ pub use rules_impl::rules;
 pub mod generics {
     use ::pest_typed::predefined_node;
     #[doc = r" Skipped content."]
-    pub type Skipped<'i> = predefined_node::AtomicRep<
+    pub type Skipped<'i> = predefined_node::AtomicRepeat<
         ::pest_typed::choices::Choice2<
             super::rules::WHITESPACE<'i, 0>,
             super::rules::COMMENT<'i, 0>,

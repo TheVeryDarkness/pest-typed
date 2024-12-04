@@ -25,7 +25,9 @@ use super::{
 use core::ops::{Deref, DerefMut};
 use core::{fmt::Debug, marker::PhantomData};
 use custom_debug_derive::Debug as Dbg;
-pub use repetition::{AtomicRep, Rep, RepMin, RepMinMax, RepOnce};
+pub use repetition::{
+    AtomicRepeat, Rep, RepExact, RepMin, RepMinMax, RepOnce, RepeatMin, RepeatMinMax,
+};
 
 /// Match given string case sensitively.
 ///

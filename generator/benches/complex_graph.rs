@@ -19,6 +19,19 @@ fn complete_graph_26(c: &mut Criterion) {
                 let _output = derive_typed_parser(
                     quote! {
                         #[grammar_inline = #s]
+                        #[pest_optimizer = false]
+                        struct x;
+                    },
+                    false,
+                    false,
+                );
+            });
+        });
+        c.bench_function("complete_graph_26 optimized", |c| {
+            c.iter(|| {
+                let _output = derive_typed_parser(
+                    quote! {
+                        #[grammar_inline = #s]
                         struct x;
                     },
                     false,

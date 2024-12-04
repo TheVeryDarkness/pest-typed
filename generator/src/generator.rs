@@ -10,15 +10,12 @@
 //! Copied from **pest/generator/src/generator.rs** (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
 //! and modified.
 
-use std::path::PathBuf;
-
+use super::docs::DocComment;
+use crate::graph::Generate;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
+use std::path::PathBuf;
 use syn::{self, Ident};
-
-use pest_meta::optimizer::*;
-
-use super::docs::DocComment;
 
 /// Generate Rust `include_str!` for grammar files, then Cargo will watch changes in grammars.
 pub(crate) fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream {
@@ -49,11 +46,11 @@ pub(crate) fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream
         ];
     }
 }
-pub(crate) fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment) -> TokenStream {
+pub(crate) fn generate_enum<R: Generate>(rules: &[R], doc_comment: &DocComment) -> TokenStream {
     let rules = rules.iter().map(|rule| {
-        let rule_name = format_ident!("r#{}", rule.name);
+        let rule_name = format_ident!("r#{}", rule.name());
 
-        match doc_comment.line_docs.get(&rule.name) {
+        match doc_comment.line_docs.get(rule.name()) {
             Some(doc) => quote! {
                 #[doc = #doc]
                 #rule_name
@@ -79,7 +76,10 @@ pub(crate) fn generate_enum(rules: &[OptimizedRule], doc_comment: &DocComment) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pest_meta::ast::RuleType;
+    use pest_meta::{
+        ast::RuleType,
+        optimizer::{OptimizedExpr, OptimizedRule},
+    };
     use std::collections::HashMap;
 
     #[test]

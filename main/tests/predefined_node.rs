@@ -69,7 +69,7 @@ mod tests {
         Rule,
         Rule::Foo,
         Str::<Foo>,
-        AtomicRep<Choice2<WHITESPACE<'i>, COMMENT<'i>>>,
+        AtomicRepeat<Choice2<WHITESPACE<'i>, COMMENT<'i>>>,
         false
     );
     rule_eoi!(EOI, Rule);
@@ -102,7 +102,7 @@ mod tests {
             "COMMENT { content: CharRange { content: '\\t' }, span: Span { str: \"\\t\", start: 0, end: 1 } }"
         );
     }
-    type Ignore<'i> = AtomicRep<Choice2<WHITESPACE<'i>, COMMENT<'i>>>;
+    type Ignore<'i> = AtomicRepeat<Choice2<WHITESPACE<'i>, COMMENT<'i>>>;
 
     #[test]
     fn ignore() {
@@ -291,7 +291,7 @@ mod tests {
                     Ignore<'i>,
                     0,
                 >,
-                Skipped<AtomicRep<CharRange<'a', 'z'>>, Ignore<'i>, 0>,
+                Skipped<AtomicRepeat<CharRange<'a', 'z'>>, Ignore<'i>, 0>,
             >,
             false
         );
@@ -344,7 +344,7 @@ mod tests {
             "Any character except \"foo\" or \"bar\".",
             Rule,
             Rule::NotFooBar,
-            AtomicRep<(Negative<Choice2<Str<StrFoo>, Str<StrBar>>>, ANY)>,
+            AtomicRepeat<(Negative<Choice2<Str<StrFoo>, Str<StrBar>>>, ANY)>,
             false
         );
         let _ = not_foo_bar::<1>::try_parse("").unwrap();
@@ -370,7 +370,7 @@ mod tests {
             Rule::RepFoo,
             Seq2<
                 Skipped<Push<Insens<'i, Foo>>, Ignore<'i>, 0>,
-                Skipped<RepMinMax<Skipped<PEEK<'i>, Ignore<'i>, 0>, 1, 3>, Ignore<'i>, 0>,
+                Skipped<RepeatMinMax<Skipped<PEEK<'i>, Ignore<'i>, 0>, 1, 3>, Ignore<'i>, 0>,
             >,
             false
         );
@@ -384,7 +384,7 @@ mod tests {
                 content: \"foO\",
             },
         },
-        RepMinMax {
+        RepeatMinMax {
             content: [
                 PEEK {
                     span: Span {
@@ -440,12 +440,12 @@ mod tests {
             "Repeat previously matched expression 0 to 3 times",
             Rule,
             Rule::RepFoo,
-            RepMin<Skipped<Str<Foo>, Ignore<'i>, 0>, 0>,
+            RepeatMin<Skipped<Str<Foo>, Ignore<'i>, 0>, 0>,
             false
         );
 
         let x = Rep_0_3::try_parse("").unwrap();
-        assert_eq!(x.ref_inner(), &RepMin::default());
+        assert_eq!(x.ref_inner(), &RepeatMin::default());
 
         use std::collections::HashSet;
 

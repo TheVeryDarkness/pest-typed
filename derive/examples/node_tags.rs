@@ -21,7 +21,7 @@ fn main() -> Result<(), Error> {
     {
         // Access tag `b` with `b()`.
         let _b = a.b();
-        // Tag `b` also has accesser functions.
+        // Tag `b` also has getter functions.
 
         // if let Some(b1) = b.b1() {
         //     assert_eq!(b1.span.as_str(), "bbb");

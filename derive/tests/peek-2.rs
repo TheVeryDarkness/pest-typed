@@ -9,7 +9,7 @@
 
 use std::{collections::HashSet, ops::DerefMut};
 
-use pest_typed::{predefined_node::RepMin, ParsableTypedNode};
+use pest_typed::{predefined_node::RepeatMin, ParsableTypedNode};
 use pest_typed_derive::TypedParser;
 
 #[allow(dead_code)]
@@ -41,7 +41,7 @@ fn tree() {
 
     let mut x = rules::main::try_parse("FOO ").unwrap();
     x.deref_mut().0.matched.content.clear();
-    assert_eq!(x.get_matched().0, &RepMin::default());
+    assert_eq!(x.get_matched().0, &RepeatMin::default());
 
     let error = rules::main::try_parse(" ").unwrap_err();
     assert_eq!(

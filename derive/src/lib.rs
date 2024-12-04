@@ -42,13 +42,13 @@
 //!
 //! Note: the simulated [Pairs](#https://docs.rs/pest/latest/pest/iterators/struct.Pairs.html) API behaves a bit different from original version. An atomic rule will not contain inner pairs.
 //!
-//! ### Accesser API
+//! ### Getter API
 //!
-//! See [`fn@derive_typed_parser`] for how to enable Accesser API.
+//! See [`fn@derive_typed_parser`] for how to enable Getter API.
 //!
-//! Accesser API is a group of functions, called **Accesser Functions**, to access referenced rules (or tags, if enabled).
+//! Getter API is a group of functions, called **Getter Functions**, to get referenced rules (or tags, if enabled).
 //!
-//! Accesser function is named with the same name of the rule that it's accessing.
+//! Getter function is named with the same name of the rule that it's accessing.
 //!
 //! For example, if you have
 //!
@@ -64,10 +64,10 @@
 #![doc = include_str!("../examples/csv.pest")]
 //! ```
 //!
-//! Here is a basic example on how to access and process referenced rules in a rule using Accesser API:
+//! Here is a basic example on how to access and process referenced rules in a rule using Getter API:
 //!
 //! ```rust
-#![doc = include_str!("../examples/accesser_api.rs")]
+#![doc = include_str!("../examples/getter_api.rs")]
 //! ```
 //!
 //! ### Rule Structs
@@ -127,7 +127,7 @@
 //!
 //! |              Node Type              |                                                  Fields                                                   |                                             Functions                                             |
 //! | :---------------------------------: | :-------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------: |
-//! |           Non-silent rule           | Matched `content` (wrapped in a [`Box`]), which can be used to access matched expression; matched `span`. |                                See [Accesser API](#accesser-api).                                 |
+//! |           Non-silent rule           | Matched `content` (wrapped in a [`Box`]), which can be used to access matched expression; matched `span`. |                                See [Getter API](#getter-api).                                 |
 //! |    Exact string (case-sensitive)    |                                                                                                           | `const fn get_content(&self)` to get original string, which requires trait `pest_typed::Storage`. |
 //! |   Exact string (case-insensitive)   |                                     Matched `content` (an `&'i str`).                                     | `const fn get_content(&self)` to get original string, which requires trait `pest_typed::Storage`. |
 //! |        Sequence `T, Res...`         |                                       Matched `content` as a tuple.                                       |          `get_matched(&self)`, which returns referencs of all elemnets `(&elemnts...)`.           |
@@ -208,7 +208,8 @@ use proc_macro::TokenStream;
         emit_rule_reference,
         emit_tagged_node_reference,
         do_not_emit_span,
-        truncate_accesser_at_node_tag,
+        pest_optimizer,
+        truncate_getter_at_node_tag,
         simulate_pair_api,
         box_only_if_needed,
         no_warnings,

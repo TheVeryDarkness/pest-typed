@@ -14,7 +14,7 @@ struct Parser;
 
 fn parse(input: &'static str) -> Result<(), Error> {
     let a = Parser::try_parse::<pairs::a>(input)?;
-    // With accesser API.
+    // With getter API.
     // Call `b()` to get reference to `b`.
     // Call `c()` to get reference to `c`.
     // Call `d()` to get reference to `d`.

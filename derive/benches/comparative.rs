@@ -16,6 +16,15 @@ macro_rules! case {
                 use super::*;
                 #[derive(TypedParser)]
                 #[grammar_inline = $grammar]
+                #[pest_optimizer = false]
+                pub struct Parser;
+            }
+
+            mod pest_typed_optimized {
+                use super::*;
+                #[derive(TypedParser)]
+                #[grammar_inline = $grammar]
+                #[pest_optimizer = true]
                 pub struct Parser;
             }
 
@@ -42,6 +51,23 @@ macro_rules! case {
                     b.iter(|| {
                         let _pair = pest_typed::Parser::try_check::<pest_typed::rules::$name>(&s)
                             .unwrap_or_else(|err| panic!("{}", err));
+                    })
+                });
+                group.bench_function("pest-typed-optimized-parse", |b| {
+                    b.iter(|| {
+                        let pair = pest_typed_optimized::Parser::try_parse::<
+                            pest_typed_optimized::rules::$name,
+                        >(&s)
+                        .unwrap_or_else(|err| panic!("{}", err));
+                        assert_eq!(pair.span().as_str().len(), s.len());
+                    })
+                });
+                group.bench_function("pest-typed-optimized-check", |b| {
+                    b.iter(|| {
+                        let _pair = pest_typed_optimized::Parser::try_check::<
+                            pest_typed_optimized::rules::$name,
+                        >(&s)
+                        .unwrap_or_else(|err| panic!("{}", err));
                     })
                 });
                 group.bench_function("pest-parse", |b| {

@@ -22,9 +22,8 @@ use super::docs::{consume, DocComment};
 use super::generator::{generate_enum, generate_include};
 use super::helper::{collect_data, get_string, GrammarSource};
 use crate::config::Config;
-use crate::graph::{generate_typed_pair_from_rule, pest_typed};
+use crate::graph::{generate_typed_pair_from_rule, pest_typed, Generate};
 use crate::helper::get_bool;
-use pest_meta::optimizer::OptimizedRule;
 use pest_meta::parser::{consume_rules, parse, rename_meta_rule, Rule};
 use pest_meta::{optimizer::optimize, unwrap_or_report};
 use proc_macro2::TokenStream;
@@ -54,27 +53,42 @@ pub fn derive_typed_parser(
 
     let doc_comment = consume(pairs.clone());
     let ast = unwrap_or_report(consume_rules(pairs));
-    let optimized = optimize(ast);
+    if config.pest_optimizer {
+        let optimized = optimize(ast);
+        let input = Input::new(optimized, doc_comment);
 
-    let input = Input {
-        rules: optimized,
-        doc_comment,
-    };
-
-    generate_typed(
-        name,
-        &generics,
-        paths,
-        &input,
-        include_grammar,
-        include_derive,
-        config,
-    )
+        generate_typed(
+            name,
+            &generics,
+            paths,
+            &input,
+            include_grammar,
+            include_derive,
+            config,
+        )
+    } else {
+        let input = Input::new(ast, doc_comment);
+        generate_typed(
+            name,
+            &generics,
+            paths,
+            &input,
+            include_grammar,
+            include_derive,
+            config,
+        )
+    }
 }
 
-struct Input {
-    rules: Vec<OptimizedRule>,
+pub(crate) struct Input<R> {
+    rules: Vec<R>,
     doc_comment: DocComment,
+}
+
+impl<R> Input<R> {
+    pub(crate) fn new(rules: Vec<R>, doc_comment: DocComment) -> Self {
+        Self { rules, doc_comment }
+    }
 }
 
 fn parse_typed_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>, Config) {
@@ -95,11 +109,13 @@ fn parse_typed_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>,
             config.emit_tagged_node_reference = get_bool(attr);
         } else if path.is_ident("do_not_emit_span") {
             config.do_not_emit_span = get_bool(attr);
-        } else if path.is_ident("truncate_accesser_at_node_tag") {
+        } else if path.is_ident("pest_optimizer") {
+            config.pest_optimizer = get_bool(attr);
+        } else if path.is_ident("truncate_getter_at_node_tag") {
             if cfg!(not(feature = "grammar-extras")) && !config.no_warnings {
-                eprintln!("Specify `truncate_accesser_at_node_tag` does not take effect when `grammar-extras` is not enabled.");
+                eprintln!("Specify `truncate_getter_at_node_tag` does not take effect when `grammar-extras` is not enabled.");
             }
-            config.truncate_accesser_at_node_tag = get_bool(attr);
+            config.truncate_getter_at_node_tag = get_bool(attr);
         } else if path.is_ident("simulate_pair_api") {
             config.simulate_pair_api = get_bool(attr);
         } else if path.is_ident("box_only_if_needed") {
@@ -117,11 +133,11 @@ fn parse_typed_derive(ast: DeriveInput) -> (Ident, Generics, Vec<GrammarSource>,
 }
 
 /// Generate codes for Parser.
-fn generate_typed(
+fn generate_typed<R: Generate>(
     name: Ident,
     generics: &Generics,
     paths: Vec<PathBuf>,
-    input: &Input,
+    input: &Input<R>,
     include_grammar: bool,
     include_derive: bool,
     config: Config,
@@ -185,7 +201,7 @@ mod tests {
             #[grammar_inline = "x = { \"x\" }"]
             #[emit_rule_reference]
             #[no_warnings = true]
-            #[truncate_accesser_at_node_tag = false]
+            #[truncate_getter_at_node_tag = false]
             struct x;
         })
         .unwrap();
@@ -196,7 +212,8 @@ mod tests {
                 emit_rule_reference: true,
                 emit_tagged_node_reference: false,
                 do_not_emit_span: false,
-                truncate_accesser_at_node_tag: false,
+                pest_optimizer: true,
+                truncate_getter_at_node_tag: false,
                 simulate_pair_api: false,
                 box_only_if_needed: false,
                 no_warnings: true,

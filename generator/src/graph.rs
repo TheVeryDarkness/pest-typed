@@ -11,14 +11,15 @@ use crate::config::Config;
 use crate::docs::DocComment;
 use crate::types::{option_type, vec_type};
 use pest::unicode::unicode_property_names;
-use pest_meta::{
-    ast::RuleType,
-    optimizer::{OptimizedExpr, OptimizedRule},
-};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use std::collections::{btree_map, BTreeMap, BTreeSet};
 use syn::Index;
+pub(crate) use traits::Generate;
+
+mod optimized_rule;
+mod rule;
+mod traits;
 
 pub fn pest_typed() -> TokenStream {
     quote! {::pest_typed}
@@ -256,29 +257,29 @@ impl<'g> Node<'g> {
 
 /// `'g` stands for the lifetime of rules.
 #[derive(Clone)]
-struct Accesser<'g> {
+struct Getter<'g> {
     /// name -> (path, type)
-    accessers: BTreeMap<&'g str, Node<'g>>,
+    getters: BTreeMap<&'g str, Node<'g>>,
 }
-impl<'g> Default for Accesser<'g> {
+impl<'g> Default for Getter<'g> {
     fn default() -> Self {
         Self::new()
     }
 }
-impl<'g> Accesser<'g> {
+impl<'g> Getter<'g> {
     pub fn new() -> Self {
         Self {
-            accessers: BTreeMap::new(),
+            getters: BTreeMap::new(),
         }
     }
     pub fn from_rule(name: &'g str, id: &'g str, has_life_time: bool, has_skip: bool) -> Self {
         let res = BTreeMap::from([(name, Node::from_rule(id, has_life_time, has_skip))]);
-        Self { accessers: res }
+        Self { getters: res }
     }
     #[cfg(feature = "grammar-extras")]
     pub fn from_tag(rule: &'g str, name: &'g str, tokens: TokenStream) -> Self {
         let res = BTreeMap::from([(name, Node::from_tag(rule, name, vec![tokens]))]);
-        Self { accessers: res }
+        Self { getters: res }
     }
     pub fn content(self) -> Self {
         self.prepend(Edge::Content)
@@ -297,16 +298,16 @@ impl<'g> Accesser<'g> {
     }
     #[inline]
     fn prepend(mut self, edge: Edge) -> Self {
-        for (_, node) in self.accessers.iter_mut() {
+        for (_, node) in self.getters.iter_mut() {
             // TODO: Ellide clone here.
             *node = node.clone().wrap(edge.clone());
         }
         self
     }
-    /// Join two accesser forest in the same level.
-    pub fn join_mut(&mut self, other: Accesser<'g>) {
-        other.accessers.into_iter().for_each(|(name, tree)| {
-            let entry = self.accessers.entry(name);
+    /// Join two getter forest in the same level.
+    pub fn join_mut(&mut self, other: Getter<'g>) {
+        other.getters.into_iter().for_each(|(name, tree)| {
+            let entry = self.getters.entry(name);
             match entry {
                 btree_map::Entry::Vacant(entry) => {
                     entry.insert(tree);
@@ -319,13 +320,13 @@ impl<'g> Accesser<'g> {
             }
         });
     }
-    /// Join two accesser forest in the same level.
-    pub fn join(mut self, other: Accesser<'g>) -> Self {
+    /// Join two getter forest in the same level.
+    pub fn join(mut self, other: Getter<'g>) -> Self {
         self.join_mut(other);
         self
     }
     pub fn collect(&self, root: &TokenStream, config: &RuleConfig<'g>) -> TokenStream {
-        let accessers = self.accessers.iter().map(|(name, node)| {
+        let getters = self.getters.iter().map(|(name, node)| {
             let id = ident(name);
             let (paths, types) = node.expand(root, config);
             let content = if config.boxed {
@@ -348,7 +349,7 @@ impl<'g> Accesser<'g> {
             }
         });
         quote! {
-            #(#accessers)*
+            #(#getters)*
         }
     }
 }
@@ -417,19 +418,19 @@ impl<'g> RuleConfig<'g> {
 fn rule<'g>(
     rule_config: &RuleConfig<'g>,
     type_name: TokenStream,
-    accessers: &Accesser<'g>,
+    getters: &Getter<'g>,
     emission: Emission,
 ) -> TokenStream {
     let root = quote! {super::super};
     let _bool = _bool();
-    let accessers = match emission {
-        Emission::Both | Emission::Expression => accessers.collect(&root, rule_config),
+    let getters = match emission {
+        Emission::Both | Emission::Expression => getters.collect(&root, rule_config),
         Emission::Span => quote! {},
     };
     #[allow(clippy::needless_lifetimes)]
     fn create<'g>(
         rule_config: &RuleConfig<'g>,
-        accesser_impl: TokenStream,
+        getter_impl: TokenStream,
         inner_type: TokenStream,
         emission: Emission,
     ) -> TokenStream {
@@ -448,11 +449,11 @@ fn rule<'g>(
         quote! {
             #pest_typed::rule!(#name, #(#docs)*, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission, #boxed);
             impl<'i, const INHERITED: #usize> #name<'i, INHERITED> {
-                #accesser_impl
+                #getter_impl
             }
         }
     }
-    create(rule_config, accessers, type_name, emission)
+    create(rule_config, getters, type_name, emission)
 }
 
 struct Output<'g> {
@@ -460,9 +461,9 @@ struct Output<'g> {
     wrappers: Vec<TokenStream>,
     wrapper_counter: usize,
     rule_configs: BTreeMap<Ident, RuleConfig<'g>>,
-    /// Rule Name -> (Tag Name, ([Type], Accesser)).
+    /// Rule Name -> (Tag Name, ([Type], Getter)).
     #[cfg(feature = "grammar-extras")]
-    tagged_nodes: BTreeMap<Ident, BTreeMap<Ident, (Vec<TokenStream>, Accesser<'g>)>>,
+    tagged_nodes: BTreeMap<Ident, BTreeMap<Ident, (Vec<TokenStream>, Getter<'g>)>>,
     sequences: BTreeSet<usize>,
     choices: BTreeSet<usize>,
 }
@@ -513,12 +514,12 @@ impl<'g> Output<'g> {
         rule_name: &Ident,
         tag_name: &Ident,
         inner: TokenStream,
-        accesser: Accesser<'g>,
+        getter: Getter<'g>,
     ) {
         let entry = self.tagged_nodes.entry(rule_name.clone()).or_default();
         let entry = entry.entry(tag_name.clone()).or_default();
         entry.0.push(inner);
-        entry.1.join_mut(accesser);
+        entry.1.join_mut(getter);
     }
     /// Insert a string wrapper to corresponding module.
     /// Return the module path relative to module root.
@@ -574,9 +575,9 @@ impl<'g> Output<'g> {
             // let root = quote! {super::super};
             // let config = self.rule_configs.get(rule_name).unwrap();
             #[allow(unused_variables)]
-            let tags = tags.iter().map(|(tag_name, (types, accesser))| {
+            let tags = tags.iter().map(|(tag_name, (types, getter))| {
                 let comment = format!("Tag {} referenced by {}.", tag_name, rule_name);
-                // let accesser = accesser.collect(&root, config);
+                // let getter = getter.collect(&root, config);
                 quote! {
                     #[doc = #comment]
                     #[allow(non_camel_case_types)]
@@ -590,7 +591,7 @@ impl<'g> Output<'g> {
                         pub content: ( #(&'s #types, )* )
                     }
                     impl<'s, 'i, const INHERITED: #usize> #tag_name<'s, 'i, INHERITED> {
-                        #accesser
+                        #getter
                     }
                 }
                 */
@@ -631,393 +632,6 @@ impl<'g> Output<'g> {
     }
 }
 
-/// Returns (type name, accesser).
-fn process_single_alias<'g>(
-    map: &mut Output<'g>,
-    rule_config: &RuleConfig<'g>,
-    type_name: TokenStream,
-    accessers: Accesser<'g>,
-    root: &TokenStream,
-    emission: Emission,
-    explicit: bool,
-) -> (TokenStream, Accesser<'g>) {
-    if explicit {
-        let rule_id = &rule_config.rule_id;
-        let def = rule(rule_config, type_name, &accessers, emission);
-        map.insert(def, rule_config.clone());
-        let rules = rules_mod();
-        (quote! {#root::#rules::#rule_id::<'i>}, accessers)
-    } else {
-        (type_name, accessers)
-    }
-}
-
-/// Returns type name.
-fn generate_graph_node<'g>(
-    expr: &'g OptimizedExpr,
-    rule_config: &RuleConfig<'g>,
-    // From node name to type definition and implementation
-    map: &mut Output<'g>,
-    explicit: bool,
-    emission: Emission,
-    config: Config,
-    root: &TokenStream,
-) -> (TokenStream, Accesser<'g>) {
-    let generics = generics();
-    let skip = match rule_config.atomicity {
-        Some(true) => quote! {0},
-        Some(false) => quote! {1},
-        None => quote! {INHERITED},
-    };
-    macro_rules! walk {
-        ($root:expr, $var:ident) => {{
-            let mut current = $root;
-            let mut nodes = Vec::<&OptimizedExpr>::new();
-            while let OptimizedExpr::$var(lhs, rhs) = current {
-                current = rhs;
-                nodes.push(&lhs);
-            }
-            nodes.push(current);
-            nodes
-        }};
-    }
-    // Still some compile-time information not taken.
-    match expr {
-        OptimizedExpr::Str(content) => {
-            let wrapper = map.insert_string_wrapper(content.as_str());
-            process_single_alias(
-                map,
-                rule_config,
-                quote! {
-                    #root::#generics::Str::<#root::#wrapper>
-                },
-                Accesser::new(),
-                root,
-                emission,
-                explicit,
-            )
-        }
-        OptimizedExpr::Insens(content) => {
-            let wrapper = map.insert_string_wrapper(content.as_str());
-            process_single_alias(
-                map,
-                rule_config,
-                quote! {
-                    #root::#generics::Insens::<'i, #root::#wrapper>
-                },
-                Accesser::new(),
-                root,
-                emission,
-                explicit,
-            )
-        }
-        OptimizedExpr::PeekSlice(start, end) => process_single_alias(
-            map,
-            rule_config,
-            match end {
-                Some(end) => quote! {
-                    #root::#generics::PeekSlice2::<#start, #end>
-                },
-                None => quote! {
-                    #root::#generics::PeekSlice1::<#start>
-                },
-            },
-            Accesser::new(),
-            root,
-            emission,
-            explicit,
-        ),
-        OptimizedExpr::Push(expr) => {
-            let (inner, accesser) =
-                generate_graph_node(expr, rule_config, map, false, emission, config, root);
-            process_single_alias(
-                map,
-                rule_config,
-                quote! {
-                    #root::#generics::Push::<#inner>
-                },
-                accesser.content(),
-                root,
-                emission,
-                explicit,
-            )
-        }
-        OptimizedExpr::Skip(strings) => {
-            let wrapper = map.insert_string_array_wrapper(strings);
-            process_single_alias(
-                map,
-                rule_config,
-                quote! {
-                    #root::#generics::Skip::<#root::#wrapper>
-                },
-                Accesser::new(),
-                root,
-                emission,
-                explicit,
-            )
-        }
-        OptimizedExpr::Range(start, end) => {
-            let start = start.chars().next().unwrap();
-            let end = end.chars().next().unwrap();
-            process_single_alias(
-                map,
-                rule_config,
-                quote! {
-                    #root::#generics::CharRange::<#start, #end>
-                },
-                Accesser::new(),
-                root,
-                emission,
-                explicit,
-            )
-        }
-        OptimizedExpr::Ident(id) => {
-            let inner = ident(id);
-            let rules = rules_mod();
-            let has_life_time = rule_config.defined.contains(id.as_str())
-                || !rule_config.builtins_without_lifetime.contains(id.as_str());
-            let has_skip = rule_config.defined.contains(id.as_str());
-            let generics = match (has_life_time, has_skip) {
-                (true, true) => quote! {::<'i, #skip>},
-                (true, false) => quote! {::<'i>},
-                (false, true) => quote! {::<#skip>},
-                (false, false) => quote! {},
-            };
-            let accessers = if config.emit_rule_reference {
-                Accesser::from_rule(id, id.as_str(), has_life_time, has_skip)
-            } else {
-                Accesser::new()
-            };
-            let type_name = quote! {#root::#rules::#inner #generics};
-            process_single_alias(
-                map,
-                rule_config,
-                type_name,
-                accessers,
-                root,
-                emission,
-                explicit,
-            )
-        }
-        OptimizedExpr::PosPred(expr) => {
-            let (inner, accessers) =
-                generate_graph_node(expr, rule_config, map, false, emission, config, root);
-            process_single_alias(
-                map,
-                rule_config,
-                quote! {
-                    #root::#generics::Positive::<#inner>
-                },
-                accessers.content(),
-                root,
-                emission,
-                explicit,
-            )
-        }
-        OptimizedExpr::NegPred(expr) => {
-            // Impossible to access inner tokens.
-            let (inner, _) =
-                generate_graph_node(expr, rule_config, map, false, emission, config, root);
-            process_single_alias(
-                map,
-                rule_config,
-                quote! {
-                    #root::#generics::Negative::<#inner>
-                },
-                Accesser::new(),
-                root,
-                emission,
-                explicit,
-            )
-        }
-        OptimizedExpr::RestoreOnErr(inner) => {
-            generate_graph_node(inner, rule_config, map, explicit, emission, config, root)
-        }
-        OptimizedExpr::Seq(_, _) => {
-            let vec = walk!(expr, Seq);
-            let mut types = Vec::<TokenStream>::with_capacity(vec.len());
-            let mut accesser = Accesser::new();
-            for (i, expr) in vec.into_iter().enumerate() {
-                let (child, acc) =
-                    generate_graph_node(expr, rule_config, map, false, emission, config, root);
-                types.push(child);
-                accesser = accesser.join(acc.content_i(i));
-            }
-            let seq = format_ident!("Seq{}", types.len());
-            map.record_seq(types.len());
-
-            let pest_typed = pest_typed();
-            let args = types.iter().map(
-                |t| quote! {(#pest_typed::predefined_node::Skipped<#t, #root::generics::Skipped<'i>, #skip>)},
-            );
-            process_single_alias(
-                map,
-                rule_config,
-                quote! { #root::#generics::#seq::<#(#args, )*> },
-                accesser,
-                root,
-                emission,
-                explicit,
-            )
-        }
-        OptimizedExpr::Choice(_, _) => {
-            let vec = walk!(expr, Choice);
-            let mut types = Vec::<TokenStream>::with_capacity(vec.len());
-            let mut accesser = Accesser::new();
-            for (i, expr) in vec.into_iter().enumerate() {
-                let (child, acc) =
-                    generate_graph_node(expr, rule_config, map, false, emission, config, root);
-                types.push(child);
-                accesser = accesser.join(acc.choice(i));
-            }
-            let choice = format_ident!("Choice{}", types.len());
-            map.record_choice(types.len());
-            process_single_alias(
-                map,
-                rule_config,
-                quote! { #root::#generics::#choice::<#(#types, )*> },
-                accesser,
-                root,
-                emission,
-                explicit,
-            )
-        }
-        OptimizedExpr::Opt(inner) => {
-            let (inner_name, accessers) =
-                generate_graph_node(inner, rule_config, map, false, emission, config, root);
-            let accessers = accessers.optional();
-            let option = option_type();
-            process_single_alias(
-                map,
-                rule_config,
-                quote! {#option::<#inner_name>},
-                accessers,
-                root,
-                emission,
-                explicit,
-            )
-        }
-        OptimizedExpr::Rep(inner) => {
-            let (inner_name, accessers) =
-                generate_graph_node(inner, rule_config, map, false, emission, config, root);
-            process_single_alias(
-                map,
-                rule_config,
-                quote! { #root::#generics::Rep::<'i, #skip, #inner_name> },
-                accessers.contents(),
-                root,
-                emission,
-                explicit,
-            )
-        }
-        #[cfg(feature = "grammar-extras")]
-        OptimizedExpr::RepOnce(inner) => {
-            let (inner_name, accessers) =
-                generate_graph_node(inner, rule_config, map, false, emission, config, root);
-            process_single_alias(
-                map,
-                rule_config,
-                quote! { #root::#generics::RepOnce::<'i, #skip, #inner_name> },
-                accessers.contents(),
-                root,
-                emission,
-                explicit,
-            )
-        }
-        #[cfg(feature = "grammar-extras")]
-        OptimizedExpr::NodeTag(inner_expr, tag) => {
-            if config.emit_tagged_node_reference {
-                let tag_id = ident(tag.as_str());
-                let (inner, accesser) = generate_graph_node(
-                    inner_expr,
-                    rule_config,
-                    map,
-                    explicit,
-                    emission,
-                    config,
-                    root,
-                );
-                map.insert_tag(
-                    &rule_config.rule_id,
-                    &tag_id,
-                    inner.clone(),
-                    accesser.clone(),
-                );
-                let new_accesser =
-                    Accesser::from_tag(rule_config.rule_name, tag.as_str(), inner.clone());
-                if config.truncate_accesser_at_node_tag {
-                    (inner, new_accesser)
-                } else {
-                    (inner, new_accesser.join(accesser))
-                }
-            } else {
-                let (inner, accesser) = generate_graph_node(
-                    inner_expr,
-                    rule_config,
-                    map,
-                    explicit,
-                    emission,
-                    config,
-                    root,
-                );
-                process_single_alias(map, rule_config, inner, accesser, root, emission, false)
-            }
-        }
-    }
-}
-
-fn generate_graph<'g: 'f, 'f>(
-    rules: &'g [OptimizedRule],
-    defined: &'g BTreeSet<&'g str>,
-    not_boxed: &'f BTreeSet<&'g str>,
-    builtins_without_lifetime: &'g BTreeSet<&'g str>,
-    config: Config,
-    doc: &'g DocComment,
-) -> Output<'g> {
-    let mut res = Output::new();
-    for rule in rules.iter() {
-        let rule_name = rule.name.as_str();
-        let (atomicity, emission) = match rule.ty {
-            RuleType::Normal => (None, Emission::Both),
-            RuleType::Silent => (None, Emission::Expression),
-            RuleType::NonAtomic => (Some(false), Emission::Both),
-            RuleType::CompoundAtomic => (Some(true), Emission::Both),
-            RuleType::Atomic => (Some(true), Emission::Span),
-        };
-        let atomicity_doc = match atomicity {
-            Some(true) => "Atomic rule.",
-            Some(false) => "Non-atomic rule.",
-            None => "Normal rule.",
-        };
-        let rule_desc = format!(
-            "Corresponds to expression: `{}`. {}",
-            rule.expr, atomicity_doc
-        );
-        let boxed = !config.box_only_if_needed || !not_boxed.contains(rule_name);
-        let rule_doc = doc.line_docs.get(rule_name).map(|s| s.as_str());
-        let rule_config = RuleConfig {
-            atomicity,
-            boxed,
-            rule_id: ident(rule_name),
-            rule_name,
-            rule_desc,
-            rule_doc,
-            defined,
-            builtins_without_lifetime,
-        };
-        generate_graph_node(
-            &rule.expr,
-            &rule_config,
-            &mut res,
-            true,
-            emission,
-            config,
-            &quote! {super::super},
-        );
-    }
-    res
-}
-
 /// Whether skipped rules has been defined.
 #[derive(Clone, Copy)]
 struct Implicit {
@@ -1025,10 +639,10 @@ struct Implicit {
     comment: bool,
 }
 
-impl<'s> From<&'s [OptimizedRule]> for Implicit {
-    fn from(value: &'s [OptimizedRule]) -> Self {
-        let whitespace = value.iter().any(|rule| rule.name == "WHITESPACE");
-        let comment = value.iter().any(|rule| rule.name == "COMMENT");
+impl<'s, R: Generate> From<&'s [R]> for Implicit {
+    fn from(value: &'s [R]) -> Self {
+        let whitespace = value.iter().any(|rule| rule.name() == "WHITESPACE");
+        let comment = value.iter().any(|rule| rule.name() == "COMMENT");
         Self {
             whitespace,
             comment,
@@ -1036,68 +650,34 @@ impl<'s> From<&'s [OptimizedRule]> for Implicit {
     }
 }
 
-fn collect_used_rule<'s>(rule: &'s OptimizedRule, implicit: Implicit, res: &mut BTreeSet<&'s str>) {
-    //
-    if rule.ty == RuleType::Normal {
-        if implicit.comment {
-            res.insert("COMMENT");
-        }
-        if implicit.whitespace {
-            res.insert("WHITESPACE");
-        }
-    }
-    let mut exprs = vec![&rule.expr];
-    while let Some(expr) = exprs.pop() {
-        match expr {
-            OptimizedExpr::Str(_) | OptimizedExpr::Insens(_) | OptimizedExpr::Range(_, _) => (),
-            OptimizedExpr::Ident(rule_name) => {
-                res.insert(rule_name.as_str());
-            }
-            OptimizedExpr::PeekSlice(_, _) => (),
-            OptimizedExpr::PosPred(expr) | OptimizedExpr::NegPred(expr) => exprs.push(expr),
-            OptimizedExpr::Seq(lhs, rhs) | OptimizedExpr::Choice(lhs, rhs) => {
-                exprs.push(lhs);
-                exprs.push(rhs);
-            }
-            OptimizedExpr::Opt(expr) | OptimizedExpr::Rep(expr) => exprs.push(expr),
-            #[cfg(feature = "grammar-extras")]
-            OptimizedExpr::RepOnce(expr) => exprs.push(expr),
-            OptimizedExpr::Skip(_) => (),
-            OptimizedExpr::Push(expr) | OptimizedExpr::RestoreOnErr(expr) => exprs.push(expr),
-            #[cfg(feature = "grammar-extras")]
-            OptimizedExpr::NodeTag(expr, _) => exprs.push(expr),
-        }
-    }
-}
-
-fn collect_used_rules<'s>(rules: &'s [OptimizedRule], implicit: Implicit) -> BTreeSet<&'s str> {
+fn collect_used_rules<'s, R: Generate>(rules: &'s [R], implicit: Implicit) -> BTreeSet<&'s str> {
     let mut res = BTreeSet::<&'s str>::new();
     for rule in rules {
-        collect_used_rule(rule, implicit, &mut res);
+        R::collect_used_rule(rule, implicit, &mut res);
     }
     res
 }
 
-fn collect_reachability<'g>(
-    rules: &'g [OptimizedRule],
+fn collect_reachability<'g, R: Generate>(
+    rules: &'g [R],
     implicit: Implicit,
 ) -> BTreeMap<&'g str, BTreeSet<&'g str>> {
     let mut res: BTreeMap<&'g str, BTreeSet<&'g str>> = BTreeMap::new();
     for rule in rules {
-        let entry = res.entry(rule.name.as_str()).or_default();
-        collect_used_rule(rule, implicit, entry);
+        let entry = res.entry(rule.name()).or_default();
+        R::collect_used_rule(rule, implicit, entry);
     }
     for _ in 0..rules.len() {
         for rule in rules {
-            if let Some(cur) = res.remove(rule.name.as_str()) {
+            if let Some(cur) = res.remove(rule.name()) {
                 let mut new = cur.clone();
                 for referenced in cur {
                     if let Some(iter) = res.get(referenced) {
                         new.extend(iter);
                     }
                 }
-                if !new.contains(rule.name.as_str()) {
-                    res.insert(rule.name.as_str(), new);
+                if !new.contains(rule.name()) {
+                    res.insert(rule.name(), new);
                 }
             }
         }
@@ -1105,14 +685,14 @@ fn collect_reachability<'g>(
     res
 }
 
-pub(crate) fn generate_typed_pair_from_rule(
-    rules: &[OptimizedRule],
+pub(crate) fn generate_typed_pair_from_rule<R: Generate>(
+    rules: &[R],
     doc: &DocComment,
     config: Config,
 ) -> TokenStream {
     let pest_typed = pest_typed();
 
-    let defined_rules: BTreeSet<&str> = rules.iter().map(|rule| rule.name.as_str()).collect();
+    let defined_rules: BTreeSet<&str> = rules.iter().map(|rule| rule.name()).collect();
 
     let implicit = Implicit::from(rules);
 
@@ -1132,7 +712,7 @@ pub(crate) fn generate_typed_pair_from_rule(
         .cloned()
         .collect();
 
-    let mut graph = generate_graph(
+    let mut graph = R::generate_graph(
         rules,
         &defined_rules,
         &not_boxed,
@@ -1214,7 +794,7 @@ pub(crate) fn generate_typed_pair_from_rule(
         let has_comment = defined_rules.contains("COMMENT");
         let skip = match (has_white_space, has_comment) {
             (true, true) => quote! {
-                predefined_node::AtomicRep<
+                predefined_node::AtomicRepeat<
                     #pest_typed::choices::Choice2<
                         #root::#rules_mod::WHITESPACE<'i, 0>,
                         #root::#rules_mod::COMMENT<'i, 0>,
@@ -1222,12 +802,12 @@ pub(crate) fn generate_typed_pair_from_rule(
                 >
             },
             (true, false) => quote! {
-                predefined_node::AtomicRep<
+                predefined_node::AtomicRepeat<
                     #root::#rules_mod::WHITESPACE<'i, 0>,
                 >
             },
             (false, true) => quote! {
-                predefined_node::AtomicRep<
+                predefined_node::AtomicRepeat<
                     #root::#rules_mod::COMMENT<'i, 0>,
                 >
             },
@@ -1374,6 +954,7 @@ mod tests {
     use crate::docs::consume;
     use lazy_static::lazy_static;
     use pest_meta::{
+        optimizer::OptimizedRule,
         parse_and_optimize,
         parser::{parse, Rule},
     };
