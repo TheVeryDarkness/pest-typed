@@ -245,6 +245,7 @@ impl<'i> Position<'i> {
 
     /// Returns `true` when the `Position` points to the start of the input `&str`.
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn at_start(&self) -> bool {
         self.pos == 0
     }
@@ -303,6 +304,7 @@ impl<'i> Position<'i> {
     /// Skips until one of the given `strings` is found. If none of the `strings` can be found,
     /// this function will return `false` but its `pos` will *still* be updated.
     #[inline]
+    #[allow(dead_code, unexpected_cfgs)]
     pub(crate) fn skip_until(&mut self, strings: &[&str]) -> bool {
         #[cfg(not(feature = "memchr"))]
         {
@@ -410,6 +412,7 @@ impl<'i> Position<'i> {
     /// Matches `string` from the `Position` and returns `true` if a match was made or `false`
     /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn match_string(&mut self, string: &str) -> bool {
         let to = self.pos + string.len();
 
@@ -424,6 +427,7 @@ impl<'i> Position<'i> {
     /// Case-insensitively matches `string` from the `Position` and returns `true` if a match was
     /// made or `false` otherwise. If no match was made, `pos` will not be updated.
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn match_insensitive(&mut self, string: &str) -> bool {
         let matched = {
             let slice = &self.input[self.pos..];
@@ -445,6 +449,7 @@ impl<'i> Position<'i> {
     /// Matches `char` `range` from the `Position` and returns `true` if a match was made or `false`
     /// otherwise. If no match was made, `pos` will not be updated.
     #[inline]
+    #[allow(dead_code)]
     pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
         if let Some(c) = self.input[self.pos..].chars().next() {
             if range.start <= c && c <= range.end {

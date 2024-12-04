@@ -12,6 +12,7 @@
 use crate::{RuleType, TypedNode};
 
 /// Pratt parser for those nodes with prefix, infix and postfix.
+#[allow(dead_code)]
 pub trait PrattPrefixInfixPostfix<
     'i,
     R: RuleType,
