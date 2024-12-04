@@ -27,5 +27,5 @@ lazy_static = { version = "1.4.0" }
 anyhow.workspace = true
 
 [[bench]]
-name = "complex_graph"
+name = "graph"
 harness = false
