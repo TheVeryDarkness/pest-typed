@@ -158,7 +158,12 @@ fn write_tree_to<'i: 'n, 'n, R: RuleType + 'n>(
                 p.span.as_str(),
             ))
         } else {
-            buf.write_fmt(format_args!("{}{:?}\n", &"    ".repeat(depth), p.rule))
+            buf.write_fmt(format_args!(
+                "{}{:?} {:?}\n",
+                &"    ".repeat(depth),
+                p.rule,
+                p.span.as_str()
+            ))
         }
     })
 }
