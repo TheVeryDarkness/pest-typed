@@ -86,8 +86,11 @@ macro_rules! seq {
                 }
                 $(
                     {
-                        let next = Skip::check_with(input, stack);
-                        let next = $T::try_check_partial_with(next, stack, tracker)?;
+                        for _ in 0..SKIP {
+                            let next = Skip::check_with(input, stack);
+                            input = next;
+                        }
+                        let next = $T::try_check_partial_with(input, stack, tracker)?;
                         input = next;
                     }
                 )*

@@ -394,9 +394,7 @@ macro_rules! impl_try_parse_with {
                 tracker.record_during_with(
                     input,
                     |tracker| {
-                        let start = input;
                         let input = <$inner>::try_check_partial_with(input, stack, tracker)?;
-                        let span = start.span(input);
                         Some(input)
                     },
                     <Self as $crate::RuleWrapper<$Rule>>::RULE,
@@ -785,7 +783,7 @@ pub fn check<
         Some(input) => input,
         None => return false,
     };
-    let (input, _) = IGNORED::parse_with(input, stack);
+    let input = IGNORED::check_with(input, stack);
     tracker
         .record_during_with(
             input,
@@ -835,7 +833,7 @@ pub fn check_without_ignore<'i, I: Input<'i>, R: RuleType + 'i, _Self: TypedNode
     tracker
         .record_during_with(
             input,
-            |tracker| EOI::try_parse_partial_with(input, stack, tracker),
+            |tracker| EOI::try_check_partial_with(input, stack, tracker),
             rule_eoi,
         )
         .is_some()
