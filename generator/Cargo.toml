@@ -22,4 +22,10 @@ syn = { version = "^2.0.26", features = ["full"] }
 
 [dev-dependencies]
 pest_typed.workspace = true
+criterion.workspace = true
 lazy_static = { version = "1.4.0" }
+anyhow.workspace = true
+
+[[bench]]
+name = "complex_graph"
+harness = false

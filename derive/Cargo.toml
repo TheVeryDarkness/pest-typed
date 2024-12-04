@@ -25,8 +25,7 @@ pest_typed_generator.workspace = true
 [dev-dependencies]
 pest_typed.workspace = true
 indoc = { version = "2.0" }
-anyhow = { version = "1.0" }
-criterion = "0.5.1"
+anyhow.workspace = true
 pest.workspace = true
 pest_derive.workspace = true
 
