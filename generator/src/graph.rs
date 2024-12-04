@@ -668,18 +668,26 @@ fn collect_reachability<'g, R: Generate>(
         R::collect_used_rule(rule, implicit, entry);
     }
     for _ in 0..rules.len() {
+        let mut updated = false;
         for rule in rules {
             if let Some(cur) = res.remove(rule.name()) {
+                let old_len = cur.len();
                 let mut new = cur.clone();
                 for referenced in cur {
                     if let Some(iter) = res.get(referenced) {
                         new.extend(iter);
                     }
                 }
+                if new.len() > old_len {
+                    updated = true;
+                }
                 if !new.contains(rule.name()) {
                     res.insert(rule.name(), new);
                 }
             }
+        }
+        if !updated {
+            break;
         }
     }
     res
