@@ -6,10 +6,10 @@ package.version = "0.17.1"
 package.repository = "https://github.com/theverydarkness/pest-typed"
 
 [workspace.dependencies]
-pest = { version = "2.7.10" }
-pest_meta = { version = "2.7.10" }
-pest_generator = { version = "2.7.10" }
-pest_derive = { version = "2.7.10" }
+pest = { version = "2.7.10 <2.7.15" }
+pest_meta = { version = "2.7.10 <2.7.15" }
+pest_generator = { version = "2.7.10 <2.7.15" }
+pest_derive = { version = "2.7.10 <2.7.15" }
 
 [workspace.dependencies.pest_typed]
 path = "./main"
