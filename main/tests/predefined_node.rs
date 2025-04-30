@@ -20,7 +20,7 @@ mod tests {
         predefined_node::*,
         rule_eoi,
         sequence::{Seq2, Seq3},
-        silent_rule, BoundWrapper, ParsableTypedNode, RuleStruct, RuleWrapper, Storage,
+        silent_rule, BoundWrapper, ParsableTypedNode, RuleStruct, RuleType, RuleWrapper, Storage,
         StringArrayWrapper, StringWrapper, TypeWrapper,
     };
     use std::{fmt::Write, ops::Deref, string::String};
@@ -36,6 +36,21 @@ mod tests {
         EOI,
         String,
         Quote,
+    }
+    impl RuleType for Rule {
+        fn name(&self) -> &'static str {
+            match self {
+                Rule::Foo => "Foo",
+                Rule::RepFoo => "RepFoo",
+                Rule::NotFooBar => "NotFooBar",
+                Rule::Life => "Life",
+                Rule::WHITESPACE => "WHITESPACE",
+                Rule::COMMENT => "COMMENT",
+                Rule::EOI => "EOI",
+                Rule::String => "String",
+                Rule::Quote => "Quote",
+            }
+        }
     }
 
     #[derive(Clone, Hash, PartialEq, Eq)]

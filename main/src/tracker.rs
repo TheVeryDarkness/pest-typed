@@ -284,6 +284,17 @@ mod tests {
         Body,
         EOI,
     }
+    impl RuleType for Rule {
+        fn name(&self) -> &'static str {
+            match self {
+                Rule::Program => "Program",
+                Rule::SOI => "SOI",
+                Rule::Main => "Main",
+                Rule::Body => "Body",
+                Rule::EOI => "EOI",
+            }
+        }
+    }
     mod rule_wrappers {
         use super::Rule;
         use crate::RuleWrapper;

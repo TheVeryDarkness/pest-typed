@@ -34,6 +34,7 @@ pub use repetition::{
 /// The `CONTENT` on the type (by [`StringWrapper`]) is the original string to match.
 ///
 /// See [`Insens`] for case-insensitive matching.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Dbg, Hash, PartialEq, Eq)]
 pub struct Str<T: StringWrapper + 'static> {
     #[debug(skip)]
@@ -85,6 +86,7 @@ impl<'i, R: RuleType, T: StringWrapper + 'static> TypedNode<'i, R> for Str<T> {
 ///   For example, A `^"x"` may match `"X"`, and in the parsing result, `self.content` is `"X"`, while `Self::CONTENT` is still `"x"`.    
 ///
 /// See [`Str`] for case-sensitive matching.
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[derive(Clone, Dbg, Hash, PartialEq, Eq)]
 pub struct Insens<'i, T: StringWrapper> {
     /// Matched content.
@@ -220,6 +222,7 @@ impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, N> {
 
 /// Match a character in the range `[MIN, MAX]`.
 /// Inclusively both below and above.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct CharRange<const MIN: char, const MAX: char> {
     /// Matched character.
@@ -302,6 +305,7 @@ fn peek_spans<'s, 'i: 's, I: Input<'i>, R: RuleType>(
 /// Positive predicate.
 ///
 /// Peeked expressions will not occur in Pair/Pairs API.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Positive<N> {
     /// Peeked content.
@@ -370,6 +374,7 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
 /// Negative predicate.
 ///
 /// Will not contain anything.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Dbg, Hash, PartialEq, Eq)]
 pub struct Negative<T> {
     #[debug(skip)]
@@ -427,6 +432,7 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
 }
 
 /// Match any character.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct ANY {
     /// Matched character.
@@ -453,6 +459,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
 }
 
 /// Match the start of input.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct SOI;
 impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
@@ -486,6 +493,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
 /// Match the end of input.
 ///
 /// [`EOI`] will record its rule if not matched.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct EOI;
 impl<'i, R: RuleType> TypedNode<'i, R> for EOI {
@@ -517,6 +525,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for EOI {
 }
 
 /// Type of eol.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub enum NewLineType {
     /// `\r\n`
@@ -529,6 +538,7 @@ pub enum NewLineType {
 
 /// Match a new line character.
 /// A built-in rule. Equivalent to `"\r\n" | "\n" | "\r"`.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct NEWLINE {
     /// Type of matched character.
@@ -652,9 +662,11 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
 }
 
 /// Skip comments (by rule `COMMENT`) or white spaces (by rule `WHITESPACE`) if there is any.
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub struct Skipped<T, Skip, const SKIP: usize> {
     /// Skipped content.
+    #[cfg_attr(feature = "serde", serde(skip_serializing))]
     pub skipped: [Skip; SKIP],
     /// Matched content.
     pub matched: T,
@@ -675,6 +687,7 @@ impl<T: Debug, Skip: Debug, const SKIP: usize> Debug for Skipped<T, Skip, SKIP> 
 /// Drop the top of the stack.
 ///
 /// Fail if there is no span in the stack.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct DROP;
 impl<'i, R: RuleType> TypedNode<'i, R> for DROP {
@@ -796,6 +809,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
 }
 
 /// Always fail.
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[derive(Clone, Dbg, Hash, PartialEq, Eq)]
 pub struct AlwaysFail<'i>(#[debug(skip)] PhantomData<&'i char>);
 impl<'i> Default for AlwaysFail<'i> {
@@ -824,6 +838,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for AlwaysFail<'i> {
 }
 
 /// Empty.
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[derive(Clone, Dbg, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Empty<'i>(#[debug(skip)] PhantomData<&'i char>);
 impl<'i> Default for Empty<'i> {
@@ -866,6 +881,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for Empty<'i> {
 }
 
 /// Match an expression and push it to the [Stack].
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Push<T> {
     /// Matched content.
@@ -914,6 +930,7 @@ impl<T> DerefMut for Push<T> {
 }
 
 /// Match `[START..END]` in top-to-bottom order of the stack.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PeekSlice2<const START: i32, const END: i32>;
 impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>

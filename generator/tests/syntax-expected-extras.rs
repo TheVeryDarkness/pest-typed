@@ -42,6 +42,43 @@ pub enum Rule {
     r#Drop,
     r#PeekAll,
 }
+impl ::pest_typed::RuleType for Rule {
+    fn name(&self) -> &'static ::core::primitive::str {
+        match self {
+            Self::r#Regular => "Regular",
+            Self::r#Atomic => "Atomic",
+            Self::r#Silent => "Silent",
+            Self::r#CompoundAtomic => "CompoundAtomic",
+            Self::r#Tag => "Tag",
+            Self::r#NonAtomic => "NonAtomic",
+            Self::r#ExactString => "ExactString",
+            Self::r#CaseInsensitive => "CaseInsensitive",
+            Self::r#CharRange => "CharRange",
+            Self::r#Any => "Any",
+            Self::r#Seq => "Seq",
+            Self::r#Choice => "Choice",
+            Self::r#Rep => "Rep",
+            Self::r#RepAtLeastOnce => "RepAtLeastOnce",
+            Self::r#Opt => "Opt",
+            Self::r#RepExact => "RepExact",
+            Self::r#RepLeft => "RepLeft",
+            Self::r#RepRight => "RepRight",
+            Self::r#RepLeftRight => "RepLeftRight",
+            Self::r#Pos => "Pos",
+            Self::r#Neg => "Neg",
+            Self::r#Push => "Push",
+            Self::r#Pop => "Pop",
+            Self::r#PopAll => "PopAll",
+            Self::r#Peek => "Peek",
+            Self::r#PeekLeft => "PeekLeft",
+            Self::r#PeekRight => "PeekRight",
+            Self::r#PeekLeftRight => "PeekLeftRight",
+            Self::r#Drop => "Drop",
+            Self::r#PeekAll => "PeekAll",
+            Self::EOI => "EOI",
+        }
+    }
+}
 #[doc = "Unicode rules."]
 pub mod unicode {}
 mod constant_wrappers {
@@ -353,7 +390,7 @@ pub mod rules_impl {
             pub fn r#Second<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<
-                (&super::super::generics::Seq4<
+                (&'s super::super::generics::Seq4<
                     (::pest_typed::predefined_node::Skipped<
                         super::super::generics::Push<
                             super::super::rules::r#CompoundAtomic<'i, INHERITED>,
@@ -396,7 +433,7 @@ pub mod rules_impl {
             pub fn r#Third<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<
-                (&super::super::generics::Rep<
+                (&'s super::super::generics::Rep<
                     'i,
                     INHERITED,
                     super::super::rules::r#NonAtomic<'i, INHERITED>,
@@ -416,7 +453,7 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`inner`]."]
             #[allow(non_snake_case)]
-            pub fn r#inner<'s>(&'s self) -> (&super::super::rules::r#Any<'i, INHERITED>) {
+            pub fn r#inner<'s>(&'s self) -> (&'s super::super::rules::r#Any<'i, INHERITED>) {
                 let res = &*self.content;
                 {
                     let res = &res.content.2.matched;

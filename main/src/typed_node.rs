@@ -9,11 +9,10 @@
 
 use crate::{
     error::Error, predefined_node::restore_on_none, span::Span, tracker::Tracker, AsInput, Input,
-    RuleWrapper, Stack,
+    RuleType, RuleWrapper, Stack,
 };
 use alloc::{boxed::Box, vec::Vec};
 use core::fmt::Debug;
-use pest::RuleType;
 
 /// Node of concrete syntax tree that never fails.
 pub trait NeverFailedTypedNode<'i, R: RuleType>

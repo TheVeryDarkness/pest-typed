@@ -11,7 +11,7 @@
 //! and modified.
 
 use super::docs::DocComment;
-use crate::graph::Generate;
+use crate::graph::{pest_typed, Generate};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use std::path::PathBuf;
@@ -47,6 +47,9 @@ pub(crate) fn generate_include(name: &Ident, paths: Vec<PathBuf>) -> TokenStream
     }
 }
 pub(crate) fn generate_enum<R: Generate>(rules: &[R], doc_comment: &DocComment) -> TokenStream {
+    let rule_names = rules.iter().map(|rule| format_ident!("r#{}", rule.name()));
+    let rule_name_strings = rules.iter().map(|rule| rule.name());
+
     let rules = rules.iter().map(|rule| {
         let rule_name = format_ident!("r#{}", rule.name());
 
@@ -61,6 +64,8 @@ pub(crate) fn generate_enum<R: Generate>(rules: &[R], doc_comment: &DocComment) 
         }
     });
 
+    let pest_typed = pest_typed();
+
     let grammar_doc = &doc_comment.grammar_doc;
     quote! {
         #[doc = #grammar_doc]
@@ -69,6 +74,16 @@ pub(crate) fn generate_enum<R: Generate>(rules: &[R], doc_comment: &DocComment) 
         pub enum Rule {
             EOI,
             #( #rules, )*
+        }
+        impl #pest_typed::RuleType for Rule {
+            fn name(&self) -> &'static ::core::primitive::str {
+                match self {
+                    #(
+                        Self::#rule_names => #rule_name_strings,
+                    )*
+                    Self::EOI => "EOI",
+                }
+            }
         }
     }
 }
@@ -108,6 +123,14 @@ mod tests {
                     EOI,
                     #[doc = "This is rule comment"]
                     r#f,
+                }
+                impl ::pest_typed::RuleType for Rule {
+                    fn name(&self) -> &'static ::core::primitive::str {
+                        match self {
+                            Self::r#f => "f",
+                            Self::EOI => "EOI",
+                        }
+                    }
                 }
             }
             .to_string()

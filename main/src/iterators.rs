@@ -16,14 +16,15 @@ use crate::{
         PEEK_ALL, POP, POP_ALL, SOI,
     },
     typed_node::{RuleStorage, RuleStruct, Spanned},
-    Span, StringArrayWrapper, StringWrapper, TypedNode,
+    RuleType, Span, StringArrayWrapper, StringWrapper, TypedNode,
 };
 use alloc::{boxed::Box, collections::VecDeque, string::String, vec::Vec};
 use core::{
     iter::{once, Iterator},
     mem::swap,
 };
-use pest::RuleType;
+#[cfg(feature = "serde")]
+use serde::ser::SerializeStruct;
 
 /// Token.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -62,6 +63,21 @@ impl<'i, R: RuleType> Token<'i, R> {
             end,
             children,
         }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'i, R: RuleType> serde::Serialize for Token<'i, R> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut seq = serializer.serialize_struct(self.rule.name(), 2)?;
+
+        seq.serialize_field("content", &self.span.as_str())?;
+        seq.serialize_field("children", &self.children)?;
+
+        seq.end()
     }
 }
 

@@ -42,6 +42,43 @@ pub enum Rule {
     r#Drop,
     r#PeekAll,
 }
+impl ::pest_typed::RuleType for Rule {
+    fn name(&self) -> &'static ::core::primitive::str {
+        match self {
+            Self::r#Regular => "Regular",
+            Self::r#Atomic => "Atomic",
+            Self::r#Silent => "Silent",
+            Self::r#CompoundAtomic => "CompoundAtomic",
+            Self::r#Tag => "Tag",
+            Self::r#NonAtomic => "NonAtomic",
+            Self::r#ExactString => "ExactString",
+            Self::r#CaseInsensitive => "CaseInsensitive",
+            Self::r#CharRange => "CharRange",
+            Self::r#Any => "Any",
+            Self::r#Seq => "Seq",
+            Self::r#Choice => "Choice",
+            Self::r#Rep => "Rep",
+            Self::r#RepAtLeastOnce => "RepAtLeastOnce",
+            Self::r#Opt => "Opt",
+            Self::r#RepExact => "RepExact",
+            Self::r#RepLeft => "RepLeft",
+            Self::r#RepRight => "RepRight",
+            Self::r#RepLeftRight => "RepLeftRight",
+            Self::r#Pos => "Pos",
+            Self::r#Neg => "Neg",
+            Self::r#Push => "Push",
+            Self::r#Pop => "Pop",
+            Self::r#PopAll => "PopAll",
+            Self::r#Peek => "Peek",
+            Self::r#PeekLeft => "PeekLeft",
+            Self::r#PeekRight => "PeekRight",
+            Self::r#PeekLeftRight => "PeekLeftRight",
+            Self::r#Drop => "Drop",
+            Self::r#PeekAll => "PeekAll",
+            Self::EOI => "EOI",
+        }
+    }
+}
 #[doc = "Unicode rules."]
 pub mod unicode {}
 mod constant_wrappers {

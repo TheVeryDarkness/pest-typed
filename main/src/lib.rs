@@ -46,7 +46,6 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
-pub use pest::RuleType;
 use typed_node::NeverFailedParsableTypedNode;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, RuleStruct, Spanned, TypedNode};
 pub use wrapper::{
@@ -81,6 +80,14 @@ pub use span::{merge_spans, Span};
 
 // Re-export unicode.
 pub use pest::unicode;
+
+/// A trait that is implemented for all pest rules. An extension of [`pest::RuleType`].
+pub trait RuleType: pest::RuleType {
+    /// The name of the rule.
+    ///
+    /// Could be a `const` `fn` if stabilized.
+    fn name(&self) -> &'static str;
+}
 
 /// A trait with a single method that parses strings into typed concrete syntax tree.
 pub trait TypedParser<R: RuleType> {

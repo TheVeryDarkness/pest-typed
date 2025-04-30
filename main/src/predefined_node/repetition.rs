@@ -31,6 +31,7 @@ type IntoIter<T, IGNORED, const SKIP: usize> = core::iter::Map<
 >;
 
 /// Repeatably match `T` at least `MIN` times.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct AtomicRepeat<T> {
     /// Skipped and Matched expressions.
@@ -113,6 +114,7 @@ impl<T: Clone + PartialEq> BoundWrapper for AtomicRepeat<T> {
 }
 
 /// Repeatably match `T` at least `MIN` times.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct RepeatMin<T, const MIN: usize> {
     /// Skipped and Matched expressions.
@@ -251,6 +253,7 @@ impl<T: Clone + PartialEq, const MIN: usize> BoundWrapper for RepeatMin<T, MIN> 
 }
 
 /// Repeatably match `T` at least `MIN` times and at most `MAX` times.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct RepeatMinMax<T, const MIN: usize, const MAX: usize> {
     /// Skipped and Matched expressions.

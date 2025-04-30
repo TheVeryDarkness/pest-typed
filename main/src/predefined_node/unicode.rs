@@ -11,6 +11,7 @@ macro_rules! unicode {
     ($property_ident:ident) => {
         #[allow(non_camel_case_types)]
         #[doc = concat!("Auto generated. Unicode property ", stringify!($property_ident))]
+        #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         #[derive(Clone, Hash, PartialEq, Eq)]
         pub struct $property_ident {
             /// Matched character.

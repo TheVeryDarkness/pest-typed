@@ -208,7 +208,7 @@ impl<'g> Node<'g> {
             Node::Tag(_rule, _tag, inner) => {
                 // let tag_id = format_ident!("r#{tag}");
                 // let rule_id = format_ident!("r#{rule}");
-                (quote! {res}, quote! {(#(&#inner),*)})
+                (quote! {res}, quote! {(#(&'s #inner),*)})
             }
             Node::Content(inner) => {
                 let (pa, ty) = inner.expand(root, config);

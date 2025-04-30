@@ -42,3 +42,6 @@ pub use ::std::vec;
 pub use ::core::ops::FnMut;
 
 pub use ::core::primitive::char;
+
+#[cfg(feature = "serde")]
+pub use serde;

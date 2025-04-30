@@ -474,6 +474,22 @@ macro_rules! rule_inner {
     };
 }
 
+/// Derive [serde::Serialize] and [serde::Deserialize] for the struct.
+#[cfg(feature = "serde")]
+#[macro_export]
+macro_rules! derive_serde {
+    ($($tt:tt)*) => {
+        $($tt)*
+    };
+}
+
+/// Derive [serde::Serialize] and [serde::Deserialize] for the struct.
+#[cfg(not(feature = "serde"))]
+#[macro_export]
+macro_rules! derive_serde {
+    ($($tt:tt)*) => {};
+}
+
 /// Declare the body of the struct.
 ///
 /// Arguments:
