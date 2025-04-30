@@ -72,9 +72,10 @@ impl<'i, R: RuleType> serde::Serialize for Token<'i, R> {
     where
         S: serde::Serializer,
     {
-        let mut seq = serializer.serialize_struct(self.rule.name(), 2)?;
+        let mut seq = serializer.serialize_struct(self.rule.name(), 3)?;
 
-        seq.serialize_field("content", &self.span.as_str())?;
+        seq.serialize_field("type", self.rule.name())?;
+        seq.serialize_field("content", self.span.as_str())?;
         seq.serialize_field("children", &self.children)?;
 
         seq.end()
