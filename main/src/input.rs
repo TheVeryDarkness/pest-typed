@@ -3,7 +3,7 @@ use alloc::string::String;
 use core::{borrow::Borrow, ops::Range, str::Chars};
 use derive_where::derive_where;
 
-/// Input.
+/// Input with span information.
 ///
 /// # Safety
 ///
@@ -285,15 +285,15 @@ pub trait AsInput<'i, S: ?Sized + Borrow<str> = str> {
     fn as_input(&self) -> Self::Output;
 }
 
-impl<'i> AsInput<'i, str> for &'i String {
-    type Output = Position<'i, str>;
+impl<'i, S: ?Sized + Borrow<str> + 'i> AsInput<'i, S> for &'i S {
+    type Output = Position<'i, S>;
 
     fn as_input(&self) -> Self::Output {
         Position::from_start(self)
     }
 }
 
-impl<'i> AsInput<'i, str> for &'i str {
+impl<'i> AsInput<'i, str> for &'i String {
     type Output = Position<'i, str>;
 
     fn as_input(&self) -> Self::Output {
@@ -331,4 +331,24 @@ impl<'i, S: ?Sized + Borrow<str>> AsInput<'i, S> for Span<'i, S> {
             cursor,
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AsInput;
+    use crate::line_indexer::CachedLineIndexer;
+    use core::borrow::Borrow;
+    use std::string::String;
+
+    #[allow(dead_code)]
+    const fn test_impl<S, I>()
+    where
+        S: ?Sized + Borrow<str>,
+        I: AsInput<'static, S>,
+    {
+    }
+
+    const _1: () = test_impl::<str, &str>();
+    const _2: () = test_impl::<str, &String>();
+    const _3: () = test_impl::<CachedLineIndexer<'static>, &CachedLineIndexer<'static>>();
 }

@@ -459,6 +459,16 @@ impl<'i, S: ?Sized + Borrow<str>> From<Position<'i, S>> for pest::Position<'i> {
     }
 }
 
+impl<'i, S: ?Sized + Borrow<str>> Position<'i, S> {
+    /// Returns a new `Position` with the same input but without the cache.
+    pub fn drop_cache(self) -> Position<'i, str> {
+        Position {
+            input: self.input.borrow(),
+            pos: self.pos,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

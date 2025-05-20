@@ -551,6 +551,17 @@ impl<S: ?Sized + Borrow<str>> fmt::Display for Span<'_, S> {
     }
 }
 
+impl<'i, S: ?Sized + Borrow<str>> Span<'i, S> {
+    /// Returns a new `Span` with the same input but without the cache.
+    pub fn drop_cache(self) -> Span<'i, str> {
+        Span {
+            input: self.input.borrow(),
+            start:self.start,
+            end: self.end,
+        }
+    }
+}
+
 /// Merges two spans into one.
 ///
 /// This function merges two spans that are contiguous or overlapping into a single span
