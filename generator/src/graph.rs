@@ -21,7 +21,7 @@ mod optimized_rule;
 mod rule;
 mod traits;
 
-pub fn pest_typed() -> TokenStream {
+pub(crate) fn pest_typed() -> TokenStream {
     quote! {::pest_typed}
 }
 
@@ -133,7 +133,7 @@ impl<'g> Node<'g> {
             Node::Contents(_) | Node::Tuple(_) => false,
         }
     }
-    pub fn wrap(self, edge: Edge) -> Self {
+    fn wrap(self, edge: Edge) -> Self {
         match edge {
             Edge::Content => Self::Content(Box::new(self)),
             Edge::ContentI(i) => Self::SequenceI(i, Box::new(self)),
@@ -142,7 +142,7 @@ impl<'g> Node<'g> {
             Edge::Contents => Self::Contents(Box::new(self)),
         }
     }
-    pub fn merge(self, other: Self) -> Self {
+    fn merge(self, other: Self) -> Self {
         match self {
             Node::Tuple(vec) => match other {
                 Node::Tuple(mut v) => {
@@ -166,11 +166,7 @@ impl<'g> Node<'g> {
             },
         }
     }
-    pub fn expand(
-        &self,
-        root: &TokenStream,
-        config: &RuleConfig<'g>,
-    ) -> (TokenStream, TokenStream) {
+    fn expand(&self, root: &TokenStream, config: &RuleConfig<'g>) -> (TokenStream, TokenStream) {
         let flat = |flatten: &bool| {
             if *flatten {
                 quote! {.flatten()}
@@ -267,33 +263,33 @@ impl Default for Getter<'_> {
     }
 }
 impl<'g> Getter<'g> {
-    pub const fn new() -> Self {
+    const fn new() -> Self {
         Self {
             getters: BTreeMap::new(),
         }
     }
-    pub fn from_rule(name: &'g str, id: &'g str, has_life_time: bool, has_skip: bool) -> Self {
+    fn from_rule(name: &'g str, id: &'g str, has_life_time: bool, has_skip: bool) -> Self {
         let res = BTreeMap::from([(name, Node::from_rule(id, has_life_time, has_skip))]);
         Self { getters: res }
     }
     #[cfg(feature = "grammar-extras")]
-    pub fn from_tag(rule: &'g str, name: &'g str, tokens: TokenStream) -> Self {
+    fn from_tag(rule: &'g str, name: &'g str, tokens: TokenStream) -> Self {
         let res = BTreeMap::from([(name, Node::from_tag(rule, name, vec![tokens]))]);
         Self { getters: res }
     }
-    pub fn content(self) -> Self {
+    fn content(self) -> Self {
         self.prepend(Edge::Content)
     }
-    pub fn content_i(self, i: usize) -> Self {
+    fn content_i(self, i: usize) -> Self {
         self.prepend(Edge::ContentI(i))
     }
-    pub fn contents(self) -> Self {
+    fn contents(self) -> Self {
         self.prepend(Edge::Contents)
     }
-    pub fn optional(self) -> Self {
+    fn optional(self) -> Self {
         self.prepend(Edge::Optional)
     }
-    pub fn choice(self, i: usize) -> Self {
+    fn choice(self, i: usize) -> Self {
         self.prepend(Edge::ChoiceI(i))
     }
     #[inline]
@@ -305,7 +301,7 @@ impl<'g> Getter<'g> {
         self
     }
     /// Join two getter forest in the same level.
-    pub fn join_mut(&mut self, other: Self) {
+    fn join_mut(&mut self, other: Self) {
         other.getters.into_iter().for_each(|(name, tree)| {
             let entry = self.getters.entry(name);
             match entry {
@@ -321,11 +317,11 @@ impl<'g> Getter<'g> {
         });
     }
     /// Join two getter forest in the same level.
-    pub fn join(mut self, other: Self) -> Self {
+    fn join(mut self, other: Self) -> Self {
         self.join_mut(other);
         self
     }
-    pub fn collect(&self, root: &TokenStream, config: &RuleConfig<'g>) -> TokenStream {
+    fn collect(&self, root: &TokenStream, config: &RuleConfig<'g>) -> TokenStream {
         let getters = self.getters.iter().map(|(name, node)| {
             let id = ident(name);
             let (paths, types) = node.expand(root, config);
@@ -447,7 +443,7 @@ fn rule<'g>(
         let boxed = rule_config.boxed;
         let usize = _usize();
         quote! {
-            #pest_typed::rule!(#name, #(#docs)*, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission, #boxed);
+            #pest_typed::rule!(pub #name, #(#docs)*, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission, #boxed);
             impl<'i, const INHERITED: #usize> #name<'i, INHERITED> {
                 #getter_impl
             }
@@ -930,7 +926,7 @@ fn generate_builtin(
     }
 
     results.push(quote! {
-        #pest_typed::rule_eoi!(EOI, #root::Rule);
+        #pest_typed::rule_eoi!(pub EOI, #root::Rule);
     });
 
     insert_builtin!("ANY", ANY);

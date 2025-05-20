@@ -474,22 +474,6 @@ macro_rules! rule_inner {
     };
 }
 
-/// Derive [serde::Serialize] and [serde::Deserialize] for the struct.
-#[cfg(feature = "serde")]
-#[macro_export]
-macro_rules! derive_serde {
-    ($($tt:tt)*) => {
-        $($tt)*
-    };
-}
-
-/// Derive [serde::Serialize] and [serde::Deserialize] for the struct.
-#[cfg(not(feature = "serde"))]
-#[macro_export]
-macro_rules! derive_serde {
-    ($($tt:tt)*) => {};
-}
-
 /// Declare the body of the struct.
 ///
 /// Arguments:
@@ -501,13 +485,13 @@ macro_rules! derive_serde {
 /// - `$boxed:tt`. `true` or `false`.
 #[macro_export]
 macro_rules! declare_rule_struct {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $inner:ty, Expression, $boxed:tt) => {
+    ($vis:vis $name:ident, $($doc:literal)*, $Rule:ty, $inner:ty, Expression, $boxed:tt) => {
         $(
             #[doc = $doc]
         )*
         #[allow(non_camel_case_types)]
         #[derive(Clone, Hash, PartialEq, Eq)]
-        pub struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
+        $vis struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
             /// Matched expression.
             pub content: $crate::rule_inner!($inner, $boxed),
             _phantom: ::core::marker::PhantomData<&'i ::core::primitive::str>,
@@ -521,13 +505,13 @@ macro_rules! declare_rule_struct {
         }
         $crate::impl_rule_struct!($name, $Rule, $inner, $boxed);
     };
-    ($name:ident, $($doc:literal)*, $Rule:ty, $inner:ty, Span, $boxed:tt) => {
+    ($vis:vis $name:ident, $($doc:literal)*, $Rule:ty, $inner:ty, Span, $boxed:tt) => {
         $(
             #[doc = $doc]
         )*
         #[allow(non_camel_case_types)]
         #[derive(Clone, Hash, PartialEq, Eq)]
-        pub struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
+        $vis struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
             /// Span of matched expression.
             pub span: $crate::Span<'i>,
         }
@@ -539,13 +523,13 @@ macro_rules! declare_rule_struct {
             }
         }
     };
-    ($name:ident, $($doc:literal)*, $Rule:ty, $inner:ty, Both, $boxed:tt) => {
+    ($vis:vis $name:ident, $($doc:literal)*, $Rule:ty, $inner:ty, Both, $boxed:tt) => {
         $(
             #[doc = $doc]
         )*
         #[allow(non_camel_case_types)]
         #[derive(Clone, Hash, PartialEq, Eq)]
-        pub struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
+        $vis struct $name<'i, const INHERITED: ::core::primitive::usize = 1> {
             /// Matched expression.
             pub content: $crate::rule_inner!($inner, $boxed),
             /// Span of matched expression.
@@ -587,8 +571,8 @@ macro_rules! declare_rule_struct {
 /// - [silent_rule](`crate::silent_rule!`).
 #[macro_export]
 macro_rules! rule {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $atomicity:tt, $emission:tt, $boxed:tt) => {
-        $crate::declare_rule_struct!($name, $($doc)*, $Rule, $inner, $emission, $boxed);
+    ($vis:vis $name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $atomicity:tt, $emission:tt, $boxed:tt) => {
+        $crate::declare_rule_struct!($vis $name, $($doc)*, $Rule, $inner, $emission, $boxed);
         $crate::impl_rule_wrapper!($name, $Rule, $rule);
         $crate::impl_try_parse_with!($name, $Rule, $inner, $atomicity, $emission);
         $crate::impl_parse!($name, $Rule, $ignored, $atomicity);
@@ -609,8 +593,8 @@ macro_rules! rule {
 /// - `$inner:ty`. Type of inner parsing expression.
 #[macro_export]
 macro_rules! atomic_rule {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty) => {
-        $crate::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Span, false);
+    ($vis:vis $name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty) => {
+        $crate::rule!($vis $name, $($doc)*, $Rule, $rule, $inner, (), true, Span, false);
     };
 }
 
@@ -626,8 +610,8 @@ macro_rules! atomic_rule {
 /// - `$boxed:tt`. Whether wrap inner type in a [Box](crate::re_exported::Box). `true` or `false`.
 #[macro_export]
 macro_rules! compound_atomic_rule {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $boxed:tt) => {
-        $crate::rule!($name, $($doc)*, $Rule, $rule, $inner, (), true, Both, $boxed);
+    ($vis:vis $name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $boxed:tt) => {
+        $crate::rule!($vis $name, $($doc)*, $Rule, $rule, $inner, (), true, Both, $boxed);
     };
 }
 
@@ -647,8 +631,8 @@ macro_rules! compound_atomic_rule {
 /// - `$boxed:tt`. Whether wrap inner type in a [Box](crate::re_exported::Box). `true` or `false`.
 #[macro_export]
 macro_rules! non_atomic_rule {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
-        $crate::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, false, Both, $boxed);
+    ($vis:vis $name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
+        $crate::rule!($vis $name, $($doc)*, $Rule, $rule, $inner, $ignored, false, Both, $boxed);
     };
 }
 
@@ -668,8 +652,8 @@ macro_rules! non_atomic_rule {
 /// - `$boxed:tt`. Whether wrap inner type in a [Box](crate::re_exported::Box). `true` or `false`.
 #[macro_export]
 macro_rules! normal_rule {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
-        $crate::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Both, $boxed);
+    ($vis:vis $name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
+        $crate::rule!($vis $name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Both, $boxed);
     };
 }
 
@@ -689,8 +673,8 @@ macro_rules! normal_rule {
 /// - `$boxed:tt`. Whether wrap inner type in a [Box](crate::re_exported::Box). `true` or `false`.
 #[macro_export]
 macro_rules! silent_rule {
-    ($name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
-        $crate::rule!($name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Expression, $boxed);
+    ($vis:vis $name:ident, $($doc:literal)*, $Rule:ty, $rule:expr, $inner:ty, $ignored:ty, $boxed:tt) => {
+        $crate::rule!($vis $name, $($doc)*, $Rule, $rule, $inner, $ignored, INHERITED, Expression, $boxed);
     };
 }
 
@@ -702,9 +686,9 @@ macro_rules! silent_rule {
 /// - `$Rule:ty`. Rule type. Must implement [RuleType].
 #[macro_export]
 macro_rules! rule_eoi {
-    ($name:ident, $Rule:ty) => {
+    ($vis:vis $name:ident, $Rule:ty) => {
         $crate::declare_rule_struct!(
-            $name,
+            $vis $name,
             "The rule for end of input.",
             $Rule,
             $crate::predefined_node::EOI,

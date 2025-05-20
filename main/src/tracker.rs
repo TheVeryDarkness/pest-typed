@@ -307,7 +307,7 @@ mod tests {
         macro_rules! wrap {
             ($name:ident) => {
                 #[derive(Clone, PartialEq)]
-                pub struct $name;
+                pub(super) struct $name;
                 impl RuleWrapper<Rule> for $name {
                     const RULE: Rule = Rule::$name;
                     type Rule = Rule;

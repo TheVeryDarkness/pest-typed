@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! A trait and a type for splitting a string into lines.
+
 use alloc::{string::String, vec::Vec};
 use core::borrow::Borrow;
 

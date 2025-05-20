@@ -7,6 +7,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
+//! Test for generator.
+
 use pest_typed_generator::derive_typed_parser;
 use quote::quote;
 use std::io::Write;
@@ -37,6 +39,7 @@ fn generate(name: &'static str) {
     );
     let actual = actual.to_string();
     let mut f = std::fs::File::create(&path_generated).unwrap();
+    writeln!(f, "//! Test `{}`.", name).unwrap();
     writeln!(f, "{}", feature).unwrap();
     writeln!(f, "{}", "#![allow(unused_parens)]").unwrap();
     writeln!(f, "{}", actual).unwrap();

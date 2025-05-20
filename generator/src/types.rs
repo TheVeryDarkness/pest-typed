@@ -16,11 +16,11 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 /// `Option` in corresponding context.
-pub fn option_type() -> TokenStream {
+pub(crate) fn option_type() -> TokenStream {
     quote! { ::pest_typed::re_exported::Option }
 }
 
 /// `Vec` in corresponding context.
-pub fn vec_type() -> TokenStream {
+pub(crate) fn vec_type() -> TokenStream {
     quote! { ::pest_typed::re_exported::Vec }
 }
