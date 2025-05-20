@@ -384,7 +384,7 @@ where
     }
 }
 
-impl fmt::Debug for Position<'_> {
+impl<S: ?Sized> fmt::Debug for Position<'_, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Position").field("pos", &self.pos).finish()
     }
