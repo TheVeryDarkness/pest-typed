@@ -17,7 +17,7 @@ macro_rules! case {
                 #[derive(TypedParser)]
                 #[grammar_inline = $grammar]
                 #[pest_optimizer = false]
-                pub struct Parser;
+                pub(crate) struct Parser;
             }
 
             mod pest_typed_optimized {
@@ -25,17 +25,17 @@ macro_rules! case {
                 #[derive(TypedParser)]
                 #[grammar_inline = $grammar]
                 #[pest_optimizer = true]
-                pub struct Parser;
+                pub(crate) struct Parser;
             }
 
             mod pest {
                 use super::*;
                 #[derive(Parser)]
                 #[grammar_inline = $grammar]
-                pub struct Parser;
+                pub(crate) struct Parser;
             }
 
-            pub fn bench(c: &mut Criterion) {
+            pub(crate) fn bench(c: &mut Criterion) {
                 let mut group = c.benchmark_group(stringify!($name));
                 group.sample_size(10);
                 let s: String = $input;
