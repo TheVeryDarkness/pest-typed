@@ -2,7 +2,8 @@
 name = "pest_typed_derive"
 description = "pest-typed's derive macro."
 version.workspace = true
-edition = "2021"
+edition.workspace = true
+rust-version.workspace = true
 documentation = "https://docs.rs/pest_typed_derive"
 repository.workspace = true
 readme.workspace = true

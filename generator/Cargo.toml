@@ -3,6 +3,7 @@ name = "pest_typed_generator"
 description = "Pest-typed's code generator."
 version.workspace = true
 edition = "2021"
+rust-version.workspace = true
 documentation = "https://docs.rs/pest_typed_generator"
 repository.workspace = true
 readme.workspace = true

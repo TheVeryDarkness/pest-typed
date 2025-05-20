@@ -3,7 +3,8 @@ members = ["derive", "generator", "main"]
 resolver = "2"
 package.readme = "./README.md"
 package.version = "0.19.1"
-package.rust-version = "1.60.0"
+package.edition = "2021"
+package.rust-version = "1.81.0"
 package.repository = "https://github.com/theverydarkness/pest-typed"
 
 [workspace.dependencies]
