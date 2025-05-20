@@ -1,5 +1,4 @@
 use crate::{line_indexer::DropCache, Position, Span};
-use alloc::string::String;
 use core::{borrow::Borrow, ops::Range, str::Chars};
 use derive_where::derive_where;
 
@@ -210,7 +209,8 @@ pub struct SubInput2<'i, S: ?Sized = str> {
     cursor: usize,
 }
 
-impl<'i, S: ?Sized + Borrow<str>> AsInput<'i, S> for SubInput1<'i, S> {
+impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for SubInput1<'i, S> {
+    type S = S;
     type Output = Self;
 
     fn as_input(&self) -> Self::Output {
@@ -218,7 +218,8 @@ impl<'i, S: ?Sized + Borrow<str>> AsInput<'i, S> for SubInput1<'i, S> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> AsInput<'i, S> for SubInput2<'i, S> {
+impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for SubInput2<'i, S> {
+    type S = S;
     type Output = Self;
 
     fn as_input(&self) -> Self::Output {
@@ -318,15 +319,18 @@ unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for SubInput2<'i, S> {
 }
 
 /// Convert to input.
-pub trait AsInput<'i, S: ?Sized + Borrow<str> = str>: DropCache<'i> {
+pub trait AsInput<'i>: DropCache<'i> {
+    /// Input string type.
+    type S: ?Sized + Borrow<str>;
     /// Output type.
-    type Output: Input<'i, S>;
+    type Output: Input<'i, Self::S>;
 
     /// Convert to a [Input] type.
     fn as_input(&self) -> Self::Output;
 }
 
-impl<'i, S: ?Sized + Borrow<str> + 'i> AsInput<'i, S> for &'i S {
+impl<'i, S: ?Sized + Borrow<str> + 'i> AsInput<'i> for &'i S {
+    type S = S;
     type Output = Position<'i, S>;
 
     fn as_input(&self) -> Self::Output {
@@ -334,15 +338,8 @@ impl<'i, S: ?Sized + Borrow<str> + 'i> AsInput<'i, S> for &'i S {
     }
 }
 
-impl<'i> AsInput<'i, str> for &'i String {
-    type Output = Position<'i, str>;
-
-    fn as_input(&self) -> Self::Output {
-        Position::from_start(self)
-    }
-}
-
-impl<'i, S: ?Sized + Borrow<str>> AsInput<'i, S> for Position<'i, S> {
+impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for Position<'i, S> {
+    type S = S;
     type Output = SubInput1<'i, S>;
 
     fn as_input(&self) -> Self::Output {
@@ -357,7 +354,8 @@ impl<'i, S: ?Sized + Borrow<str>> AsInput<'i, S> for Position<'i, S> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> AsInput<'i, S> for Span<'i, S> {
+impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for Span<'i, S> {
+    type S = S;
     type Output = SubInput2<'i, S>;
 
     fn as_input(&self) -> Self::Output {
@@ -385,11 +383,11 @@ mod tests {
     const fn test_impl<S, I>()
     where
         S: ?Sized + Borrow<str>,
-        I: AsInput<'static, S>,
+        I: AsInput<'static, S = S>,
     {
     }
 
     const _1: () = test_impl::<str, &str>();
-    const _2: () = test_impl::<str, &String>();
+    const _2: () = test_impl::<String, &String>();
     const _3: () = test_impl::<CachedLineIndexer<'static>, &CachedLineIndexer<'static>>();
 }

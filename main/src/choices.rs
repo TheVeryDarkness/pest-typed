@@ -136,14 +136,14 @@ macro_rules! choices {
                     }
                 )*
             }
-            impl<'i, R: $crate::RuleType, $V0: $crate::TypedNode<'i, R>, $($V: $crate::TypedNode<'i, R>, )* > $crate::TypedNode<'i, R>
+            impl<'i, R: $crate::RuleType, S: ?::core::marker::Sized + ::core::borrow::Borrow<::core::primitive::str>, $V0: $crate::TypedNode<'i, R, S>, $($V: $crate::TypedNode<'i, R, S>, )* > $crate::TypedNode<'i, R, S>
                 for $name<$V0, $($V, )* >
             {
                 #[inline]
-                fn try_parse_partial_with<I: $crate::Input<'i>>(
+                fn try_parse_partial_with<I: $crate::Input<'i, S>>(
                     input: I,
-                    stack: &mut $crate::Stack<$crate::Span<'i>>,
-                    tracker: &mut $crate::tracker::Tracker<'i, R>,
+                    stack: &mut $crate::Stack<$crate::Span<'i, S>>,
+                    tracker: &mut $crate::tracker::Tracker<'i, R, S>,
                 ) -> ::core::option::Option<(I, Self)> {
                     let res = $crate::predefined_node::restore_on_none(stack, |stack| $V0::try_parse_partial_with(input, stack, tracker));
                     if let Some((input, res)) = res {
@@ -159,10 +159,10 @@ macro_rules! choices {
                 }
 
                 #[inline]
-                fn try_check_partial_with<I: $crate::Input<'i>>(
+                fn try_check_partial_with<I: $crate::Input<'i, S>>(
                     input: I,
-                    stack: &mut $crate::Stack<$crate::Span<'i>>,
-                    tracker: &mut $crate::tracker::Tracker<'i, R>,
+                    stack: &mut $crate::Stack<$crate::Span<'i, S>>,
+                    tracker: &mut $crate::tracker::Tracker<'i, R, S>,
                 ) -> ::core::option::Option<I> {
                     let res = $crate::predefined_node::restore_on_none(stack, |stack| $V0::try_check_partial_with(input, stack, tracker));
                     if let Some(input) = res {

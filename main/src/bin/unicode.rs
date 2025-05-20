@@ -31,12 +31,12 @@ macro_rules! unicode {
                 Self { content }
             }
         }
-        impl<'i, R: RuleType> TypedNode<'i, R> for $property_ident {
+        impl<'i, R: RuleType, S: ?Sized + Borrow<str>> TypedNode<'i, R, S> for $property_ident {
             #[inline]
-            fn try_parse_partial_with<I: Input<'i>>(
+            fn try_parse_partial_with<I: Input<'i, S>>(
                 mut input: I,
-                _stack: &mut Stack<Span<'i>>,
-                _tracker: &mut Tracker<'i, R>,
+                _stack: &mut Stack<Span<'i, S>>,
+                _tracker: &mut Tracker<'i, R, S>,
             ) -> Option<(I, Self)> {
                 match super::match_char_by(&mut input, pest::unicode::$property_ident) {
                     Some(content) => Some((input, Self::from(content))),
@@ -44,10 +44,10 @@ macro_rules! unicode {
                 }
             }
             #[inline]
-            fn try_check_partial_with<I: Input<'i>>(
+            fn try_check_partial_with<I: Input<'i, S>>(
                 mut input: I,
-                _stack: &mut Stack<Span<'i>>,
-                _tracker: &mut Tracker<'i, R>,
+                _stack: &mut Stack<Span<'i, S>>,
+                _tracker: &mut Tracker<'i, R, S>,
             ) -> Option<I> {
                 match super::match_char_by(&mut input, pest::unicode::$property_ident) {
                     Some(_) => Some(input),

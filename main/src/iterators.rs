@@ -213,8 +213,8 @@ pub trait PairTree<'i, R: RuleType>: Pair<'i, R> + Sized {
 impl<'i, R: RuleType, T: RuleStruct<'i, R> + Pairs<'i, R> + Pair<'i, R>> PairTree<'i, R> for T {}
 
 macro_rules! impl_empty {
-    ($node:ty, $($tt:tt)*) => {
-        impl<'i, R: RuleType, $($tt)*> Pairs<'i, R> for $node {
+    ($node:ty $(, $($tt:tt)*)?) => {
+        impl<'i, R: RuleType $(, $($tt)*)?> Pairs<'i, R> for $node {
             fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<'i, R>)) {}
         }
     };
@@ -298,32 +298,17 @@ impl_with_vec!(RepeatMinMax, const MIN: usize, const MAX: usize,);
 impl_with_vec!(RepeatMin, const MIN: usize,);
 impl_with_vec!(AtomicRepeat,);
 
-macro_rules! impl_without_lifetime {
-    ($id: ident) => {
-        impl<'i, R: RuleType> Pairs<'i, R> for $id {
-            fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<'i, R>)) {}
-        }
-    };
-}
-macro_rules! impl_with_lifetime {
-    ($id: ident) => {
-        impl<'i, R: RuleType> Pairs<'i, R> for $id<'i> {
-            fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<'i, R>)) {}
-        }
-    };
-}
+impl_empty!(ANY);
+impl_empty!(SOI);
+impl_empty!(NEWLINE);
+impl_empty!(PEEK<'i>);
+impl_empty!(PEEK_ALL<'i>);
+impl_empty!(POP<'i>);
+impl_empty!(POP_ALL<'i>);
+impl_empty!(DROP);
 
-impl_without_lifetime!(ANY);
-impl_without_lifetime!(SOI);
-impl_without_lifetime!(NEWLINE);
-impl_with_lifetime!(PEEK);
-impl_with_lifetime!(PEEK_ALL);
-impl_with_lifetime!(POP);
-impl_with_lifetime!(POP_ALL);
-impl_without_lifetime!(DROP);
-
-impl_with_lifetime!(AlwaysFail);
-impl_with_lifetime!(Empty);
+impl_empty!(AlwaysFail<'i>);
+impl_empty!(Empty<'i>);
 
 /// An iterator that maybe contain another iterator.
 pub struct Maybe<Item, T: Iterator<Item = Item>>(Option<T>);

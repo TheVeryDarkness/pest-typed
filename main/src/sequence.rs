@@ -33,11 +33,12 @@ macro_rules! seq {
         impl<
                 'i,
                 R: $crate::RuleType,
-                $T0: $crate::TypedNode<'i, R>,
-                $($T: $crate::TypedNode<'i, R>, )*
-                Skip: $crate::NeverFailedTypedNode<'i, R> + ::core::default::Default,
+                $T0: $crate::TypedNode<'i, R, S>,
+                $($T: $crate::TypedNode<'i, R, S>, )*
+                S: ?::core::marker::Sized + ::core::borrow::Borrow<str>,
+                Skip: $crate::NeverFailedTypedNode<'i, R, S> + ::core::default::Default,
                 const SKIP: ::core::primitive::usize,
-            > $crate::TypedNode<'i, R> for $name<
+            > $crate::TypedNode<'i, R, S> for $name<
                 $crate::predefined_node::Skipped<$T0, Skip, SKIP>,
                 $(
                     $crate::predefined_node::Skipped<$T, Skip, SKIP>,
@@ -45,10 +46,10 @@ macro_rules! seq {
             >
         {
             #[inline]
-            fn try_parse_partial_with<I: $crate::Input<'i>>(
+            fn try_parse_partial_with<I: $crate::Input<'i, S>>(
                 mut input: I,
-                stack: &mut $crate::Stack<$crate::Span<'i>>,
-                tracker: &mut $crate::tracker::Tracker<'i, R>,
+                stack: &mut $crate::Stack<$crate::Span<'i, S>>,
+                tracker: &mut $crate::tracker::Tracker<'i, R, S>,
             ) -> ::core::option::Option<(I, Self)> {
                 let content =
                 (
@@ -75,10 +76,10 @@ macro_rules! seq {
                 Some((input, Self::from(content)))
             }
             #[inline]
-            fn try_check_partial_with<I: $crate::Input<'i>>(
+            fn try_check_partial_with<I: $crate::Input<'i, S>>(
                 mut input: I,
-                stack: &mut $crate::Stack<$crate::Span<'i>>,
-                tracker: &mut $crate::tracker::Tracker<'i, R>,
+                stack: &mut $crate::Stack<$crate::Span<'i, S>>,
+                tracker: &mut $crate::tracker::Tracker<'i, R, S>,
             ) -> ::core::option::Option<I> {
                 {
                     let next = T0::try_check_partial_with(input, stack, tracker)?;

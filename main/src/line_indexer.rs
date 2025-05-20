@@ -259,7 +259,7 @@ impl<'i> LineIndexer<'i> for &CachedLineIndexer<'i> {
 /// A trait for dropping the cache of a [`LineIndexer`].
 pub trait DropCache<'i> {
     /// The raw type of the line indexer.
-    type Raw: AsInput<'i, str>;
+    type Raw: AsInput<'i, S = str>;
 
     /// Drops the cache of the line indexer.
     fn drop_cache(self) -> Self::Raw;
