@@ -57,6 +57,7 @@ pub mod choices;
 mod formatter;
 mod input;
 pub mod iterators;
+mod line_indexer;
 mod pratt;
 pub mod predefined_node;
 pub mod re_exported;

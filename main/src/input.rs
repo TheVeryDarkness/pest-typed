@@ -1,13 +1,20 @@
 use crate::{Position, Span};
 use alloc::string::String;
-use core::{ops::Range, str::Chars};
+use core::{borrow::Borrow, ops::Range, str::Chars};
+use derive_where::derive_where;
 
 /// Input.
-pub trait Input<'i>: Copy {
+///
+/// # Safety
+///
+/// [`byte_offset()`](Input::byte_offset) must be in the range of [`input()`](Input::input).
+pub unsafe trait Input<'i, S: ?Sized + Borrow<str> = str>: Copy {
     /// Get byte offset.
     fn byte_offset(&self) -> usize;
     /// Get the full input.
     fn input(&self) -> &'i str;
+    /// Get the input with cached data.
+    fn input_cached(&self) -> &'i S;
 
     /// Get unconsumed characters.
     fn get(&self) -> &'i str;
@@ -22,11 +29,11 @@ pub trait Input<'i>: Copy {
     // fn line_of(&self) -> &'i str;
 
     /// To position.
-    fn as_position(&self) -> Position<'i> {
-        unsafe { Position::new_unchecked(self.input(), self.byte_offset()) }
+    fn as_position(&self) -> Position<'i, S> {
+        unsafe { Position::new_unchecked(self.input_cached(), self.byte_offset()) }
     }
     /// Create a [Span].
-    fn span(&self, end: Self) -> Span<'i> {
+    fn span(&self, end: Self) -> Span<'i, S> {
         self.as_position().span(&end.as_position())
     }
 
@@ -123,7 +130,11 @@ pub trait Input<'i>: Copy {
         c
     }
 
-    /// Get the cursor.
+    /// Get the cursor, which is the current byte offset.
+    ///
+    /// # Safety
+    ///
+    /// The cursor must be in the range of [`input()`](Input::input).
     unsafe fn cursor(&mut self) -> &mut usize;
 
     /// Get the start of the input.
@@ -141,20 +152,24 @@ pub trait Input<'i>: Copy {
     }
 }
 
-impl<'i> Input<'i> for Position<'i> {
+unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for Position<'i, S> {
     fn byte_offset(&self) -> usize {
         self.pos
     }
 
     fn input(&self) -> &'i str {
+        self.input.borrow()
+    }
+
+    fn input_cached(&self) -> &'i S {
         self.input
     }
 
     fn get(&self) -> &'i str {
         if cfg!(debug_assertions) {
-            &self.input[self.pos..]
+            &self.input()[self.pos..]
         } else {
-            unsafe { self.input.get_unchecked(self.pos..) }
+            unsafe { self.input().get_unchecked(self.pos..) }
         }
     }
 
@@ -174,32 +189,36 @@ impl<'i> Input<'i> for Position<'i> {
         0
     }
     fn end(&self) -> usize {
-        self.input.len()
+        self.input().len()
     }
 }
 
 /// A part of input.
-#[derive(Clone, Copy)]
-pub struct SubInput1<'i> {
-    input: &'i str,
+#[derive_where(Clone, Copy)]
+pub struct SubInput1<'i, S: ?Sized = str> {
+    input: &'i S,
     start: usize,
     cursor: usize,
 }
 
-impl<'i> Input<'i> for SubInput1<'i> {
+unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for SubInput1<'i, S> {
     fn byte_offset(&self) -> usize {
         self.cursor
     }
 
     fn input(&self) -> &'i str {
+        self.input.borrow()
+    }
+
+    fn input_cached(&self) -> &'i S {
         self.input
     }
 
     fn get(&self) -> &'i str {
         if cfg!(debug_assertions) {
-            &self.input[self.cursor..]
+            &self.input()[self.cursor..]
         } else {
-            unsafe { self.input.get_unchecked(self.cursor..) }
+            unsafe { self.input().get_unchecked(self.cursor..) }
         }
     }
 
@@ -211,24 +230,28 @@ impl<'i> Input<'i> for SubInput1<'i> {
         self.start
     }
     fn end(&self) -> usize {
-        self.input.len()
+        self.input().len()
     }
 }
 
-impl<'i> Input<'i> for SubInput2<'i> {
+unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for SubInput2<'i, S> {
     fn byte_offset(&self) -> usize {
         self.cursor
     }
 
     fn input(&self) -> &'i str {
+        self.input.borrow()
+    }
+
+    fn input_cached(&self) -> &'i S {
         self.input
     }
 
     fn get(&self) -> &'i str {
         if cfg!(debug_assertions) {
-            &self.input[self.cursor..self.end]
+            &self.input()[self.cursor..self.end]
         } else {
-            unsafe { self.input.get_unchecked(self.cursor..self.end) }
+            unsafe { self.input().get_unchecked(self.cursor..self.end) }
         }
     }
 
@@ -245,41 +268,41 @@ impl<'i> Input<'i> for SubInput2<'i> {
 }
 
 /// A part of input.
-#[derive(Clone, Copy)]
-pub struct SubInput2<'i> {
-    input: &'i str,
+#[derive_where(Clone, Copy)]
+pub struct SubInput2<'i, S: ?Sized = str> {
+    input: &'i S,
     start: usize,
     end: usize,
     cursor: usize,
 }
 
 /// Convert to input.
-pub trait AsInput<'i> {
+pub trait AsInput<'i, S: ?Sized + Borrow<str> = str> {
     /// Output type.
-    type Output: Input<'i>;
+    type Output: Input<'i, S>;
 
     /// Convert to a [Input] type.
     fn as_input(&self) -> Self::Output;
 }
 
-impl<'i> AsInput<'i> for &'i String {
-    type Output = Position<'i>;
+impl<'i> AsInput<'i, str> for &'i String {
+    type Output = Position<'i, str>;
 
     fn as_input(&self) -> Self::Output {
         Position::from_start(self)
     }
 }
 
-impl<'i> AsInput<'i> for &'i str {
-    type Output = Position<'i>;
+impl<'i> AsInput<'i, str> for &'i str {
+    type Output = Position<'i, str>;
 
     fn as_input(&self) -> Self::Output {
         Position::from_start(self)
     }
 }
 
-impl<'i> AsInput<'i> for Position<'i> {
-    type Output = SubInput1<'i>;
+impl<'i, S: ?Sized + Borrow<str>> AsInput<'i, S> for Position<'i, S> {
+    type Output = SubInput1<'i, S>;
 
     fn as_input(&self) -> Self::Output {
         let input = self.input;
@@ -293,11 +316,11 @@ impl<'i> AsInput<'i> for Position<'i> {
     }
 }
 
-impl<'i> AsInput<'i> for Span<'i> {
-    type Output = SubInput2<'i>;
+impl<'i, S: ?Sized + Borrow<str>> AsInput<'i, S> for Span<'i, S> {
+    type Output = SubInput2<'i, S>;
 
     fn as_input(&self) -> Self::Output {
-        let input = self.get_input();
+        let input = self.input();
         let start = self.start();
         let end = self.end();
         let cursor = start;

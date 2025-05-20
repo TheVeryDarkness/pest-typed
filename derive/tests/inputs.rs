@@ -20,7 +20,7 @@ fn string() -> anyhow::Result<()> {
     let input = &input.to_owned();
 
     let main = rules::main::try_parse(input)?;
-    assert_eq!(main.span(), Span::new_full(input));
+    assert_eq!(main.span(), Span::new_full(input.as_str()));
 
     Ok(())
 }

@@ -10,6 +10,7 @@
 //! Copied from pest/pest/src/position.rs (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
 //! and modified.
 
+use core::borrow::Borrow;
 use core::cmp::Ordering;
 use core::fmt::{self, Write};
 use core::hash::{Hash, Hasher};
@@ -17,28 +18,36 @@ use core::ops::Range;
 use core::ptr;
 use core::str;
 
+use derive_where::derive_where;
+
 use crate::formatter::FormatOption;
+use crate::line_indexer::LineIndexer;
 
 use super::span;
 
 /// A cursor position in a `&str` which provides useful methods to manually parse that string.
-#[derive(Clone, Copy)]
-pub struct Position<'i> {
-    pub(crate) input: &'i str,
+#[derive_where(Clone, Copy)]
+pub struct Position<'i, S: ?Sized = str> {
+    pub(crate) input: &'i S,
     /// # Safety:
     ///
     /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
     pub(crate) pos: usize,
 }
 
-impl<'i> Position<'i> {
+impl<'i, S: ?Sized> Position<'i, S>
+where
+    S: Borrow<str>,
+    str: Borrow<str>,
+{
     /// Create a new `Position` without checking invariants. (Checked with `debug_assertions`.)
     ///
     /// # Safety:
     ///
     /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
-    pub(crate) unsafe fn new_unchecked(input: &str, pos: usize) -> Position<'_> {
-        debug_assert!(input.get(pos..).is_some());
+    pub(crate) unsafe fn new_unchecked(input: &'i S, pos: usize) -> Self {
+        debug_assert!(input.borrow().get(pos..).is_some());
+
         Position { input, pos }
     }
 
@@ -54,10 +63,12 @@ impl<'i> Position<'i> {
     /// assert_eq!(Position::new(heart, 1), None);
     /// assert_ne!(Position::new(heart, cheart.len_utf8()), None);
     /// ```
-    pub fn new(input: &str, pos: usize) -> Option<Position<'_>> {
-        input.get(pos..).map(|_| Position { input, pos })
+    pub fn new(input: &'i S, pos: usize) -> Option<Self> {
+        input.borrow().get(pos..).map(|_| Position { input, pos })
     }
+}
 
+impl<'i, S: ?Sized> Position<'i, S> {
     /// Creates a `Position` at the start of a `&str`.
     ///
     /// # Examples
@@ -68,7 +79,7 @@ impl<'i> Position<'i> {
     /// assert_eq!(start.pos(), 0);
     /// ```
     #[inline]
-    pub fn from_start(input: &'i str) -> Position<'i> {
+    pub fn from_start(input: &'i S) -> Self {
         // Position 0 is always safe because it's always a valid UTF-8 border.
         Position { input, pos: 0 }
     }
@@ -88,7 +99,13 @@ impl<'i> Position<'i> {
     pub fn pos(&self) -> usize {
         self.pos
     }
+}
 
+impl<'i, S: ?Sized> Position<'i, S>
+where
+    S: Borrow<str>,
+    str: Borrow<str>,
+{
     /// Creates a `Span` from two `Position`s.
     ///
     /// # Panics
@@ -107,7 +124,7 @@ impl<'i> Position<'i> {
     /// assert_eq!(span.end(), 0);
     /// ```
     #[inline]
-    pub fn span(&self, other: &Position<'i>) -> span::Span<'i> {
+    pub fn span(&self, other: &Position<'i, S>) -> span::Span<'i, S> {
         if ptr::eq(self.input, other.input)
         /* && self.input.get(self.pos..other.pos).is_some() */
         {
@@ -118,131 +135,39 @@ impl<'i> Position<'i> {
             panic!("span created from positions from different inputs")
         }
     }
+}
 
-    /// Returns the line and column number of this `Position`.
-    ///
-    /// This is an O(n) operation, where n is the number of chars in the input.
-    /// You better use [`pair.line_col()`](struct.Pair.html#method.line_col) instead.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest;
-    /// # #[allow(non_camel_case_types)]
-    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    /// enum Rule {}
-    ///
-    /// let input = "\na";
-    /// let mut state: Box<pest::ParserState<'_, Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.match_string("\na");
-    /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap().position().line_col(), (2, 2));
-    /// ```
+impl<'i, S: ?Sized> Position<'i, S>
+where
+    &'i S: LineIndexer<'i>,
+    &'i str: LineIndexer<'i>,
+{
+    /// Returns the line and column number of this [`Position`] using [LineIndexer::line_col].
     #[inline]
     pub fn line_col(&self) -> (usize, usize) {
-        if self.pos > self.input.len() {
-            panic!("position out of bounds");
-        }
-        let mut pos = self.pos;
-        let slice = &self.input[..pos];
-        let mut chars = slice.chars().peekable();
-
-        let mut line_col = (1, 1);
-
-        while pos != 0 {
-            match chars.next() {
-                Some('\r') => {
-                    if let Some(&'\n') = chars.peek() {
-                        chars.next();
-
-                        if pos == 1 {
-                            pos -= 1;
-                        } else {
-                            pos -= 2;
-                        }
-
-                        line_col = (line_col.0 + 1, 1);
-                    } else {
-                        pos -= 1;
-                        line_col = (line_col.0, line_col.1 + 1);
-                    }
-                }
-                Some('\n') => {
-                    pos -= 1;
-                    line_col = (line_col.0 + 1, 1);
-                }
-                Some(c) => {
-                    pos -= c.len_utf8();
-                    line_col = (line_col.0, line_col.1 + 1);
-                }
-                None => unreachable!(),
-            }
-        }
-
-        line_col
+        self.input.line_col(self.pos)
     }
 
     /// Returns the entire line of the input that contains this `Position`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use pest;
-    /// # #[allow(non_camel_case_types)]
-    /// # #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-    /// enum Rule {}
-    ///
-    /// let input = "\na";
-    /// let mut state: Box<pest::ParserState<'_, Rule>> = pest::ParserState::new(input);
-    /// let mut result = state.match_string("\na");
-    /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap().position().line_of(), "a");
-    /// ```
     #[inline]
     pub fn line_of(&self) -> &'i str {
-        if self.pos > self.input.len() {
-            panic!("position out of bounds");
-        };
-        // Safe since start and end can only be valid UTF-8 borders.
-        &self.input[self.find_line_start()..self.find_line_end()]
+        self.input.line_of(self.pos)
     }
 
     pub(crate) fn find_line_start(&self) -> usize {
-        if self.input.is_empty() {
-            return 0;
-        };
-        // Position's pos is always a UTF-8 border.
-        let start = self
-            .input
-            .char_indices()
-            .rev()
-            .skip_while(|&(i, _)| i >= self.pos)
-            .find(|&(_, c)| c == '\n');
-        match start {
-            Some((i, _)) => i + 1,
-            None => 0,
-        }
+        self.input.find_line_start(self.pos)
     }
 
     pub(crate) fn find_line_end(&self) -> usize {
-        if self.input.is_empty() {
-            0
-        } else if self.pos == self.input.len() - 1 {
-            self.input.len()
-        } else {
-            // Position's pos is always a UTF-8 border.
-            let end = self
-                .input
-                .char_indices()
-                .skip_while(|&(i, _)| i < self.pos)
-                .find(|&(_, c)| c == '\n');
-            match end {
-                Some((i, _)) => i + 1,
-                None => self.input.len(),
-            }
-        }
+        self.input.find_line_end(self.pos)
     }
+}
 
+impl<'i, S: ?Sized> Position<'i, S>
+where
+    S: Borrow<str>,
+    str: Borrow<str>,
+{
     /// Returns `true` when the `Position` points to the start of the input `&str`.
     #[inline]
     #[allow(dead_code)]
@@ -253,7 +178,7 @@ impl<'i> Position<'i> {
     /// Returns `true` when the `Position` points to the end of the input `&str`.
     #[inline]
     pub(crate) fn at_end(&self) -> bool {
-        self.pos == self.input.len()
+        self.pos == self.input.borrow().len()
     }
 
     /// Skips `n` `char`s from the `Position` and returns `true` if the skip was possible or `false`
@@ -263,7 +188,7 @@ impl<'i> Position<'i> {
         let skipped = {
             let mut len = 0;
             // Position's pos is always a UTF-8 border.
-            let mut chars = self.input[self.pos..].chars();
+            let mut chars = self.input.borrow()[self.pos..].chars();
             for _ in 0..n {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
@@ -286,7 +211,7 @@ impl<'i> Position<'i> {
         let skipped = {
             let mut len = 0;
             // Position's pos is always a UTF-8 border.
-            let mut chars = self.input[..self.pos].chars().rev();
+            let mut chars = self.input.borrow()[..self.pos].chars().rev();
             for _ in 0..n {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
@@ -360,15 +285,15 @@ impl<'i> Position<'i> {
     #[inline]
     fn skip_until_basic(&mut self, strings: &[&str]) -> bool {
         // TODO: optimize with Aho-Corasick, e.g. https://crates.io/crates/daachorse?
-        for from in self.pos..self.input.len() {
-            let bytes = if let Some(string) = self.input.get(from..) {
+        for from in self.pos..self.input.borrow().len() {
+            let bytes = if let Some(string) = self.input.borrow().get(from..) {
                 string.as_bytes()
             } else {
                 continue;
             };
 
             for slice in strings.iter() {
-                let to = slice.len();
+                let to = <str>::len(slice);
                 if Some(slice.as_bytes()) == bytes.get(0..to) {
                     self.pos = from;
                     return true;
@@ -376,7 +301,7 @@ impl<'i> Position<'i> {
             }
         }
 
-        self.pos = self.input.len();
+        self.pos = self.input.borrow().len();
         false
     }
 
@@ -386,7 +311,7 @@ impl<'i> Position<'i> {
     #[inline]
     #[allow(dead_code)]
     pub(crate) fn match_char(&self, c: char) -> bool {
-        matches!(self.input[self.pos..].chars().next(), Some(cc) if c == cc)
+        matches!(self.input.borrow()[self.pos..].chars().next(), Some(cc) if c == cc)
     }
 
     /// Matches the char at the `Position` against a filter function and returns `true` if a match
@@ -397,7 +322,7 @@ impl<'i> Position<'i> {
     where
         F: FnOnce(char) -> bool,
     {
-        if let Some(c) = self.input[self.pos..].chars().next() {
+        if let Some(c) = self.input.borrow()[self.pos..].chars().next() {
             if f(c) {
                 self.pos += c.len_utf8();
                 true
@@ -416,7 +341,7 @@ impl<'i> Position<'i> {
     pub(crate) fn match_string(&mut self, string: &str) -> bool {
         let to = self.pos + string.len();
 
-        if Some(string.as_bytes()) == self.input.as_bytes().get(self.pos..to) {
+        if Some(string.as_bytes()) == self.input.borrow().as_bytes().get(self.pos..to) {
             self.pos = to;
             true
         } else {
@@ -430,7 +355,7 @@ impl<'i> Position<'i> {
     #[allow(dead_code)]
     pub(crate) fn match_insensitive(&mut self, string: &str) -> bool {
         let matched = {
-            let slice = &self.input[self.pos..];
+            let slice = &self.input.borrow()[self.pos..];
             if let Some(slice) = slice.get(0..string.len()) {
                 slice.eq_ignore_ascii_case(string)
             } else {
@@ -451,7 +376,7 @@ impl<'i> Position<'i> {
     #[inline]
     #[allow(dead_code)]
     pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
-        if let Some(c) = self.input[self.pos..].chars().next() {
+        if let Some(c) = self.input.borrow()[self.pos..].chars().next() {
             if range.start <= c && c <= range.end {
                 self.pos += c.len_utf8();
                 return true;
@@ -468,7 +393,10 @@ impl<'i> fmt::Debug for Position<'i> {
     }
 }
 
-impl<'i> Position<'i> {
+impl<'i, S: ?Sized + Borrow<str>> Position<'i, S>
+where
+    &'i S: LineIndexer<'i>,
+{
     /// Format position with given option.
     pub fn display<Writer, SF, MF, NF>(
         &self,
@@ -485,40 +413,51 @@ impl<'i> Position<'i> {
     }
 }
 
-impl<'i> fmt::Display for Position<'i> {
+impl<'i, S: ?Sized + Borrow<str>> fmt::Display for Position<'i, S>
+where
+    &'i S: LineIndexer<'i>,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         FormatOption::default().display_position(self, f)
     }
 }
 
-impl<'i> PartialEq for Position<'i> {
-    fn eq(&self, other: &Position<'i>) -> bool {
-        ptr::eq(self.input, other.input) && self.pos == other.pos
+impl<'i, S: ?Sized + Borrow<str>> PartialEq for Position<'i, S> {
+    fn eq(&self, other: &Self) -> bool {
+        ptr::eq::<str>(self.input.borrow(), other.input.borrow()) && self.pos == other.pos
     }
 }
 
-impl<'i> Eq for Position<'i> {}
+impl<'i, S: ?Sized + Borrow<str>> Eq for Position<'i, S> {}
 
-impl<'i> PartialOrd for Position<'i> {
-    fn partial_cmp(&self, other: &Position<'i>) -> Option<Ordering> {
+impl<'i, S: ?Sized + Borrow<str>> PartialOrd for Position<'i, S> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'i> Ord for Position<'i> {
-    fn cmp(&self, other: &Position<'i>) -> Ordering {
+impl<'i, S: ?Sized + Borrow<str>> Ord for Position<'i, S> {
+    fn cmp(&self, other: &Self) -> Ordering {
         assert_eq!(
-            self.input, other.input,
+            self.input.borrow(),
+            other.input.borrow(),
             "cannot compare positions from different strs"
         );
         self.pos.cmp(&other.pos)
     }
 }
 
-impl<'i> Hash for Position<'i> {
+impl<'i, S: ?Sized + Borrow<str>> Hash for Position<'i, S> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.input as *const str).hash(state);
+        (self.input.borrow() as *const str).hash(state);
         self.pos.hash(state);
+    }
+}
+
+impl<'i, S: ?Sized + Borrow<str>> From<Position<'i, S>> for pest::Position<'i> {
+    fn from(pos: Position<'i, S>) -> Self {
+        //FIXME: eliminate the check
+        pest::Position::new(pos.input.borrow(), pos.pos).unwrap()
     }
 }
 

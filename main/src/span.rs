@@ -10,22 +10,26 @@
 //! Copied from pest/pest/src/position.rs (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
 //! and modified.
 
+use core::borrow::Borrow;
 use core::fmt::{self, Write};
 use core::hash::{Hash, Hasher};
 use core::ops::{Bound, Range, RangeBounds};
 use core::ptr;
 use core::str;
 
+use derive_where::derive_where;
+
 use crate::formatter::FormatOption;
+use crate::line_indexer::LineIndexer;
 use crate::position;
 
 /// A span over a `&str`. It is created from either [two `Position`s] or from a [`Pair`].
 ///
 /// [two `Position`s]: struct.Position.html#method.span
 /// [`Pair`]: ../iterators/struct.Pair.html#method.span
-#[derive(Clone, Copy)]
-pub struct Span<'i> {
-    input: &'i str,
+#[derive_where(Clone, Copy)]
+pub struct Span<'i, S: ?Sized = str> {
+    input: &'i S,
     /// # Safety
     ///
     /// Must be a valid character boundary index into `input`.
@@ -36,14 +40,17 @@ pub struct Span<'i> {
     end: usize,
 }
 
-impl<'i> Span<'i> {
+impl<'i, S: ?Sized> Span<'i, S>
+where
+    S: Borrow<str>,
+{
     /// Create a new `Span` without checking invariants. (Checked with `debug_assertions`.)
     ///
     /// # Safety
     ///
     /// `input[start..end]` must be a valid subslice; that is, said indexing should not panic.
-    pub(crate) unsafe fn new_unchecked(input: &str, start: usize, end: usize) -> Span<'_> {
-        debug_assert!(input.get(start..end).is_some());
+    pub(crate) unsafe fn new_unchecked(input: &'i S, start: usize, end: usize) -> Self {
+        debug_assert!(input.borrow().get(start..end).is_some());
         Span { input, start, end }
     }
 
@@ -57,11 +64,11 @@ impl<'i> Span<'i> {
     /// let span = Span::new_full(input);
     /// assert_eq!(span.as_str(), input);
     /// ```
-    pub fn new_full(input: &'i str) -> Span<'i> {
+    pub fn new_full(input: &'i S) -> Self {
         Span {
             input,
             start: 0,
-            end: input.len(),
+            end: input.borrow().len(),
         }
     }
 
@@ -76,8 +83,8 @@ impl<'i> Span<'i> {
     /// assert_eq!(None, Span::new(input, 100, 0));
     /// assert!(Span::new(input, 0, input.len()).is_some());
     /// ```
-    pub fn new(input: &str, start: usize, end: usize) -> Option<Span<'_>> {
-        if input.get(start..end).is_some() {
+    pub fn new(input: &'i S, start: usize, end: usize) -> Option<Self> {
+        if input.borrow().get(start..end).is_some() {
             Some(Span { input, start, end })
         } else {
             None
@@ -96,7 +103,7 @@ impl<'i> Span<'i> {
     /// ```
     ///
     /// # Examples
-    pub fn get(&self, range: impl RangeBounds<usize>) -> Option<Span<'i>> {
+    pub fn get(&self, range: impl RangeBounds<usize>) -> Option<Self> {
         let start = match range.start_bound() {
             Bound::Included(offset) => *offset,
             Bound::Excluded(offset) => *offset + 1,
@@ -165,7 +172,7 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.start_pos(), start);
     /// ```
     #[inline]
-    pub fn start_pos(&self) -> position::Position<'i> {
+    pub fn start_pos(&self) -> position::Position<'i, S> {
         // Span's start position is always a UTF-8 border.
         unsafe { position::Position::new_unchecked(self.input, self.start) }
     }
@@ -184,7 +191,7 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.end_pos(), end);
     /// ```
     #[inline]
-    pub fn end_pos(&self) -> position::Position<'i> {
+    pub fn end_pos(&self) -> position::Position<'i, S> {
         // Span's end position is always a UTF-8 border.
         unsafe { position::Position::new_unchecked(self.input, self.end) }
     }
@@ -203,7 +210,7 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.split(), (start, end));
     /// ```
     #[inline]
-    pub fn split(self) -> (position::Position<'i>, position::Position<'i>) {
+    pub fn split(self) -> (position::Position<'i, S>, position::Position<'i, S>) {
         // Span's start and end positions are always a UTF-8 borders.
         let pos1 = unsafe { position::Position::new_unchecked(self.input, self.start) };
         let pos2 = unsafe { position::Position::new_unchecked(self.input, self.end) };
@@ -231,7 +238,7 @@ impl<'i> Span<'i> {
     #[inline]
     pub fn as_str(&self) -> &'i str {
         // Span's start and end positions are always a UTF-8 borders.
-        &self.input[self.start..self.end]
+        &self.input.borrow()[self.start..self.end]
     }
 
     /// Returns the input string of the `Span`.
@@ -252,6 +259,10 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.get_input(), input);
     /// ```
     pub fn get_input(&self) -> &'i str {
+        self.input.borrow()
+    }
+
+    pub(crate) fn input(&self) -> &'i S {
         self.input
     }
 
@@ -273,7 +284,7 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.lines().collect::<Vec<_>>(), vec!["b\n", "c"]);
     /// ```
     #[inline]
-    pub fn lines(&self) -> Lines<'_> {
+    pub fn lines(&self) -> Lines<'_, 'i, S> {
         Lines {
             inner: self.lines_span(),
         }
@@ -297,7 +308,7 @@ impl<'i> Span<'i> {
     /// let span = start_pos.span(&state.position().clone());
     /// assert_eq!(span.lines_span().collect::<Vec<_>>(), vec![Span::new(input, 2, 4).unwrap(), Span::new(input, 4, 5).unwrap()]);
     /// ```
-    pub fn lines_span(&self) -> LinesSpan<'_> {
+    pub fn lines_span(&self) -> LinesSpan<'_, 'i, S> {
         LinesSpan {
             span: self,
             pos: self.start,
@@ -312,7 +323,7 @@ impl<'i> Span<'i> {
         let skipped = {
             let mut len = 0;
             // Position's pos is always a UTF-8 border.
-            let mut chars = self.input[self.start..self.end].chars();
+            let mut chars = self.input.borrow()[self.start..self.end].chars();
             for _ in 0..n {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
@@ -388,7 +399,7 @@ impl<'i> Span<'i> {
     fn skip_until_basic(&mut self, strings: &[&str]) -> bool {
         // TODO: optimize with Aho-Corasick, e.g. https://crates.io/crates/daachorse?
         for from in self.start..self.end {
-            let bytes = if let Some(string) = self.input.get(from..) {
+            let bytes = if let Some(string) = self.input.borrow().get(from..) {
                 string.as_bytes()
             } else {
                 continue;
@@ -413,7 +424,7 @@ impl<'i> Span<'i> {
     #[inline]
     #[allow(dead_code)]
     pub(crate) fn match_char(&self, c: char) -> bool {
-        matches!(self.input[self.start..self.end].chars().next(), Some(cc) if c == cc)
+        matches!(self.input.borrow()[self.start..self.end].chars().next(), Some(cc) if c == cc)
     }
 
     /// Matches the char at the `Position` against a filter function and returns `true` if a match
@@ -424,7 +435,7 @@ impl<'i> Span<'i> {
     where
         F: FnOnce(char) -> bool,
     {
-        if let Some(c) = self.input[self.start..self.end].chars().next() {
+        if let Some(c) = self.input.borrow()[self.start..self.end].chars().next() {
             if f(c) {
                 self.start += c.len_utf8();
                 true
@@ -445,7 +456,7 @@ impl<'i> Span<'i> {
 
         if self.end < to {
             return false;
-        } else if Some(string.as_bytes()) == self.input.as_bytes().get(self.start..to) {
+        } else if Some(string.as_bytes()) == self.input.borrow().as_bytes().get(self.start..to) {
             self.start = to;
             true
         } else {
@@ -459,7 +470,7 @@ impl<'i> Span<'i> {
     #[allow(dead_code)]
     pub(crate) fn match_insensitive(&mut self, string: &str) -> bool {
         let matched = {
-            let slice = &self.input[self.start..self.end];
+            let slice = &self.input.borrow()[self.start..self.end];
             if let Some(slice) = slice.get(0..string.len()) {
                 slice.eq_ignore_ascii_case(string)
             } else {
@@ -480,7 +491,7 @@ impl<'i> Span<'i> {
     #[inline]
     #[allow(dead_code)]
     pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
-        if let Some(c) = self.input[self.start..self.end].chars().next() {
+        if let Some(c) = self.input.borrow()[self.start..self.end].chars().next() {
             if range.start <= c && c <= range.end {
                 self.start += c.len_utf8();
                 return true;
@@ -491,7 +502,7 @@ impl<'i> Span<'i> {
     }
 }
 
-impl<'i> fmt::Debug for Span<'i> {
+impl<'i, S: ?Sized + Borrow<str>> fmt::Debug for Span<'i, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Span")
             .field("str", &self.as_str())
@@ -501,23 +512,25 @@ impl<'i> fmt::Debug for Span<'i> {
     }
 }
 
-impl<'i> PartialEq for Span<'i> {
-    fn eq(&self, other: &Span<'i>) -> bool {
-        ptr::eq(self.input, other.input) && self.start == other.start && self.end == other.end
+impl<'i, S: ?Sized + Borrow<str>> PartialEq for Span<'i, S> {
+    fn eq(&self, other: &Self) -> bool {
+        ptr::eq::<str>(self.input.borrow(), other.input.borrow())
+            && self.start == other.start
+            && self.end == other.end
     }
 }
 
-impl<'i> Eq for Span<'i> {}
+impl<'i, S: ?Sized + Borrow<str>> Eq for Span<'i, S> {}
 
-impl<'i> Hash for Span<'i> {
+impl<'i, S: ?Sized + Borrow<str>> Hash for Span<'i, S> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.input as *const str).hash(state);
+        (self.input.borrow() as *const str).hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }
 }
 
-impl<'i> Span<'i> {
+impl<'i, S: ?Sized + Borrow<str>> Span<'i, S> {
     /// Format span with given option.
     pub fn display<Writer, SF, MF, NF>(
         &self,
@@ -534,7 +547,7 @@ impl<'i> Span<'i> {
     }
 }
 
-impl<'i> fmt::Display for Span<'i> {
+impl<'i, S: ?Sized + Borrow<str>> fmt::Display for Span<'i, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let opt = FormatOption::default();
         opt.display_span(self, f)
@@ -582,11 +595,14 @@ impl<'i> fmt::Display for Span<'i> {
 /// let merged = merge_spans(&span1, &span2);
 /// assert!(merged.is_none());
 /// ```
-pub fn merge_spans<'i>(a: &Span<'i>, b: &Span<'i>) -> Option<Span<'i>> {
+pub fn merge_spans<'i, S: ?Sized + Borrow<str>>(
+    a: &Span<'i, S>,
+    b: &Span<'i, S>,
+) -> Option<Span<'i, S>> {
     if a.end() >= b.start() && a.start() <= b.end() {
         // The spans overlap or are contiguous, so they can be merged.
         Span::new(
-            a.get_input(),
+            a.input(),
             core::cmp::min(a.start(), b.start()),
             core::cmp::max(a.end(), b.end()),
         )
@@ -601,13 +617,16 @@ pub fn merge_spans<'i>(a: &Span<'i>, b: &Span<'i>) -> Option<Span<'i>> {
 /// Iterates all lines that are at least _partially_ covered by the span. Yielding a `Span` for each.
 ///
 /// [`Span::lines_span()`]: struct.Span.html#method.lines_span
-pub struct LinesSpan<'i> {
-    span: &'i Span<'i>,
+pub struct LinesSpan<'s, 'i, S: ?Sized> {
+    span: &'s Span<'i, S>,
     pos: usize,
 }
 
-impl<'i> Iterator for LinesSpan<'i> {
-    type Item = Span<'i>;
+impl<'s, 'i, S: ?Sized + Borrow<str>> Iterator for LinesSpan<'s, 'i, S>
+where
+    &'i S: LineIndexer<'i>,
+{
+    type Item = Span<'i, S>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.pos > self.span.end {
             return None;
@@ -629,11 +648,14 @@ impl<'i> Iterator for LinesSpan<'i> {
 /// Iterates all lines that are at least _partially_ covered by the span. Yielding a `&str` for each.
 ///
 /// [`Span::lines()`]: struct.Span.html#method.lines
-pub struct Lines<'i> {
-    inner: LinesSpan<'i>,
+pub struct Lines<'s, 'i, S: ?Sized> {
+    inner: LinesSpan<'s, 'i, S>,
 }
 
-impl<'i> Iterator for Lines<'i> {
+impl<'s, 'i, S: ?Sized + Borrow<str>> Iterator for Lines<'s, 'i, S>
+where
+    &'i S: LineIndexer<'i>,
+{
     type Item = &'i str;
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|span| span.as_str())
