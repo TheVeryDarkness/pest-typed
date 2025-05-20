@@ -9,6 +9,7 @@
 
 //! A trait and a type for splitting a string into lines.
 
+use crate::AsInput;
 use alloc::{string::String, vec::Vec};
 use core::borrow::Borrow;
 
@@ -252,6 +253,31 @@ impl<'i> LineIndexer<'i> for &CachedLineIndexer<'i> {
             .get(line)
             .copied()
             .unwrap_or(self.input.len())
+    }
+}
+
+/// A trait for dropping the cache of a [`LineIndexer`].
+pub trait DropCache<'i> {
+    /// The raw type of the line indexer.
+    type Raw: AsInput<'i, str>;
+
+    /// Drops the cache of the line indexer.
+    fn drop_cache(self) -> Self::Raw;
+}
+
+impl<'i> DropCache<'i> for CachedLineIndexer<'i> {
+    type Raw = &'i str;
+
+    fn drop_cache(self) -> Self::Raw {
+        self.input
+    }
+}
+
+impl<'i> DropCache<'i> for &'i str {
+    type Raw = &'i str;
+
+    fn drop_cache(self) -> Self::Raw {
+        self
     }
 }
 

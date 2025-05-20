@@ -1,4 +1,4 @@
-use crate::{Position, Span};
+use crate::{line_indexer::DropCache, Position, Span};
 use alloc::string::String;
 use core::{borrow::Borrow, ops::Range, str::Chars};
 use derive_where::derive_where;
@@ -8,7 +8,7 @@ use derive_where::derive_where;
 /// # Safety
 ///
 /// [`byte_offset()`](Input::byte_offset) must be in the range of [`input()`](Input::input).
-pub unsafe trait Input<'i, S: ?Sized + Borrow<str> = str>: Copy {
+pub unsafe trait Input<'i, S: ?Sized + Borrow<str> = str>: Copy + DropCache<'i> {
     /// Get byte offset.
     fn byte_offset(&self) -> usize;
     /// Get the full input.
@@ -201,6 +201,56 @@ pub struct SubInput1<'i, S: ?Sized = str> {
     cursor: usize,
 }
 
+/// A part of input.
+#[derive_where(Clone, Copy)]
+pub struct SubInput2<'i, S: ?Sized = str> {
+    input: &'i S,
+    start: usize,
+    end: usize,
+    cursor: usize,
+}
+
+impl<'i, S: ?Sized + Borrow<str>> AsInput<'i, S> for SubInput1<'i, S> {
+    type Output = Self;
+
+    fn as_input(&self) -> Self::Output {
+        *self
+    }
+}
+
+impl<'i, S: ?Sized + Borrow<str>> AsInput<'i, S> for SubInput2<'i, S> {
+    type Output = Self;
+
+    fn as_input(&self) -> Self::Output {
+        *self
+    }
+}
+
+impl<'i, S: ?Sized + Borrow<str>> DropCache<'i> for SubInput1<'i, S> {
+    type Raw = SubInput1<'i, str>;
+
+    fn drop_cache(self) -> Self::Raw {
+        SubInput1 {
+            input: self.input.borrow(),
+            start: self.start,
+            cursor: self.cursor,
+        }
+    }
+}
+
+impl<'i, S: ?Sized + Borrow<str>> DropCache<'i> for SubInput2<'i, S> {
+    type Raw = SubInput2<'i, str>;
+
+    fn drop_cache(self) -> Self::Raw {
+        SubInput2 {
+            input: self.input.borrow(),
+            start: self.start,
+            end: self.end,
+            cursor: self.cursor,
+        }
+    }
+}
+
 unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for SubInput1<'i, S> {
     fn byte_offset(&self) -> usize {
         self.cursor
@@ -265,15 +315,6 @@ unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for SubInput2<'i, S> {
     fn end(&self) -> usize {
         self.end
     }
-}
-
-/// A part of input.
-#[derive_where(Clone, Copy)]
-pub struct SubInput2<'i, S: ?Sized = str> {
-    input: &'i S,
-    start: usize,
-    end: usize,
-    cursor: usize,
 }
 
 /// Convert to input.

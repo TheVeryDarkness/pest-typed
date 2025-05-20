@@ -21,7 +21,7 @@ use core::str;
 use derive_where::derive_where;
 
 use crate::formatter::FormatOption;
-use crate::line_indexer::LineIndexer;
+use crate::line_indexer::{DropCache, LineIndexer};
 
 use super::span;
 
@@ -459,9 +459,11 @@ impl<'i, S: ?Sized + Borrow<str>> From<Position<'i, S>> for pest::Position<'i> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> Position<'i, S> {
+impl<'i, S: ?Sized + Borrow<str>> DropCache<'i> for Position<'i, S> {
+    type Raw = Position<'i, str>;
+
     /// Returns a new `Position` with the same input but without the cache.
-    pub fn drop_cache(self) -> Position<'i, str> {
+    fn drop_cache(self) -> Position<'i, str> {
         Position {
             input: self.input.borrow(),
             pos: self.pos,

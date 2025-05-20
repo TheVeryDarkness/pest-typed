@@ -20,7 +20,7 @@ use core::str;
 use derive_where::derive_where;
 
 use crate::formatter::FormatOption;
-use crate::line_indexer::LineIndexer;
+use crate::line_indexer::{DropCache, LineIndexer};
 use crate::position;
 
 /// A span over a `&str`. It is created from either [two `Position`s] or from a [`Pair`].
@@ -551,12 +551,13 @@ impl<S: ?Sized + Borrow<str>> fmt::Display for Span<'_, S> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> Span<'i, S> {
-    /// Returns a new `Span` with the same input but without the cache.
-    pub fn drop_cache(self) -> Span<'i, str> {
+impl<'i, S: ?Sized + Borrow<str>> DropCache<'i> for Span<'i, S> {
+    type Raw = Span<'i, str>;
+
+    fn drop_cache(self) -> Span<'i, str> {
         Span {
             input: self.input.borrow(),
-            start:self.start,
+            start: self.start,
             end: self.end,
         }
     }
