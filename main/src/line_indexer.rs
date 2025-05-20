@@ -248,6 +248,9 @@ impl<'i> LineIndexer<'i> for &CachedLineIndexer<'i> {
 
 #[cfg(test)]
 mod tests {
+    use rand::SeedableRng as _;
+    use rand_utf8::rand_utf8;
+
     use super::{CachedLineIndexer, LineIndexer};
 
     fn test_line_col<'i, T: LineIndexer<'i>>(line_indexer: T) {
@@ -275,6 +278,21 @@ mod tests {
         test_line_of(input);
         test_line_of(&line_indexer);
 
+        let mut rng = rand::rngs::SmallRng::seed_from_u64(0);
+
+        let f = |input: &str| {
+            let line_indexer = CachedLineIndexer::new(input);
+            for (pos, _) in input.char_indices() {
+                assert_eq!(line_indexer.line_col(pos), input.line_col(pos));
+                assert_eq!(line_indexer.line_of(pos), input.line_of(pos));
+                assert_eq!(
+                    line_indexer.find_line_start(pos),
+                    input.find_line_start(pos)
+                );
+                assert_eq!(line_indexer.find_line_end(pos), input.find_line_end(pos));
+            }
+        };
+
         for input in [
             "",
             "\n",
@@ -288,16 +306,12 @@ mod tests {
             "🦀🦀",
             "🦀\n🦀\n",
         ] {
-            let line_indexer = CachedLineIndexer::new(input);
-            for (pos, _) in input.char_indices() {
-                assert_eq!(line_indexer.line_col(pos), input.line_col(pos));
-                assert_eq!(line_indexer.line_of(pos), input.line_of(pos));
-                assert_eq!(
-                    line_indexer.find_line_start(pos),
-                    input.find_line_start(pos)
-                );
-                assert_eq!(line_indexer.find_line_end(pos), input.find_line_end(pos));
-            }
+            f(input)
+        }
+
+        for _ in 0..100 {
+            let input = rand_utf8(&mut rng, 1000);
+            f(&input);
         }
     }
 }
