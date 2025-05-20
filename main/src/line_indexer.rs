@@ -273,11 +273,11 @@ impl<'i> DropCache<'i> for CachedLineIndexer<'i> {
     }
 }
 
-impl<'i> DropCache<'i> for &'i str {
+impl<'i, S: ?Sized + Borrow<str> + 'i> DropCache<'i> for &'i S {
     type Raw = &'i str;
 
     fn drop_cache(self) -> Self::Raw {
-        self
+        self.borrow()
     }
 }
 

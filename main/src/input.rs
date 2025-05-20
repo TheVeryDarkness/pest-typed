@@ -318,7 +318,7 @@ unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for SubInput2<'i, S> {
 }
 
 /// Convert to input.
-pub trait AsInput<'i, S: ?Sized + Borrow<str> = str> {
+pub trait AsInput<'i, S: ?Sized + Borrow<str> = str>: DropCache<'i> {
     /// Output type.
     type Output: Input<'i, S>;
 
