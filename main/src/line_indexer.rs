@@ -8,6 +8,7 @@
 // modified, or distributed except according to those terms.
 
 use alloc::{string::String, vec::Vec};
+use core::borrow::Borrow;
 
 /// A trait for splitting a string into lines.
 ///
@@ -192,6 +193,12 @@ impl<'i> CachedLineIndexer<'i> {
             }
         }
         Self { input, line_starts }
+    }
+}
+
+impl Borrow<str> for CachedLineIndexer<'_> {
+    fn borrow(&self) -> &str {
+        self.input
     }
 }
 
