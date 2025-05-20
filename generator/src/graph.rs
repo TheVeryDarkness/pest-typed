@@ -115,7 +115,7 @@ enum Node<'g> {
 }
 
 impl<'g> Node<'g> {
-    fn from_rule(value: &'g str, has_lifetime: bool, has_skip: bool) -> Self {
+    const fn from_rule(value: &'g str, has_lifetime: bool, has_skip: bool) -> Self {
         Self::Rule(value, has_lifetime, has_skip)
     }
     #[cfg(feature = "grammar-extras")]
@@ -267,7 +267,7 @@ impl Default for Getter<'_> {
     }
 }
 impl<'g> Getter<'g> {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             getters: BTreeMap::new(),
         }
@@ -305,7 +305,7 @@ impl<'g> Getter<'g> {
         self
     }
     /// Join two getter forest in the same level.
-    pub fn join_mut(&mut self, other: Getter<'g>) {
+    pub fn join_mut(&mut self, other: Self) {
         other.getters.into_iter().for_each(|(name, tree)| {
             let entry = self.getters.entry(name);
             match entry {
@@ -321,7 +321,7 @@ impl<'g> Getter<'g> {
         });
     }
     /// Join two getter forest in the same level.
-    pub fn join(mut self, other: Getter<'g>) -> Self {
+    pub fn join(mut self, other: Self) -> Self {
         self.join_mut(other);
         self
     }
@@ -342,7 +342,7 @@ impl<'g> Getter<'g> {
                 }
             };
             // We may generate source codes to help debugging here.
-            let doc = format! {"A helper function to access [`{}`].", name};
+            let doc = format!("A helper function to access [`{}`].", name);
             quote! {
                 #[doc = #doc]
                 #src
@@ -468,7 +468,7 @@ struct Output<'g> {
     choices: BTreeSet<usize>,
 }
 impl<'g> Output<'g> {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             content: Vec::new(),
             wrappers: Vec::new(),
@@ -489,11 +489,11 @@ impl<'g> Output<'g> {
         self.choices.insert(index);
     }
     /// Used sequences.
-    fn seq(&self) -> &BTreeSet<usize> {
+    const fn seq(&self) -> &BTreeSet<usize> {
         &self.sequences
     }
     /// Used choices.
-    fn choices(&self) -> &BTreeSet<usize> {
+    const fn choices(&self) -> &BTreeSet<usize> {
         &self.choices
     }
     /// Insert rule struct to rule module.
@@ -843,7 +843,10 @@ pub(crate) fn generate_typed_pair_from_rule<R: Generate>(
     let pairs = {
         let rules_mod = rules_mod();
         let pairs_mod = pairs_mod();
-        let doc = format! {"Re-export some types from {} to simplify the usage.", rules_mod};
+        let doc = format!(
+            "Re-export some types from {} to simplify the usage.",
+            rules_mod
+        );
         quote! {
             #[doc = #doc]
             pub use #rules_mod as #pairs_mod;

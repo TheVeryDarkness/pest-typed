@@ -40,10 +40,7 @@ pub struct Span<'i, S: ?Sized = str> {
     end: usize,
 }
 
-impl<'i, S: ?Sized> Span<'i, S>
-where
-    S: Borrow<str>,
-{
+impl<'i, S: ?Sized + Borrow<str>> Span<'i, S> {
     /// Create a new `Span` without checking invariants. (Checked with `debug_assertions`.)
     ///
     /// # Safety
@@ -136,7 +133,7 @@ where
     /// assert_eq!(span.start(), 0);
     /// ```
     #[inline]
-    pub fn start(&self) -> usize {
+    pub const fn start(&self) -> usize {
         self.start
     }
 
@@ -154,7 +151,7 @@ where
     /// assert_eq!(span.end(), 0);
     /// ```
     #[inline]
-    pub fn end(&self) -> usize {
+    pub const fn end(&self) -> usize {
         self.end
     }
 
@@ -262,7 +259,7 @@ where
         self.input.borrow()
     }
 
-    pub(crate) fn input(&self) -> &'i S {
+    pub(crate) const fn input(&self) -> &'i S {
         self.input
     }
 
@@ -284,7 +281,7 @@ where
     /// assert_eq!(span.lines().collect::<Vec<_>>(), vec!["b\n", "c"]);
     /// ```
     #[inline]
-    pub fn lines(&self) -> Lines<'_, 'i, S> {
+    pub const fn lines(&self) -> Lines<'_, 'i, S> {
         Lines {
             inner: self.lines_span(),
         }
@@ -308,7 +305,7 @@ where
     /// let span = start_pos.span(&state.position().clone());
     /// assert_eq!(span.lines_span().collect::<Vec<_>>(), vec![Span::new(input, 2, 4).unwrap(), Span::new(input, 4, 5).unwrap()]);
     /// ```
-    pub fn lines_span(&self) -> LinesSpan<'_, 'i, S> {
+    pub const fn lines_span(&self) -> LinesSpan<'_, 'i, S> {
         LinesSpan {
             span: self,
             pos: self.start,

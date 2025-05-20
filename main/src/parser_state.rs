@@ -20,7 +20,7 @@ pub(crate) fn constrain_idxs(start: i32, end: Option<i32>, len: usize) -> Option
 
 /// Normalizes the index using its sequence’s length.
 /// Returns `None` if the normalized index is OOB.
-fn normalize_index(i: i32, len: usize) -> Option<usize> {
+const fn normalize_index(i: i32, len: usize) -> Option<usize> {
     if i > len as i32 {
         None
     } else if i >= 0 {

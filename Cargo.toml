@@ -3,6 +3,7 @@ members = ["derive", "generator", "main"]
 resolver = "2"
 package.readme = "./README.md"
 package.version = "0.19.0"
+package.rust-version = "1.60.0"
 package.repository = "https://github.com/theverydarkness/pest-typed"
 
 [workspace.dependencies]
@@ -26,3 +27,12 @@ version = "0.5.1"
 
 [workspace.dependencies.anyhow]
 version = "1.0"
+
+[workspace.lints.clippy]
+equatable_if_let = { level = "allow", priority = 1 }
+option_if_let_else = { level = "allow", priority = 1 }
+redundant_pub_crate = { level = "allow", priority = 1 }
+incompatible_msrv = { level = "deny", priority = 1 }
+
+nursery = { level = "warn" }
+perf = { level = "deny" }

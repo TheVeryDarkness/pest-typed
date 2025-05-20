@@ -35,9 +35,8 @@ pub struct Position<'i, S: ?Sized = str> {
     pub(crate) pos: usize,
 }
 
-impl<'i, S: ?Sized> Position<'i, S>
+impl<'i, S: ?Sized + Borrow<str>> Position<'i, S>
 where
-    S: Borrow<str>,
     str: Borrow<str>,
 {
     /// Create a new `Position` without checking invariants. (Checked with `debug_assertions`.)
@@ -79,7 +78,7 @@ impl<'i, S: ?Sized> Position<'i, S> {
     /// assert_eq!(start.pos(), 0);
     /// ```
     #[inline]
-    pub fn from_start(input: &'i S) -> Self {
+    pub const fn from_start(input: &'i S) -> Self {
         // Position 0 is always safe because it's always a valid UTF-8 border.
         Position { input, pos: 0 }
     }
@@ -96,14 +95,13 @@ impl<'i, S: ?Sized> Position<'i, S> {
     /// assert_eq!(start.pos(), 0);
     /// ```
     #[inline]
-    pub fn pos(&self) -> usize {
+    pub const fn pos(&self) -> usize {
         self.pos
     }
 }
 
-impl<'i, S: ?Sized> Position<'i, S>
+impl<'i, S: ?Sized + Borrow<str>> Position<'i, S>
 where
-    S: Borrow<str>,
     str: Borrow<str>,
 {
     /// Creates a `Span` from two `Position`s.
@@ -124,7 +122,7 @@ where
     /// assert_eq!(span.end(), 0);
     /// ```
     #[inline]
-    pub fn span(&self, other: &Position<'i, S>) -> span::Span<'i, S> {
+    pub fn span(&self, other: &Self) -> span::Span<'i, S> {
         if ptr::eq(self.input, other.input)
         /* && self.input.get(self.pos..other.pos).is_some() */
         {
@@ -163,15 +161,14 @@ where
     }
 }
 
-impl<S: ?Sized> Position<'_, S>
+impl<S: ?Sized + Borrow<str>> Position<'_, S>
 where
-    S: Borrow<str>,
     str: Borrow<str>,
 {
     /// Returns `true` when the `Position` points to the start of the input `&str`.
     #[inline]
     #[allow(dead_code)]
-    pub(crate) fn at_start(&self) -> bool {
+    pub(crate) const fn at_start(&self) -> bool {
         self.pos == 0
     }
 
@@ -454,6 +451,7 @@ impl<S: ?Sized + Borrow<str>> Hash for Position<'_, S> {
     }
 }
 
+#[expect(clippy::fallible_impl_from)]
 impl<'i, S: ?Sized + Borrow<str>> From<Position<'i, S>> for pest::Position<'i> {
     fn from(pos: Position<'i, S>) -> Self {
         //FIXME: eliminate the check

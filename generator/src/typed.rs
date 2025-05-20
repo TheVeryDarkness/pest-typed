@@ -86,7 +86,7 @@ pub(crate) struct Input<R> {
 }
 
 impl<R> Input<R> {
-    pub(crate) fn new(rules: Vec<R>, doc_comment: DocComment) -> Self {
+    pub(crate) const fn new(rules: Vec<R>, doc_comment: DocComment) -> Self {
         Self { rules, doc_comment }
     }
 }

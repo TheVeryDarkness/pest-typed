@@ -22,3 +22,6 @@ unicode-width = { version = "0.1.13" }
 cmp_by_derive = { version = "0.1.0" }
 serde = { version = "1.0", optional = true, features = ["derive"] }
 derive-where = "1.4.0"
+
+[lints]
+workspace = true

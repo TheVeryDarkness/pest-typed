@@ -92,7 +92,7 @@ macro_rules! choices {
             impl<$V0, $($V, )* > $name<$V0, $($V, )* > {
                 /// Traverse all branches with reference.
                 #[allow(clippy::needless_lifetimes)]
-                pub fn reference<'n, Ret>(&'n self) -> helper::$v0<Ret, &'n $V0, $(&'n $V, )*> {
+                pub const fn reference<'n, Ret>(&'n self) -> helper::$v0<Ret, &'n $V0, $(&'n $V, )*> {
                     match self {
                         Self::$v0(c) => helper::$v0::$v0(c),
                         $(
@@ -118,7 +118,7 @@ macro_rules! choices {
                     self.consume().else_if(f)
                 }
                 /// Access inner node if matched.
-                pub fn $v0(&self) -> ::core::option::Option<&$V0> {
+                pub const fn $v0(&self) -> ::core::option::Option<&$V0> {
                     if let Self::$v0(res) = self {
                         ::core::option::Option::Some(res)
                     } else {
@@ -127,7 +127,7 @@ macro_rules! choices {
                 }
                 $(
                     /// Access inner node if matched.
-                    pub fn $v(&self) -> ::core::option::Option<&$V> {
+                    pub const fn $v(&self) -> ::core::option::Option<&$V> {
                         if let Self::$v(res) = self {
                             ::core::option::Option::Some(res)
                         } else {

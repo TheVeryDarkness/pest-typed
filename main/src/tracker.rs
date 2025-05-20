@@ -36,12 +36,12 @@ pub enum SpecialError {
 impl Display for SpecialError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SpecialError::SliceOutOfBound(start, end) => match end {
+            Self::SliceOutOfBound(start, end) => match end {
                 Some(end) => write!(f, "Peek slice {}..{} out of bound.", start, end),
                 None => write!(f, "Peek slice {}.. out of bound.", start),
             },
-            SpecialError::RepeatTooManyTimes => f.write_str("Repeated too many times."),
-            SpecialError::EmptyStack => f.write_str("Nothing to pop or drop."),
+            Self::RepeatTooManyTimes => f.write_str("Repeated too many times."),
+            Self::EmptyStack => f.write_str("Nothing to pop or drop."),
         }
     }
 }

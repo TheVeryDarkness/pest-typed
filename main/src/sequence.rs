@@ -147,11 +147,11 @@ macro_rules! seq {
         }
         impl<$T0, $($T),*, const SKIP: usize, IGNORED> $name<$crate::predefined_node::Skipped<$T0, IGNORED, SKIP>, $($crate::predefined_node::Skipped<$T, IGNORED, SKIP>, )*> {
             /// Convert the reference of a sequence into a tuple of references of matched elements.
-            pub fn as_ref(&self) -> ( &$T0, $(&$T, )* ) {
+            pub const fn as_ref(&self) -> ( &$T0, $(&$T, )* ) {
                 self.get_matched()
             }
             /// Convert the reference of a sequence into a tuple of references of matched elements.
-            pub fn get_matched(&self) -> ( &$T0, $(&$T, )* ) {
+            pub const fn get_matched(&self) -> ( &$T0, $(&$T, )* ) {
                 ( &self.content.$t0.matched, $(&self.content.$t.matched, )* )
             }
             /// Convert a sequence into a tuple of matched elements.
@@ -161,7 +161,7 @@ macro_rules! seq {
         }
         impl<$T0, $($T, )*> $name<T0, $($T, )*> {
             /// Convert the reference of a sequence into a tuple of references of skipped and matched elements.
-            pub fn get_all(&self) -> ( &$T0, $(&$T, )* ) {
+            pub const fn get_all(&self) -> ( &$T0, $(&$T, )* ) {
                 ( &self.content.$t0, $(&self.content.$t, )* )
             }
             /// Convert a sequence into a tuple of skipped and matched elements.

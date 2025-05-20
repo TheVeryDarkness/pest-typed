@@ -26,6 +26,9 @@ criterion.workspace = true
 lazy_static = { version = "1.4.0" }
 anyhow.workspace = true
 
+[lints]
+workspace = true
+
 [[bench]]
 name = "graph"
 harness = false

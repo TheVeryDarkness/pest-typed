@@ -46,6 +46,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
+pub use line_indexer::CachedLineIndexer;
 use typed_node::NeverFailedParsableTypedNode;
 pub use typed_node::{NeverFailedTypedNode, ParsableTypedNode, RuleStruct, Spanned, TypedNode};
 pub use wrapper::{

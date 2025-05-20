@@ -126,7 +126,7 @@ impl<Writer: fmt::Write> Default for FormatOption<FmtPtr<Writer>, FmtPtr<Writer>
 
 impl<SF, MF, NF> FormatOption<SF, MF, NF> {
     /// Create option with given functions.
-    pub fn new<Writer>(span_formatter: SF, marker_formatter: MF, number_formatter: NF) -> Self
+    pub const fn new<Writer>(span_formatter: SF, marker_formatter: MF, number_formatter: NF) -> Self
     where
         Writer: fmt::Write,
         SF: FnMut(&str, &mut Writer) -> fmt::Result,
@@ -139,7 +139,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             number_formatter,
         }
     }
-    fn ceil_log10(num: usize) -> usize {
+    const fn ceil_log10(num: usize) -> usize {
         let mut digit = 1usize;
         let mut i = num;
         while i >= 10 {
@@ -363,8 +363,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         let mut lines = input
             .lines()
             .skip(start.line)
-            .take(end.line - start.line + 1)
-            .peekable();
+            .take(end.line - start.line + 1);
         let index_digit = Self::ceil_log10(end.line + 1);
         if start.line == end.line {
             let cur_line = lines.next().unwrap();
