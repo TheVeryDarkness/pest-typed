@@ -50,7 +50,7 @@ pub struct Token<'i, R: RuleType> {
     pub children: Vec<Self>,
 }
 
-impl<'i, R: RuleType> Token<'i, R> {
+impl<R: RuleType> Token<'_, R> {
     /// To [`ThinToken`].
     pub fn to_thin(&self) -> ThinToken<R> {
         let rule = self.rule;

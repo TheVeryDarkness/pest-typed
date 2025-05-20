@@ -23,9 +23,9 @@ pub unsafe trait Input<'i, S: ?Sized + Borrow<str> = str>: Copy {
         self.get().chars()
     }
 
-    /// Get line number and column number.
+    // /// Get line number and column number.
     // fn line_col(&self) -> (usize, usize);
-    /// Get current line.
+    // /// Get current line.
     // fn line_of(&self) -> &'i str;
 
     /// To position.
@@ -175,7 +175,7 @@ unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for Position<'i, S> {
 
     fn next(&mut self) -> Option<char> {
         let c = self.chars().next();
-        if let Some(_) = c {
+        if c.is_some() {
             self.skip(1);
         }
         c

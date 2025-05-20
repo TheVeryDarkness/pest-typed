@@ -455,7 +455,7 @@ where
         let to = self.start + string.len();
 
         if self.end < to {
-            return false;
+            false
         } else if Some(string.as_bytes()) == self.input.borrow().as_bytes().get(self.start..to) {
             self.start = to;
             true
@@ -502,7 +502,7 @@ where
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> fmt::Debug for Span<'i, S> {
+impl<S: ?Sized + Borrow<str>> fmt::Debug for Span<'_, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Span")
             .field("str", &self.as_str())
@@ -512,7 +512,7 @@ impl<'i, S: ?Sized + Borrow<str>> fmt::Debug for Span<'i, S> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> PartialEq for Span<'i, S> {
+impl<S: ?Sized + Borrow<str>> PartialEq for Span<'_, S> {
     fn eq(&self, other: &Self) -> bool {
         ptr::eq::<str>(self.input.borrow(), other.input.borrow())
             && self.start == other.start
@@ -520,9 +520,9 @@ impl<'i, S: ?Sized + Borrow<str>> PartialEq for Span<'i, S> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> Eq for Span<'i, S> {}
+impl<S: ?Sized + Borrow<str>> Eq for Span<'_, S> {}
 
-impl<'i, S: ?Sized + Borrow<str>> Hash for Span<'i, S> {
+impl<S: ?Sized + Borrow<str>> Hash for Span<'_, S> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (self.input.borrow() as *const str).hash(state);
         self.start.hash(state);
@@ -530,7 +530,7 @@ impl<'i, S: ?Sized + Borrow<str>> Hash for Span<'i, S> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> Span<'i, S> {
+impl<S: ?Sized + Borrow<str>> Span<'_, S> {
     /// Format span with given option.
     pub fn display<Writer, SF, MF, NF>(
         &self,
@@ -547,7 +547,7 @@ impl<'i, S: ?Sized + Borrow<str>> Span<'i, S> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> fmt::Display for Span<'i, S> {
+impl<S: ?Sized + Borrow<str>> fmt::Display for Span<'_, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let opt = FormatOption::default();
         opt.display_span(self, f)
@@ -622,7 +622,7 @@ pub struct LinesSpan<'s, 'i, S: ?Sized> {
     pos: usize,
 }
 
-impl<'s, 'i, S: ?Sized + Borrow<str>> Iterator for LinesSpan<'s, 'i, S>
+impl<'i, S: ?Sized + Borrow<str>> Iterator for LinesSpan<'_, 'i, S>
 where
     &'i S: LineIndexer<'i>,
 {
@@ -652,7 +652,7 @@ pub struct Lines<'s, 'i, S: ?Sized> {
     inner: LinesSpan<'s, 'i, S>,
 }
 
-impl<'s, 'i, S: ?Sized + Borrow<str>> Iterator for Lines<'s, 'i, S>
+impl<'i, S: ?Sized + Borrow<str>> Iterator for Lines<'_, 'i, S>
 where
     &'i S: LineIndexer<'i>,
 {

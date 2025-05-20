@@ -15,15 +15,13 @@ use crate::{
     position::Position,
     Input, RuleType, RuleWrapper,
 };
-use alloc::{
-    borrow::ToOwned,
-    collections::BTreeMap,
-    format,
-    string::{String, ToString},
-    vec,
-    vec::Vec,
+use alloc::{borrow::ToOwned, collections::BTreeMap, format, string::String, vec, vec::Vec};
+use core::{
+    borrow::Borrow,
+    cmp::Ordering,
+    fmt::{self, Display},
+    marker::PhantomData,
 };
-use core::{borrow::Borrow, cmp::Ordering, marker::PhantomData};
 
 /// Some special errors that are not matching failures.
 pub enum SpecialError {
@@ -35,15 +33,15 @@ pub enum SpecialError {
     EmptyStack,
 }
 
-impl ToString for SpecialError {
-    fn to_string(&self) -> String {
+impl Display for SpecialError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SpecialError::SliceOutOfBound(start, end) => match end {
-                Some(end) => format!("Peek slice {}..{} out of bound.", start, end),
-                None => format!("Peek slice {}.. out of bound.", start),
+                Some(end) => write!(f, "Peek slice {}..{} out of bound.", start, end),
+                None => write!(f, "Peek slice {}.. out of bound.", start),
             },
-            SpecialError::RepeatTooManyTimes => "Repeated too many times.".to_owned(),
-            SpecialError::EmptyStack => "Nothing to pop or drop.".to_owned(),
+            SpecialError::RepeatTooManyTimes => f.write_str("Repeated too many times."),
+            SpecialError::EmptyStack => f.write_str("Nothing to pop or drop."),
         }
     }
 }
@@ -235,7 +233,7 @@ impl<'i, R: RuleType, S: ?Sized + Borrow<str>> Tracker<'i, R, S> {
 
                 for special in special {
                     let _ = message.write_str(&spacing);
-                    let _ = write!(message, "{}", special.to_string());
+                    let _ = write!(message, "{}", special);
                     if let Some(upper_rule) = rule {
                         let _ = write!(message, " (By {:?})", upper_rule);
                     };

@@ -261,7 +261,7 @@ struct Getter<'g> {
     /// name -> (path, type)
     getters: BTreeMap<&'g str, Node<'g>>,
 }
-impl<'g> Default for Getter<'g> {
+impl Default for Getter<'_> {
     fn default() -> Self {
         Self::new()
     }

@@ -163,7 +163,7 @@ where
     }
 }
 
-impl<'i, S: ?Sized> Position<'i, S>
+impl<S: ?Sized> Position<'_, S>
 where
     S: Borrow<str>,
     str: Borrow<str>,
@@ -387,7 +387,7 @@ where
     }
 }
 
-impl<'i> fmt::Debug for Position<'i> {
+impl fmt::Debug for Position<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Position").field("pos", &self.pos).finish()
     }
@@ -422,21 +422,21 @@ where
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> PartialEq for Position<'i, S> {
+impl<S: ?Sized + Borrow<str>> PartialEq for Position<'_, S> {
     fn eq(&self, other: &Self) -> bool {
         ptr::eq::<str>(self.input.borrow(), other.input.borrow()) && self.pos == other.pos
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> Eq for Position<'i, S> {}
+impl<S: ?Sized + Borrow<str>> Eq for Position<'_, S> {}
 
-impl<'i, S: ?Sized + Borrow<str>> PartialOrd for Position<'i, S> {
+impl<S: ?Sized + Borrow<str>> PartialOrd for Position<'_, S> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> Ord for Position<'i, S> {
+impl<S: ?Sized + Borrow<str>> Ord for Position<'_, S> {
     fn cmp(&self, other: &Self) -> Ordering {
         assert_eq!(
             self.input.borrow(),
@@ -447,7 +447,7 @@ impl<'i, S: ?Sized + Borrow<str>> Ord for Position<'i, S> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> Hash for Position<'i, S> {
+impl<S: ?Sized + Borrow<str>> Hash for Position<'_, S> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         (self.input.borrow() as *const str).hash(state);
         self.pos.hash(state);

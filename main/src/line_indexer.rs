@@ -35,7 +35,7 @@ pub trait LineIndexer<'i>: Sized + Copy {
     fn find_line_end(self, pos: usize) -> usize;
 }
 
-impl<'i, T: ?Sized + LineIndexer<'i>> LineIndexer<'i> for &T {
+impl<'i, T: LineIndexer<'i>> LineIndexer<'i> for &T {
     fn input(self) -> &'i str {
         T::input(*self)
     }

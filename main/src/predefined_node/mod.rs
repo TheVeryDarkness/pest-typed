@@ -94,7 +94,7 @@ pub struct Insens<'i, T: StringWrapper> {
     #[debug(skip)]
     _phantom: PhantomData<&'i T>,
 }
-impl<'i, T: StringWrapper> StringWrapper for Insens<'i, T> {
+impl<T: StringWrapper> StringWrapper for Insens<'_, T> {
     const CONTENT: &'static str = T::CONTENT;
 }
 impl<'i, T: StringWrapper> From<&'i str> for Insens<'i, T> {
@@ -143,7 +143,7 @@ pub struct Skip<'i, Strings: StringArrayWrapper> {
     #[debug(skip)]
     _phantom: PhantomData<&'i Strings>,
 }
-impl<'i, Strings: StringArrayWrapper> StringArrayWrapper for Skip<'i, Strings> {
+impl<Strings: StringArrayWrapper> StringArrayWrapper for Skip<'_, Strings> {
     const CONTENT: &'static [&'static str] = Strings::CONTENT;
 }
 impl<'i, Strings: StringArrayWrapper> From<Span<'i>> for Skip<'i, Strings> {
@@ -812,7 +812,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[derive(Clone, Dbg, Hash, PartialEq, Eq)]
 pub struct AlwaysFail<'i>(#[debug(skip)] PhantomData<&'i char>);
-impl<'i> Default for AlwaysFail<'i> {
+impl Default for AlwaysFail<'_> {
     fn default() -> Self {
         Self(PhantomData)
     }
@@ -841,7 +841,7 @@ impl<'i, R: RuleType> TypedNode<'i, R> for AlwaysFail<'i> {
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[derive(Clone, Dbg, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Empty<'i>(#[debug(skip)] PhantomData<&'i char>);
-impl<'i> Default for Empty<'i> {
+impl Default for Empty<'_> {
     fn default() -> Self {
         Self(PhantomData)
     }
