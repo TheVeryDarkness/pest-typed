@@ -21,11 +21,6 @@ pub trait LineIndexer<'i>: Sized + Copy {
     /// Gets the input string.
     fn input(self) -> &'i str;
 
-    /// Length in bytes of the input string.
-    fn len(self) -> usize {
-        self.input().len()
-    }
-
     /// Returns the line and column number of this `Position`.
     fn line_col(self, pos: usize) -> (usize, usize);
 
