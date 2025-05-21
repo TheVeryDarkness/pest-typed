@@ -11,6 +11,7 @@
 
 use crate::{
     error::{Error, ErrorVariant},
+    line_indexer::LineIndexer,
     position::Position,
     Input, RuleType, RuleWrapper,
 };
@@ -179,15 +180,15 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     ) -> Option<(I, T)> {
         self.record_during_with(pos, f, T::RULE)
     }
-    fn collect_to_message(self) -> String {
+    fn collect_to_message(self, indexer: impl LineIndexer<'i>) -> String {
         let (pos, attempts) = self.finish();
         // "{} | "
         // "{} = "
-        let (line, col) = pos.line_col();
+        let (line, col) = pos.line_col(&indexer);
         let spacing = format!("{}", line).len() + 3;
         let spacing = "\n".to_owned() + &" ".repeat(spacing);
         // Will not remove trailing CR or LF.
-        let line_string = pos.line_of();
+        let line_string = pos.line_of(&indexer);
         let line_remained_index = line_string
             .char_indices()
             .nth(col.saturating_sub(1))
@@ -240,7 +241,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         message
     }
     /// Collect attempts to [`Error<R>`]
-    pub fn collect(self) -> Error<R> {
+    pub fn collect(self, indexer: impl LineIndexer<'i>) -> Error<R> {
         let pos = self.position;
         match Position::new(pos.input, pos.pos()).ok_or_else(|| {
             Error::new_from_pos(
@@ -251,7 +252,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
             )
         }) {
             Ok(pos) => {
-                let message = self.collect_to_message();
+                let message = self.collect_to_message(indexer);
                 Error::new_from_pos(ErrorVariant::CustomError { message }, pos.into())
             }
             Err(err) => err,
@@ -329,7 +330,7 @@ mod tests {
             .ok_or(())?;
 
         assert_eq!(
-            format!("{}", tracker.collect()),
+            format!("{}", tracker.collect(())),
             r#" --> 1:1
   |
 1 | abc
@@ -365,7 +366,7 @@ mod tests {
             .ok_or(())?;
 
         assert_eq!(
-            format!("{}", tracker.collect()),
+            format!("{}", tracker.collect(())),
             r#" --> 1:1
   |
 1 | abc
@@ -395,7 +396,7 @@ mod tests {
             .ok_or(())?;
 
         assert_eq!(
-            format!("{}", tracker.collect()),
+            format!("{}", tracker.collect(())),
             r#" --> 1:2
   |
 1 | αβψ
@@ -427,7 +428,7 @@ mod tests {
             .ok_or(())?;
 
         assert_eq!(
-            format!("{}", tracker.collect()),
+            format!("{}", tracker.collect(())),
             r#" --> 1:2
   |
 1 | αβψ

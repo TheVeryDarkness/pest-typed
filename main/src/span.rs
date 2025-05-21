@@ -17,6 +17,7 @@ use core::ptr;
 use core::str;
 
 use crate::formatter::FormatOption;
+use crate::line_indexer::LineIndexer;
 use crate::position;
 
 /// A span over a `&str`. It is created from either [two `Position`s] or from a [`Pair`].
@@ -291,9 +292,9 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.lines().collect::<Vec<_>>(), vec!["b\n", "c"]);
     /// ```
     #[inline]
-    pub const fn lines(&self) -> Lines<'_, 'i> {
+    pub const fn lines<L: LineIndexer<'i>>(&self, indexer: L) -> Lines<'_, 'i, L> {
         Lines {
-            inner: self.lines_span(),
+            inner: self.lines_span(indexer),
         }
     }
 
@@ -315,9 +316,10 @@ impl<'i> Span<'i> {
     /// let span = start_pos.span(&state.position().clone());
     /// assert_eq!(span.lines_span().collect::<Vec<_>>(), vec![Span::new(input, 2, 4).unwrap(), Span::new(input, 4, 5).unwrap()]);
     /// ```
-    pub const fn lines_span(&self) -> LinesSpan<'_, 'i> {
+    pub const fn lines_span<L: LineIndexer<'i>>(&self, indexer: L) -> LinesSpan<'_, 'i, L> {
         LinesSpan {
             span: self,
+            indexer: indexer,
             pos: self.start,
         }
     }
@@ -537,27 +539,30 @@ impl Hash for Span<'_> {
     }
 }
 
-impl Span<'_> {
+impl<'i> Span<'i> {
     /// Format span with given option.
-    pub fn display<Writer, SF, MF, NF>(
+    #[inline]
+    pub fn display<L, Writer, SF, MF, NF>(
         &self,
+        indexer: L,
         f: &mut Writer,
         opt: FormatOption<SF, MF, NF>,
     ) -> fmt::Result
     where
+        L: LineIndexer<'i>,
         Writer: Write,
         SF: FnMut(&str, &mut Writer) -> fmt::Result,
         MF: FnMut(&str, &mut Writer) -> fmt::Result,
         NF: FnMut(&str, &mut Writer) -> fmt::Result,
     {
-        opt.display_span(self, f)
+        opt.display_span(self, indexer, f)
     }
 }
 
 impl fmt::Display for Span<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let opt = FormatOption::default();
-        opt.display_span(self, f)
+        opt.display_span(self, (), f)
     }
 }
 
@@ -621,12 +626,13 @@ pub fn merge_spans<'i>(a: &Span<'i>, b: &Span<'i>) -> Option<Span<'i>> {
 /// Iterates all lines that are at least _partially_ covered by the span. Yielding a `Span` for each.
 ///
 /// [`Span::lines_span()`]: struct.Span.html#method.lines_span
-pub struct LinesSpan<'s, 'i> {
+pub struct LinesSpan<'s, 'i, L> {
     span: &'s Span<'i>,
+    indexer: L,
     pos: usize,
 }
 
-impl<'i> Iterator for LinesSpan<'_, 'i> {
+impl<'i, L: LineIndexer<'i>> Iterator for LinesSpan<'_, 'i, L> {
     type Item = Span<'i>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.pos > self.span.end {
@@ -637,8 +643,8 @@ impl<'i> Iterator for LinesSpan<'_, 'i> {
             return None;
         }
 
-        let line_start = pos.find_line_start();
-        self.pos = pos.find_line_end();
+        let line_start = pos.find_line_start(&self.indexer);
+        self.pos = pos.find_line_end(&self.indexer);
 
         Span::new(self.span.input, line_start, self.pos)
     }
@@ -649,11 +655,11 @@ impl<'i> Iterator for LinesSpan<'_, 'i> {
 /// Iterates all lines that are at least _partially_ covered by the span. Yielding a `&str` for each.
 ///
 /// [`Span::lines()`]: struct.Span.html#method.lines
-pub struct Lines<'s, 'i> {
-    inner: LinesSpan<'s, 'i>,
+pub struct Lines<'s, 'i, L> {
+    inner: LinesSpan<'s, 'i, L>,
 }
 
-impl<'i> Iterator for Lines<'_, 'i> {
+impl<'i, L: LineIndexer<'i>> Iterator for Lines<'_, 'i, L> {
     type Item = &'i str;
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|span| span.as_str())
@@ -733,8 +739,8 @@ mod tests {
     fn lines_mid() {
         let input = "abc\ndef\nghi";
         let span = Span::new(input, 1, 7).unwrap();
-        let lines: Vec<_> = span.lines().collect();
-        let lines_span: Vec<_> = span.lines_span().map(|span| span.as_str()).collect();
+        let lines: Vec<_> = span.lines(()).collect();
+        let lines_span: Vec<_> = span.lines_span(()).map(|span| span.as_str()).collect();
 
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0], "abc\n".to_owned());
@@ -748,8 +754,8 @@ mod tests {
         let span = Span::new(input, 5, 11).unwrap();
         assert!(span.end_pos().at_end());
         assert_eq!(span.end(), 11);
-        let lines: Vec<_> = span.lines().collect();
-        let lines_span: Vec<_> = span.lines_span().map(|span| span.as_str()).collect();
+        let lines: Vec<_> = span.lines(()).collect();
+        let lines_span: Vec<_> = span.lines_span(()).map(|span| span.as_str()).collect();
 
         assert_eq!(lines.len(), 2);
         assert_eq!(lines[0], "def\n".to_owned());
@@ -761,8 +767,8 @@ mod tests {
     fn lines_span() {
         let input = "abc\ndef\nghi";
         let span = Span::new(input, 1, 7).unwrap();
-        let lines_span: Vec<_> = span.lines_span().collect();
-        let lines: Vec<_> = span.lines().collect();
+        let lines_span: Vec<_> = span.lines_span(()).collect();
+        let lines: Vec<_> = span.lines(()).collect();
 
         assert_eq!(lines_span.len(), 2);
         assert_eq!(lines_span[0], Span::new(input, 0, 4).unwrap());

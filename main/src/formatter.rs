@@ -1,4 +1,4 @@
-use crate::{Position, Span};
+use crate::{line_indexer::LineIndexer, Position, Span};
 use alloc::{format, string::String, vec::Vec};
 use core::{fmt, marker::PhantomData};
 use unicode_width::UnicodeWidthStr;
@@ -320,9 +320,14 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
 
         Ok(())
     }
-    #[allow(clippy::needless_lifetimes)]
-    pub(crate) fn display_span<'i, Writer>(self, span: &Span<'i>, f: &mut Writer) -> fmt::Result
+    pub(crate) fn display_span<'i, L, Writer>(
+        self,
+        span: &Span<'i>,
+        indexer: L,
+        f: &mut Writer,
+    ) -> fmt::Result
     where
+        L: LineIndexer<'i>,
         Writer: fmt::Write,
         SF: FnMut(&str, &mut Writer) -> fmt::Result,
         MF: FnMut(&str, &mut Writer) -> fmt::Result,
@@ -332,7 +337,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         let mut end = None;
         let mut pos = 0usize;
         let input = Span::new(span.get_input(), 0, span.get_input().len()).unwrap();
-        let mut iter = input.lines().enumerate().peekable();
+        let mut iter = input.lines(&indexer).enumerate().peekable();
         while let Some((index, line)) = iter.peek() {
             if pos + line.len() >= span.start() {
                 start = Some(Pos {
@@ -357,7 +362,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         let start = start.unwrap();
         let end = end.unwrap();
         let mut lines = input
-            .lines()
+            .lines(&indexer)
             .skip(start.line)
             .take(end.line - start.line + 1);
         let index_digit = Self::ceil_log10(end.line + 1);
@@ -397,12 +402,14 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         Ok(())
     }
     #[allow(clippy::needless_lifetimes)]
-    pub(crate) fn display_position<'i, Writer>(
+    pub(crate) fn display_position<'i, Writer, L>(
         self,
         position: &Position<'i>,
+        indexer: L,
         f: &mut Writer,
     ) -> fmt::Result
     where
+        L: LineIndexer<'i>,
         Writer: fmt::Write,
         SF: FnMut(&str, &mut Writer) -> fmt::Result,
         MF: FnMut(&str, &mut Writer) -> fmt::Result,
@@ -410,7 +417,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
     {
         let mut pos = 0usize;
         let input = Span::new_full(position.input);
-        let mut iter = input.lines().enumerate().peekable();
+        let mut iter = input.lines(indexer).enumerate().peekable();
         while let Some((index, line)) = iter.peek() {
             if pos + line.len() > position.pos() {
                 let l = *index;
@@ -705,6 +712,7 @@ mod span {
         Span::new("123\n456\n789\n", 2, 11)
             .unwrap()
             .display(
+                (),
                 &mut msg,
                 FormatOption::new::<String>(
                     |s, f| write!(f, "{{{s}}}"),

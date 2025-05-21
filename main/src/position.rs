@@ -71,9 +71,7 @@ where
             pos: input.len(),
         }
     }
-}
 
-impl<'i> Position<'i> {
     /// Creates a `Position` at the start of a `&str`.
     ///
     /// # Examples
@@ -104,9 +102,7 @@ impl<'i> Position<'i> {
     pub const fn pos(&self) -> usize {
         self.pos
     }
-}
 
-impl<'i> Position<'i> {
     /// Creates a `Span` from two `Position`s.
     ///
     /// # Panics
@@ -136,27 +132,25 @@ impl<'i> Position<'i> {
             panic!("span created from positions from different inputs")
         }
     }
-}
 
-impl<'i> Position<'i> {
     /// Returns the line and column number of this [`Position`] using [LineIndexer::line_col].
     #[inline]
-    pub fn line_col(&self) -> (usize, usize) {
-        ().line_col(self.input, self.pos)
+    pub fn line_col(&self, indexer: impl LineIndexer<'i>) -> (usize, usize) {
+        indexer.line_col(self.input, self.pos)
     }
 
     /// Returns the entire line of the input that contains this `Position`.
     #[inline]
-    pub fn line_of(&self) -> &'i str {
-        ().line_of(self.input, self.pos)
+    pub fn line_of(&self, indexer: impl LineIndexer<'i>) -> &'i str {
+        indexer.line_of(self.input, self.pos)
     }
 
-    pub(crate) fn find_line_start(&self) -> usize {
-        ().find_line_start(self.input, self.pos)
+    pub(crate) fn find_line_start(&self, indexer: impl LineIndexer<'i>) -> usize {
+        indexer.find_line_start(self.input, self.pos)
     }
 
-    pub(crate) fn find_line_end(&self) -> usize {
-        ().find_line_end(self.input, self.pos)
+    pub(crate) fn find_line_end(&self, indexer: impl LineIndexer<'i>) -> usize {
+        indexer.find_line_end(self.input, self.pos)
     }
 
     /// Returns `true` when the `Position` points to the start of the input `&str`.
@@ -386,24 +380,27 @@ impl fmt::Debug for Position<'_> {
 
 impl<'i> Position<'i> {
     /// Format position with given option.
-    pub fn display<Writer, SF, MF, NF>(
+    #[inline]
+    pub fn display<L, Writer, SF, MF, NF>(
         &self,
+        indexer: L,
         f: &mut Writer,
         opt: FormatOption<SF, MF, NF>,
     ) -> fmt::Result
     where
+        L: LineIndexer<'i>,
         Writer: Write,
         SF: FnMut(&str, &mut Writer) -> fmt::Result,
         MF: FnMut(&str, &mut Writer) -> fmt::Result,
         NF: FnMut(&str, &mut Writer) -> fmt::Result,
     {
-        opt.display_position(self, f)
+        opt.display_position(self, indexer, f)
     }
 }
 
 impl<'i> fmt::Display for Position<'i> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        FormatOption::default().display_position(self, f)
+        FormatOption::default().display_position(self, (), f)
     }
 }
 
@@ -469,55 +466,55 @@ mod tests {
     fn line_col() {
         let input = "a\rb\nc\r\nd嗨";
 
-        assert_eq!(Position::new(input, 0).unwrap().line_col(), (1, 1));
-        assert_eq!(Position::new(input, 1).unwrap().line_col(), (1, 2));
-        assert_eq!(Position::new(input, 2).unwrap().line_col(), (1, 3));
-        assert_eq!(Position::new(input, 3).unwrap().line_col(), (1, 4));
-        assert_eq!(Position::new(input, 4).unwrap().line_col(), (2, 1));
-        assert_eq!(Position::new(input, 5).unwrap().line_col(), (2, 2));
-        assert_eq!(Position::new(input, 6).unwrap().line_col(), (2, 3));
-        assert_eq!(Position::new(input, 7).unwrap().line_col(), (3, 1));
-        assert_eq!(Position::new(input, 8).unwrap().line_col(), (3, 2));
-        assert_eq!(Position::new(input, 11).unwrap().line_col(), (3, 3));
+        assert_eq!(Position::new(input, 0).unwrap().line_col(()), (1, 1));
+        assert_eq!(Position::new(input, 1).unwrap().line_col(()), (1, 2));
+        assert_eq!(Position::new(input, 2).unwrap().line_col(()), (1, 3));
+        assert_eq!(Position::new(input, 3).unwrap().line_col(()), (1, 4));
+        assert_eq!(Position::new(input, 4).unwrap().line_col(()), (2, 1));
+        assert_eq!(Position::new(input, 5).unwrap().line_col(()), (2, 2));
+        assert_eq!(Position::new(input, 6).unwrap().line_col(()), (2, 3));
+        assert_eq!(Position::new(input, 7).unwrap().line_col(()), (3, 1));
+        assert_eq!(Position::new(input, 8).unwrap().line_col(()), (3, 2));
+        assert_eq!(Position::new(input, 11).unwrap().line_col(()), (3, 3));
         let input = "abcd嗨";
-        assert_eq!(Position::new(input, 7).unwrap().line_col(), (1, 6));
+        assert_eq!(Position::new(input, 7).unwrap().line_col(()), (1, 6));
     }
 
     #[test]
     fn line_of() {
         let input = "a\rb\nc\r\nd嗨";
 
-        assert_eq!(Position::new(input, 0).unwrap().line_of(), "a\rb\n");
-        assert_eq!(Position::new(input, 1).unwrap().line_of(), "a\rb\n");
-        assert_eq!(Position::new(input, 2).unwrap().line_of(), "a\rb\n");
-        assert_eq!(Position::new(input, 3).unwrap().line_of(), "a\rb\n");
-        assert_eq!(Position::new(input, 4).unwrap().line_of(), "c\r\n");
-        assert_eq!(Position::new(input, 5).unwrap().line_of(), "c\r\n");
-        assert_eq!(Position::new(input, 6).unwrap().line_of(), "c\r\n");
-        assert_eq!(Position::new(input, 7).unwrap().line_of(), "d嗨");
-        assert_eq!(Position::new(input, 8).unwrap().line_of(), "d嗨");
-        assert_eq!(Position::new(input, 11).unwrap().line_of(), "d嗨");
+        assert_eq!(Position::new(input, 0).unwrap().line_of(()), "a\rb\n");
+        assert_eq!(Position::new(input, 1).unwrap().line_of(()), "a\rb\n");
+        assert_eq!(Position::new(input, 2).unwrap().line_of(()), "a\rb\n");
+        assert_eq!(Position::new(input, 3).unwrap().line_of(()), "a\rb\n");
+        assert_eq!(Position::new(input, 4).unwrap().line_of(()), "c\r\n");
+        assert_eq!(Position::new(input, 5).unwrap().line_of(()), "c\r\n");
+        assert_eq!(Position::new(input, 6).unwrap().line_of(()), "c\r\n");
+        assert_eq!(Position::new(input, 7).unwrap().line_of(()), "d嗨");
+        assert_eq!(Position::new(input, 8).unwrap().line_of(()), "d嗨");
+        assert_eq!(Position::new(input, 11).unwrap().line_of(()), "d嗨");
     }
 
     #[test]
     fn line_of_empty() {
         let input = "";
 
-        assert_eq!(Position::new(input, 0).unwrap().line_of(), "");
+        assert_eq!(Position::new(input, 0).unwrap().line_of(()), "");
     }
 
     #[test]
     fn line_of_new_line() {
         let input = "\n";
 
-        assert_eq!(Position::new(input, 0).unwrap().line_of(), "\n");
+        assert_eq!(Position::new(input, 0).unwrap().line_of(()), "\n");
     }
 
     #[test]
     fn line_of_between_new_line() {
         let input = "\n\n";
 
-        assert_eq!(Position::new(input, 1).unwrap().line_of(), "\n");
+        assert_eq!(Position::new(input, 1).unwrap().line_of(()), "\n");
     }
 
     fn measure_skip(input: &str, pos: usize, n: usize) -> Option<usize> {

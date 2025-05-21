@@ -8,8 +8,8 @@
 // modified, or distributed except according to those terms.
 
 use crate::{
-    error::Error, predefined_node::restore_on_none, span::Span, tracker::Tracker, AsInput, Input,
-    RuleType, RuleWrapper, Stack,
+    error::Error, line_indexer::LineIndexer, predefined_node::restore_on_none, span::Span,
+    tracker::Tracker, AsInput, Input, RuleType, RuleWrapper, Stack,
 };
 use alloc::{boxed::Box, vec::Vec};
 use core::fmt::Debug;
@@ -56,25 +56,41 @@ pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
     ) -> Option<Self>;
     /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
-    fn try_parse(input: impl AsInput<'i>) -> Result<Self, Box<Error<R>>> {
+    fn try_parse_with_cache(
+        input: impl AsInput<'i>,
+        indexer: impl LineIndexer<'i>,
+    ) -> Result<Self, Box<Error<R>>> {
         let mut stack = Stack::new();
         let input = input.as_input();
         let mut tracker = Tracker::new(input);
         match Self::try_parse_with(input, &mut stack, &mut tracker) {
             Some(res) => Ok(res),
-            None => Err(Box::new(tracker.collect())),
+            None => Err(Box::new(tracker.collect(indexer))),
         }
     }
     /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
-    fn try_parse_partial<I: AsInput<'i>>(input: I) -> Result<(I::Output, Self), Box<Error<R>>> {
+    fn try_parse_partial_with_cache<I: AsInput<'i>>(
+        input: I,
+        indexer: impl LineIndexer<'i>,
+    ) -> Result<(I::Output, Self), Box<Error<R>>> {
         let mut stack = Stack::new();
         let input = input.as_input();
         let mut tracker = Tracker::new(input);
         match Self::try_parse_partial_with(input, &mut stack, &mut tracker) {
             Some((input, res)) => Ok((input, res)),
-            None => Err(Box::new(tracker.collect())),
+            None => Err(Box::new(tracker.collect(indexer))),
         }
+    }
+    /// Try to parse the whole input into given typed node.
+    /// A rule is not atomic by default.
+    fn try_parse(input: impl AsInput<'i>) -> Result<Self, Box<Error<R>>> {
+        Self::try_parse_with_cache(input, ())
+    }
+    /// Try to parse the whole input into given typed node.
+    /// A rule is not atomic by default.
+    fn try_parse_partial<I: AsInput<'i>>(input: I) -> Result<(I::Output, Self), Box<Error<R>>> {
+        Self::try_parse_partial_with_cache(input, ())
     }
 
     /// Check whether the typed node match the whole input.
@@ -84,25 +100,40 @@ pub trait ParsableTypedNode<'i, R: RuleType>: TypedNode<'i, R> {
         tracker: &mut Tracker<'i, R>,
     ) -> bool;
     /// Check whether the typed node match the whole input.
-    fn try_check(input: impl AsInput<'i>) -> Result<(), Box<Error<R>>> {
+    fn try_check_with_cache(
+        input: impl AsInput<'i>,
+        indexer: impl LineIndexer<'i>,
+    ) -> Result<(), Box<Error<R>>> {
         let mut stack = Stack::new();
         let input = input.as_input();
         let mut tracker = Tracker::new(input);
         match Self::try_check_with(input, &mut stack, &mut tracker) {
             true => Ok(()),
-            false => Err(Box::new(tracker.collect())),
+            false => Err(Box::new(tracker.collect(indexer))),
         }
     }
     /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
-    fn try_check_partial<I: AsInput<'i>>(input: I) -> Result<I::Output, Box<Error<R>>> {
+    fn try_check_partial_with_cache<I: AsInput<'i>>(
+        input: I,
+        indexer: impl LineIndexer<'i>,
+    ) -> Result<I::Output, Box<Error<R>>> {
         let mut stack = Stack::new();
         let input = input.as_input();
         let mut tracker = Tracker::new(input);
         match Self::try_check_partial_with(input, &mut stack, &mut tracker) {
             Some(input) => Ok(input),
-            None => Err(Box::new(tracker.collect())),
+            None => Err(Box::new(tracker.collect(indexer))),
         }
+    }
+    /// Check whether the typed node match the whole input.
+    fn try_check(input: impl AsInput<'i>) -> Result<(), Box<Error<R>>> {
+        Self::try_check_with_cache(input, ())
+    }
+    /// Try to parse the whole input into given typed node.
+    /// A rule is not atomic by default.
+    fn try_check_partial<I: AsInput<'i>>(input: I) -> Result<I::Output, Box<Error<R>>> {
+        Self::try_check_partial_with_cache(input, ())
     }
 }
 
