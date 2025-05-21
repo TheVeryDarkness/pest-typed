@@ -157,6 +157,12 @@ impl CachedLineIndexer {
         }
         Self { line_starts }
     }
+    /// Creates a new `CachedLineIndexer` with no lines.
+    pub const fn empty() -> Self {
+        Self {
+            line_starts: Vec::new(),
+        }
+    }
 }
 
 impl<'i> LineIndexer<'i> for CachedLineIndexer {
