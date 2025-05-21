@@ -5,7 +5,7 @@ use crate::{
     tracker::Tracker,
     Input, RuleType, Span, Stack, TypedNode,
 };
-use core::{borrow::Borrow, fmt};
+use core::fmt;
 
 macro_rules! unicode {
     ($property_ident:ident) => {
@@ -24,12 +24,12 @@ macro_rules! unicode {
                 Self { content }
             }
         }
-        impl<'i, R: RuleType, S: ?Sized + Borrow<str>> TypedNode<'i, R, S> for $property_ident {
+        impl<'i, R: RuleType> TypedNode<'i, R> for $property_ident {
             #[inline]
-            fn try_parse_partial_with<I: Input<'i, S>>(
+            fn try_parse_partial_with<I: Input<'i>>(
                 mut input: I,
-                _stack: &mut Stack<Span<'i, S>>,
-                _tracker: &mut Tracker<'i, R, S>,
+                _stack: &mut Stack<Span<'i>>,
+                _tracker: &mut Tracker<'i, R>,
             ) -> Option<(I, Self)> {
                 match super::match_char_by(&mut input, pest::unicode::$property_ident) {
                     Some(content) => Some((input, Self::from(content))),
@@ -37,10 +37,10 @@ macro_rules! unicode {
                 }
             }
             #[inline]
-            fn try_check_partial_with<I: Input<'i, S>>(
+            fn try_check_partial_with<I: Input<'i>>(
                 mut input: I,
-                _stack: &mut Stack<Span<'i, S>>,
-                _tracker: &mut Tracker<'i, R, S>,
+                _stack: &mut Stack<Span<'i>>,
+                _tracker: &mut Tracker<'i, R>,
             ) -> Option<I> {
                 match super::match_char_by(&mut input, pest::unicode::$property_ident) {
                     Some(_) => Some(input),

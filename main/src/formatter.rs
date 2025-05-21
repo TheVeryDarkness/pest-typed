@@ -1,6 +1,6 @@
-use crate::{line_indexer::LineIndexer, Position, Span};
+use crate::{Position, Span};
 use alloc::{format, string::String, vec::Vec};
-use core::{borrow::Borrow, fmt, marker::PhantomData};
+use core::{fmt, marker::PhantomData};
 use unicode_width::UnicodeWidthStr;
 
 struct Pos {
@@ -321,11 +321,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         Ok(())
     }
     #[allow(clippy::needless_lifetimes)]
-    pub(crate) fn display_span<'i, Writer, S: ?Sized + Borrow<str>>(
-        self,
-        span: &Span<'i, S>,
-        f: &mut Writer,
-    ) -> fmt::Result
+    pub(crate) fn display_span<'i, Writer>(self, span: &Span<'i>, f: &mut Writer) -> fmt::Result
     where
         Writer: fmt::Write,
         SF: FnMut(&str, &mut Writer) -> fmt::Result,
@@ -401,9 +397,9 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         Ok(())
     }
     #[allow(clippy::needless_lifetimes)]
-    pub(crate) fn display_position<'i, Writer, S: ?Sized + Borrow<str>>(
+    pub(crate) fn display_position<'i, Writer>(
         self,
-        position: &Position<'i, S>,
+        position: &Position<'i>,
         f: &mut Writer,
     ) -> fmt::Result
     where
@@ -411,7 +407,6 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         SF: FnMut(&str, &mut Writer) -> fmt::Result,
         MF: FnMut(&str, &mut Writer) -> fmt::Result,
         NF: FnMut(&str, &mut Writer) -> fmt::Result,
-        &'i S: LineIndexer<'i>,
     {
         let mut pos = 0usize;
         let input = Span::new_full(position.input);

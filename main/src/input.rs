@@ -1,5 +1,6 @@
-use crate::{line_indexer::DropCache, Position, Span};
-use core::{borrow::Borrow, ops::Range, str::Chars};
+use crate::{Position, Span};
+use alloc::string::String;
+use core::{ops::Range, str::Chars};
 use derive_where::derive_where;
 
 /// Input with span information.
@@ -7,13 +8,11 @@ use derive_where::derive_where;
 /// # Safety
 ///
 /// [`byte_offset()`](Input::byte_offset) must be in the range of [`input()`](Input::input).
-pub unsafe trait Input<'i, S: ?Sized + Borrow<str> = str>: Copy + DropCache<'i> {
+pub unsafe trait Input<'i>: Copy {
     /// Get byte offset.
     fn byte_offset(&self) -> usize;
     /// Get the full input.
     fn input(&self) -> &'i str;
-    /// Get the input with cached data.
-    fn input_cached(&self) -> &'i S;
 
     /// Get unconsumed characters.
     fn get(&self) -> &'i str;
@@ -28,11 +27,11 @@ pub unsafe trait Input<'i, S: ?Sized + Borrow<str> = str>: Copy + DropCache<'i> 
     // fn line_of(&self) -> &'i str;
 
     /// To position.
-    fn as_position(&self) -> Position<'i, S> {
-        unsafe { Position::new_unchecked(self.input_cached(), self.byte_offset()) }
+    fn as_position(&self) -> Position<'i> {
+        unsafe { Position::new_unchecked(self.input(), self.byte_offset()) }
     }
     /// Create a [Span].
-    fn span(&self, end: Self) -> Span<'i, S> {
+    fn span(&self, end: Self) -> Span<'i> {
         self.as_position().span(&end.as_position())
     }
 
@@ -151,16 +150,12 @@ pub unsafe trait Input<'i, S: ?Sized + Borrow<str> = str>: Copy + DropCache<'i> 
     }
 }
 
-unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for Position<'i, S> {
+unsafe impl<'i> Input<'i> for Position<'i> {
     fn byte_offset(&self) -> usize {
         self.pos
     }
 
     fn input(&self) -> &'i str {
-        self.input.borrow()
-    }
-
-    fn input_cached(&self) -> &'i S {
         self.input
     }
 
@@ -209,8 +204,7 @@ pub struct SubInput2<'i, S: ?Sized = str> {
     cursor: usize,
 }
 
-impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for SubInput1<'i, S> {
-    type S = S;
+impl<'i> AsInput<'i> for SubInput1<'i> {
     type Output = Self;
 
     fn as_input(&self) -> Self::Output {
@@ -218,8 +212,7 @@ impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for SubInput1<'i, S> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for SubInput2<'i, S> {
-    type S = S;
+impl<'i> AsInput<'i> for SubInput2<'i> {
     type Output = Self;
 
     fn as_input(&self) -> Self::Output {
@@ -227,41 +220,12 @@ impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for SubInput2<'i, S> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> DropCache<'i> for SubInput1<'i, S> {
-    type Raw = SubInput1<'i, str>;
-
-    fn drop_cache(self) -> Self::Raw {
-        SubInput1 {
-            input: self.input.borrow(),
-            start: self.start,
-            cursor: self.cursor,
-        }
-    }
-}
-
-impl<'i, S: ?Sized + Borrow<str>> DropCache<'i> for SubInput2<'i, S> {
-    type Raw = SubInput2<'i, str>;
-
-    fn drop_cache(self) -> Self::Raw {
-        SubInput2 {
-            input: self.input.borrow(),
-            start: self.start,
-            end: self.end,
-            cursor: self.cursor,
-        }
-    }
-}
-
-unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for SubInput1<'i, S> {
+unsafe impl<'i> Input<'i> for SubInput1<'i> {
     fn byte_offset(&self) -> usize {
         self.cursor
     }
 
     fn input(&self) -> &'i str {
-        self.input.borrow()
-    }
-
-    fn input_cached(&self) -> &'i S {
         self.input
     }
 
@@ -285,16 +249,12 @@ unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for SubInput1<'i, S> {
     }
 }
 
-unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for SubInput2<'i, S> {
+unsafe impl<'i> Input<'i> for SubInput2<'i> {
     fn byte_offset(&self) -> usize {
         self.cursor
     }
 
     fn input(&self) -> &'i str {
-        self.input.borrow()
-    }
-
-    fn input_cached(&self) -> &'i S {
         self.input
     }
 
@@ -319,28 +279,32 @@ unsafe impl<'i, S: ?Sized + Borrow<str>> Input<'i, S> for SubInput2<'i, S> {
 }
 
 /// Convert to input.
-pub trait AsInput<'i>: DropCache<'i> {
-    /// Input string type.
-    type S: ?Sized + Borrow<str>;
+pub trait AsInput<'i> {
     /// Output type.
-    type Output: Input<'i, Self::S>;
+    type Output: Input<'i>;
 
     /// Convert to a [Input] type.
     fn as_input(&self) -> Self::Output;
 }
 
-impl<'i, S: ?Sized + Borrow<str> + 'i> AsInput<'i> for &'i S {
-    type S = S;
-    type Output = Position<'i, S>;
+impl<'i> AsInput<'i> for &'i str {
+    type Output = Position<'i>;
 
     fn as_input(&self) -> Self::Output {
         Position::from_start(self)
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for Position<'i, S> {
-    type S = S;
-    type Output = SubInput1<'i, S>;
+impl<'i> AsInput<'i> for &'i String {
+    type Output = Position<'i>;
+
+    fn as_input(&self) -> Self::Output {
+        Position::from_start(self)
+    }
+}
+
+impl<'i> AsInput<'i> for Position<'i> {
+    type Output = SubInput1<'i>;
 
     fn as_input(&self) -> Self::Output {
         let input = self.input;
@@ -354,12 +318,11 @@ impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for Position<'i, S> {
     }
 }
 
-impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for Span<'i, S> {
-    type S = S;
-    type Output = SubInput2<'i, S>;
+impl<'i> AsInput<'i> for Span<'i> {
+    type Output = SubInput2<'i>;
 
     fn as_input(&self) -> Self::Output {
-        let input = self.input();
+        let input = self.get_input();
         let start = self.start();
         let end = self.end();
         let cursor = start;
@@ -370,24 +333,4 @@ impl<'i, S: ?Sized + Borrow<str>> AsInput<'i> for Span<'i, S> {
             cursor,
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::AsInput;
-    use crate::line_indexer::CachedLineIndexer;
-    use core::borrow::Borrow;
-    use std::string::String;
-
-    #[allow(dead_code)]
-    const fn test_impl<S, I>()
-    where
-        S: ?Sized + Borrow<str>,
-        I: AsInput<'static, S = S>,
-    {
-    }
-
-    const _1: () = test_impl::<str, &str>();
-    const _2: () = test_impl::<String, &String>();
-    const _3: () = test_impl::<CachedLineIndexer<'static>, &CachedLineIndexer<'static>>();
 }
