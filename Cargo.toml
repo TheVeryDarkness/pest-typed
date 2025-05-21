@@ -2,7 +2,7 @@
 members = ["derive", "generator", "main"]
 resolver = "2"
 package.readme = "./README.md"
-package.version = "0.20.7"
+package.version = "0.20.8"
 package.edition = "2021"
 package.rust-version = "1.81.0"
 package.repository = "https://github.com/theverydarkness/pest-typed"
@@ -18,12 +18,12 @@ rand-utf8 = { version = "0.0.1" }
 
 [workspace.dependencies.pest_typed]
 path = "./main"
-version = "0.20.7"
+version = "0.20.8"
 default-features = false
 
 [workspace.dependencies.pest_typed_generator]
 path = "./generator"
-version = "0.20.7"
+version = "0.20.8"
 default-features = false
 
 [workspace.dependencies.criterion]
