@@ -140,6 +140,7 @@ impl<'i> LineIndexer<'i> for () {
 }
 
 /// A cached line indexer that caches the start of each line in the input string.
+#[derive(Debug, Clone)]
 pub struct CachedLineIndexer {
     /// `line_starts[i + 1]` is the start of the `i`-th line.
     line_starts: Vec<usize>,
