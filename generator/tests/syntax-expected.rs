@@ -209,18 +209,25 @@ mod constant_wrappers {
     impl ::pest_typed::StringWrapper for r#w_17 {
         const CONTENT: &'static ::core::primitive::str = "c";
     }
-    #[doc = "A wrapper for `\"b\"`."]
+    #[doc = "A wrapper for `\"d\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
     pub struct r#w_18;
     impl ::pest_typed::StringWrapper for r#w_18 {
+        const CONTENT: &'static ::core::primitive::str = "d";
+    }
+    #[doc = "A wrapper for `\"b\"`."]
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, Hash, PartialEq, Eq)]
+    pub struct r#w_19;
+    impl ::pest_typed::StringWrapper for r#w_19 {
         const CONTENT: &'static ::core::primitive::str = "b";
     }
     #[doc = "A wrapper for `\"?\"`."]
     #[allow(non_camel_case_types)]
     #[derive(Clone, Hash, PartialEq, Eq)]
-    pub struct r#w_19;
-    impl ::pest_typed::StringWrapper for r#w_19 {
+    pub struct r#w_20;
+    impl ::pest_typed::StringWrapper for r#w_20 {
         const CONTENT: &'static ::core::primitive::str = "?";
     }
 }
@@ -629,7 +636,7 @@ pub mod rules_impl {
         }
         :: pest_typed :: rule ! (pub r#Seq , "Corresponds to expression: `(\"1\" ~ ('2'..'9') ~ \".\")`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#Seq , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_12 > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: CharRange :: < '2' , '9' > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_13 > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , > , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Both , true);
         impl<'i, const INHERITED: ::core::primitive::usize> r#Seq<'i, INHERITED> {}
-        :: pest_typed :: rule ! (pub r#Choice , "Corresponds to expression: `(\"a\" | ((^\"b\" ~ ^\"b\"*) ~ RepAtLeastOnce) | (&\"c\" ~ Choice ~ Rep ~ Opt) | Peek | PeekLeft | PeekRight | PeekLeftRight | Drop | PeekAll)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#Choice , super :: super :: generics :: Choice9 :: < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_14 > , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Insens :: < 'i , super :: super :: constant_wrappers :: r#w_15 > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < 'i , INHERITED , super :: super :: generics :: Insens :: < 'i , super :: super :: constant_wrappers :: r#w_16 > > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#RepAtLeastOnce :: < 'i , INHERITED > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , > , super :: super :: generics :: Seq4 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Positive :: < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_17 > > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#Choice :: < 'i , INHERITED > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#Rep :: < 'i , INHERITED > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#Opt :: < 'i , INHERITED > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , > , super :: super :: rules :: r#Peek :: < 'i , INHERITED > , super :: super :: rules :: r#PeekLeft :: < 'i , INHERITED > , super :: super :: rules :: r#PeekRight :: < 'i , INHERITED > , super :: super :: rules :: r#PeekLeftRight :: < 'i , INHERITED > , super :: super :: rules :: r#Drop :: < 'i , INHERITED > , super :: super :: rules :: r#PeekAll :: < 'i , INHERITED > , > , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#Choice , "Corresponds to expression: `(\"a\" | ((^\"b\" ~ ^\"b\"*) ~ RepAtLeastOnce) | (\"c\" ~ &\"d\" ~ Choice ~ Rep ~ Opt) | Peek | PeekLeft | PeekRight | PeekLeftRight | Drop | PeekAll)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#Choice , super :: super :: generics :: Choice9 :: < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_14 > , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Insens :: < 'i , super :: super :: constant_wrappers :: r#w_15 > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < 'i , INHERITED , super :: super :: generics :: Insens :: < 'i , super :: super :: constant_wrappers :: r#w_16 > > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#RepAtLeastOnce :: < 'i , INHERITED > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , > , super :: super :: generics :: Seq5 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_17 > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Positive :: < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_18 > > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#Choice :: < 'i , INHERITED > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#Rep :: < 'i , INHERITED > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#Opt :: < 'i , INHERITED > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , > , super :: super :: rules :: r#Peek :: < 'i , INHERITED > , super :: super :: rules :: r#PeekLeft :: < 'i , INHERITED > , super :: super :: rules :: r#PeekRight :: < 'i , INHERITED > , super :: super :: rules :: r#PeekLeftRight :: < 'i , INHERITED > , super :: super :: rules :: r#Drop :: < 'i , INHERITED > , super :: super :: rules :: r#PeekAll :: < 'i , INHERITED > , > , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Both , true);
         impl<'i, const INHERITED: ::core::primitive::usize> r#Choice<'i, INHERITED> {
             #[doc = "A helper function to access [`Choice`]."]
             #[allow(non_snake_case)]
@@ -640,7 +647,7 @@ pub mod rules_impl {
                 let res = &*self.content;
                 {
                     let res = res._2().map(|res| {
-                        let res = &res.content.1.matched;
+                        let res = &res.content.2.matched;
                         res
                     });
                     res
@@ -667,7 +674,7 @@ pub mod rules_impl {
                 let res = &*self.content;
                 {
                     let res = res._2().map(|res| {
-                        let res = &res.content.3.matched;
+                        let res = &res.content.4.matched;
                         res
                     });
                     res
@@ -744,7 +751,7 @@ pub mod rules_impl {
                 let res = &*self.content;
                 {
                     let res = res._2().map(|res| {
-                        let res = &res.content.2.matched;
+                        let res = &res.content.3.matched;
                         res
                     });
                     res
@@ -767,11 +774,11 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#Rep , "Corresponds to expression: `^\"b\"*`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#Rep , super :: super :: generics :: Rep :: < 'i , INHERITED , super :: super :: generics :: Insens :: < 'i , super :: super :: constant_wrappers :: r#w_18 > > , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#Rep , "Corresponds to expression: `^\"b\"*`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#Rep , super :: super :: generics :: Rep :: < 'i , INHERITED , super :: super :: generics :: Insens :: < 'i , super :: super :: constant_wrappers :: r#w_19 > > , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Both , true);
         impl<'i, const INHERITED: ::core::primitive::usize> r#Rep<'i, INHERITED> {}
         :: pest_typed :: rule ! (pub r#RepAtLeastOnce , "Corresponds to expression: `(('0'..'9') ~ ('0'..'9')*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#RepAtLeastOnce , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: CharRange :: < '0' , '9' > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < 'i , INHERITED , super :: super :: generics :: CharRange :: < '0' , '9' > > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , > , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Both , true);
         impl<'i, const INHERITED: ::core::primitive::usize> r#RepAtLeastOnce<'i, INHERITED> {}
-        :: pest_typed :: rule ! (pub r#Opt , "Corresponds to expression: `\"?\"?`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#Opt , :: pest_typed :: re_exported :: Option :: < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_19 > > , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#Opt , "Corresponds to expression: `\"?\"?`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#Opt , :: pest_typed :: re_exported :: Option :: < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_20 > > , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Both , true);
         impl<'i, const INHERITED: ::core::primitive::usize> r#Opt<'i, INHERITED> {}
         :: pest_typed :: rule ! (pub r#RepExact , "Corresponds to expression: `(RepAtLeastOnce ~ RepAtLeastOnce ~ RepAtLeastOnce)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#RepExact , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#RepAtLeastOnce :: < 'i , INHERITED > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#RepAtLeastOnce :: < 'i , INHERITED > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#RepAtLeastOnce :: < 'i , INHERITED > , super :: super :: generics :: Skipped < 'i > , INHERITED >) , > , super :: super :: generics :: Skipped :: < 'i > , INHERITED , Both , true);
         impl<'i, const INHERITED: ::core::primitive::usize> r#RepExact<'i, INHERITED> {
