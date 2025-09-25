@@ -365,7 +365,7 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             .take(end.line - start.line + 1);
         let index_digit = Self::ceil_log10(end.line + 1);
         if start.line == end.line {
-            let cur_line = lines.next().unwrap();
+            let cur_line = lines.next().unwrap_or("");
             let line = Partition2::new(start.line, cur_line, start.col, end.col);
             self.display_snippet_single_line(f, index_digit, line)?;
         } else {
@@ -496,6 +496,45 @@ mod span {
     use super::*;
     use alloc::string::{String, ToString};
     use core::fmt::Write;
+
+    #[test]
+    fn display_span_empty() {
+        let msg = Span::new("", 0, 0).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+1 | 
+  | 
+"
+        );
+    }
+
+    #[test]
+    fn display_span_empty_line() {
+        let msg = Span::new("\n\n", 0, 0).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+1 | ␊
+  | 
+"
+        );
+    }
+
+    #[test]
+    fn display_span_empty_lines() {
+        let msg = Span::new("\n\n", 0, 1).unwrap().to_string();
+        assert_eq!(
+            msg,
+            "  \
+  |
+1 | ␊
+  | ^
+"
+        );
+    }
 
     #[test]
     fn display_span_first_line() {
