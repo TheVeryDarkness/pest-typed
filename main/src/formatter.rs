@@ -333,17 +333,17 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         MF: FnMut(&str, &mut Writer) -> fmt::Result,
         NF: FnMut(&str, &mut Writer) -> fmt::Result,
     {
-        let mut start = None;
-        let mut end = None;
+        let mut start = Pos { line: 0, col: 0 };
+        let mut end = Pos { line: 0, col: 0 };
         let mut pos = 0usize;
         let input = Span::new(span.get_input(), 0, span.get_input().len()).unwrap();
         let mut iter = input.lines(&indexer).enumerate().peekable();
         while let Some((index, line)) = iter.peek() {
             if pos + line.len() >= span.start() {
-                start = Some(Pos {
+                start = Pos {
                     line: *index,
                     col: span.start() - pos,
-                });
+                };
                 break;
             }
             pos += line.len();
@@ -351,16 +351,14 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         }
         for (index, line) in iter {
             if pos + line.len() >= span.end() {
-                end = Some(Pos {
+                end = Pos {
                     line: index,
                     col: span.end() - pos,
-                });
+                };
                 break;
             }
             pos += line.len();
         }
-        let start = start.unwrap();
-        let end = end.unwrap();
         let mut lines = input
             .lines(&indexer)
             .skip(start.line)
