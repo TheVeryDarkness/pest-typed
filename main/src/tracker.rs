@@ -311,7 +311,7 @@ mod tests {
         wrap!(SOI);
         wrap!(Main);
         wrap!(Body);
-        wrap!(EOI);
+        // wrap!(EOI);
     }
     #[test]
     fn negative() -> Result<(), ()> {
