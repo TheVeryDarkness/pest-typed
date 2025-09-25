@@ -65,7 +65,7 @@ where
     }
 
     /// Create a new `Position` at the end of the input.
-    pub fn new_at_end(input: &'i str) -> Self {
+    pub const fn new_at_end(input: &'i str) -> Self {
         Position {
             input,
             pos: input.len(),
@@ -162,7 +162,7 @@ where
 
     /// Returns `true` when the `Position` points to the end of the input `&str`.
     #[inline]
-    pub(crate) fn at_end(&self) -> bool {
+    pub(crate) const fn at_end(&self) -> bool {
         self.pos == self.input.len()
     }
 

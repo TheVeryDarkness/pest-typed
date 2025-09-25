@@ -58,7 +58,7 @@ impl<'i> Span<'i> {
     /// let span = Span::new_full(input);
     /// assert_eq!(span.as_str(), input);
     /// ```
-    pub fn new_full(input: &'i str) -> Self {
+    pub const fn new_full(input: &'i str) -> Self {
         Span {
             input,
             start: 0,
@@ -76,7 +76,7 @@ impl<'i> Span<'i> {
     /// let span = Span::new_at_end(input);
     /// assert_eq!(span.as_str(), "");
     /// ```
-    pub fn new_at_end(input: &'i str) -> Self {
+    pub const fn new_at_end(input: &'i str) -> Self {
         Span {
             input,
             start: input.len(),
@@ -270,7 +270,7 @@ impl<'i> Span<'i> {
     /// let span = Span::new(input, 1, 7).unwrap();
     /// assert_eq!(span.get_input(), input);
     /// ```
-    pub fn get_input(&self) -> &'i str {
+    pub const fn get_input(&self) -> &'i str {
         self.input
     }
 
@@ -319,7 +319,7 @@ impl<'i> Span<'i> {
     pub const fn lines_span<L: LineIndexer<'i>>(&self, indexer: L) -> LinesSpan<'_, 'i, L> {
         LinesSpan {
             span: self,
-            indexer: indexer,
+            indexer,
             pos: self.start,
         }
     }

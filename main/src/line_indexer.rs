@@ -148,7 +148,7 @@ pub struct CachedLineIndexer {
 
 impl CachedLineIndexer {
     /// Creates a new `CachedLineIndexer` from the input string.
-    pub fn new<'i>(input: &'i str) -> Self {
+    pub fn new(input: &str) -> Self {
         let mut line_starts = Vec::new();
         for (i, c) in input.char_indices() {
             if c == '\n' {
