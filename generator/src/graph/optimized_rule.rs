@@ -353,6 +353,21 @@ impl Generate for OptimizedRule {
                 )
             }
             #[cfg(feature = "grammar-extras")]
+            OptimizedExpr::PushLiteral(content) => {
+                let wrapper = map.insert_string_wrapper(content.as_str());
+                process_single_alias(
+                    map,
+                    rule_config,
+                    quote! {
+                        #root::#generics::PushLiteral::<#root::#wrapper>
+                    },
+                    Getter::new(),
+                    root,
+                    emission,
+                    explicit,
+                )
+            }
+            #[cfg(feature = "grammar-extras")]
             OptimizedExpr::NodeTag(inner_expr, tag) => {
                 if config.emit_tagged_node_reference {
                     let tag_id = ident(tag.as_str());
@@ -470,9 +485,12 @@ impl Generate for OptimizedRule {
                 #[cfg(feature = "grammar-extras")]
                 OptimizedExpr::RepOnce(expr) => exprs.push(expr),
                 OptimizedExpr::Skip(_) => (),
-                OptimizedExpr::Push(expr) | OptimizedExpr::RestoreOnErr(expr) => exprs.push(expr),
+                OptimizedExpr::Push(expr) => exprs.push(expr),
+                #[cfg(feature = "grammar-extras")]
+                OptimizedExpr::PushLiteral(_) => (),
                 #[cfg(feature = "grammar-extras")]
                 OptimizedExpr::NodeTag(expr, _) => exprs.push(expr),
+                OptimizedExpr::RestoreOnErr(expr) => exprs.push(expr),
             }
         }
     }

@@ -826,7 +826,7 @@ pub(crate) fn generate_typed_pair_from_rule<R: Generate>(
                 use #pest_typed::predefined_node;
                 /// Skipped content.
                 pub type Skipped<'i> = #skip;
-                pub use predefined_node::{Str, Insens, PeekSlice1, PeekSlice2, Push, Skip, CharRange, Positive, Negative};
+                pub use predefined_node::{Str, Insens, PeekSlice1, PeekSlice2, Push, PushLiteral, Skip, CharRange, Positive, Negative};
                 #(#seq)*
                 #(#chs)*
                 /// Repeat arbitrary times.

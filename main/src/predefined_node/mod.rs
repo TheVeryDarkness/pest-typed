@@ -941,6 +941,45 @@ impl<T> DerefMut for Push<T> {
     }
 }
 
+/// Simply push a literal to the [Stack].
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Dbg, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PushLiteral<T: StringWrapper + 'static> {
+    /// Matched content.
+    #[debug(skip)]
+    _phantom: PhantomData<&'static T>,
+}
+impl<T: StringWrapper> PushLiteral<T> {
+    const fn new() -> Self {
+        Self {
+            _phantom: PhantomData,
+        }
+    }
+}
+impl<T: StringWrapper> StringWrapper for PushLiteral<T> {
+    const CONTENT: &'static str = T::CONTENT;
+}
+impl<'i, R: RuleType, T: StringWrapper + 'static> TypedNode<'i, R> for PushLiteral<T> {
+    #[inline]
+    fn try_parse_partial_with<I: Input<'i>>(
+        input: I,
+        stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<(I, Self)> {
+        stack.push(Span::new_at_end(T::CONTENT));
+        Some((input, Self::new()))
+    }
+
+    #[inline]
+    fn try_check_partial_with<I: Input<'i>>(
+        input: I,
+        _stack: &mut Stack<Span<'i>>,
+        _tracker: &mut Tracker<'i, R>,
+    ) -> Option<I> {
+        Some(input)
+    }
+}
+
 /// Match `[START..END]` in top-to-bottom order of the stack.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]

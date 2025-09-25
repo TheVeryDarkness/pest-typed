@@ -426,6 +426,21 @@ impl Generate for Rule {
                 )
             }
             #[cfg(feature = "grammar-extras")]
+            Expr::PushLiteral(literal) => {
+                let wrapper = map.insert_string_wrapper(literal.as_str());
+                process_single_alias(
+                    map,
+                    rule_config,
+                    quote! {
+                        #root::#generics::PushLiteral::<#root::#wrapper>
+                    },
+                    Getter::new(),
+                    root,
+                    emission,
+                    explicit,
+                )
+            }
+            #[cfg(feature = "grammar-extras")]
             Expr::NodeTag(inner_expr, tag) => {
                 if config.emit_tagged_node_reference {
                     let tag_id = ident(tag.as_str());
@@ -548,6 +563,8 @@ impl Generate for Rule {
                 | Expr::RepOnce(expr) => exprs.push(expr),
                 Expr::Skip(_) => (),
                 Expr::Push(expr) => exprs.push(expr),
+                #[cfg(feature = "grammar-extras")]
+                Expr::PushLiteral(_) => (),
                 #[cfg(feature = "grammar-extras")]
                 Expr::NodeTag(expr, _) => exprs.push(expr),
             }

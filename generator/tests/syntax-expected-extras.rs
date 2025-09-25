@@ -1120,7 +1120,7 @@ pub mod generics {
     pub use pest_typed::sequence::Seq5;
     pub use pest_typed::sequence::Seq7;
     pub use predefined_node::{
-        CharRange, Insens, Negative, PeekSlice1, PeekSlice2, Positive, Push, Skip, Str,
+        CharRange, Insens, Negative, PeekSlice1, PeekSlice2, Positive, Push, PushLiteral, Skip, Str,
     };
     #[doc = r" Repeat arbitrary times."]
     pub type Rep<'i, const SKIP: ::core::primitive::usize, T> =
