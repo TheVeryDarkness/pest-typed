@@ -14,16 +14,19 @@
 mod repetition;
 pub mod unicode;
 
-use super::{parser_state::constrain_idxs, Stack};
 use super::{
+    parser_state::constrain_idxs,
     span::Span,
     tracker::Tracker,
     typed_node::NeverFailedTypedNode,
     wrapper::{StringArrayWrapper, StringWrapper},
-    RuleType, TypedNode,
+    RuleType, Stack, TypedNode,
 };
-use core::ops::{Deref, DerefMut};
-use core::{fmt::Debug, marker::PhantomData};
+use core::{
+    fmt::Debug,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 use custom_debug_derive::Debug as Dbg;
 use derive_where::derive_where;
 pub use repetition::{
@@ -1053,8 +1056,10 @@ pub type ASCII_BIN_DIGIT = CharRange<'0', '1'>;
 #[allow(non_camel_case_types)]
 pub type ASCII_OCT_DIGIT = CharRange<'0', '7'>;
 
-use crate::choices::{Choice2, Choice3};
-use crate::Input;
+use crate::{
+    choices::{Choice2, Choice3},
+    Input,
+};
 /// Hexadecimal ASCII Digit. `'0'..'9' | 'a'..'f' | 'A'..'F'`
 #[allow(non_camel_case_types)]
 pub type ASCII_HEX_DIGIT = Choice3<ASCII_DIGIT, CharRange<'a', 'f'>, CharRange<'A', 'F'>>;

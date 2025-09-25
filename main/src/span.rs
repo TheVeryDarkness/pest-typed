@@ -10,15 +10,13 @@
 //! Copied from pest/pest/src/position.rs (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
 //! and modified.
 
-use core::fmt::{self, Write};
-use core::hash::{Hash, Hasher};
-use core::ops::{Bound, Range, RangeBounds};
-use core::ptr;
-use core::str;
-
-use crate::formatter::FormatOption;
-use crate::line_indexer::LineIndexer;
-use crate::position;
+use crate::{formatter::FormatOption, line_indexer::LineIndexer, position};
+use core::{
+    fmt::{self, Write},
+    hash::{Hash, Hasher},
+    ops::{Bound, Range, RangeBounds},
+    ptr, str,
+};
 
 /// A span over a `&str`. It is created from either [two `Position`s] or from a [`Pair`].
 ///
@@ -669,8 +667,7 @@ impl<'i, L: LineIndexer<'i>> Iterator for Lines<'_, 'i, L> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::borrow::ToOwned;
-    use alloc::vec::Vec;
+    use alloc::{borrow::ToOwned, vec::Vec};
 
     #[test]
     fn get() {

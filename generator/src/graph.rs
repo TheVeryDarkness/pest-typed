@@ -7,9 +7,11 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use crate::config::Config;
-use crate::docs::DocComment;
-use crate::types::{option_type, vec_type};
+use crate::{
+    config::Config,
+    docs::DocComment,
+    types::{option_type, vec_type},
+};
 use pest::unicode::unicode_property_names;
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens, TokenStreamExt};

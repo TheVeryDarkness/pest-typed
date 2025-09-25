@@ -7,10 +7,9 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::{collections::HashSet, ops::DerefMut};
-
 use pest_typed::{predefined_node::RepeatMin, ParsableTypedNode};
 use pest_typed_derive::TypedParser;
+use std::{collections::HashSet, ops::DerefMut};
 
 #[allow(dead_code)]
 #[derive(TypedParser)]

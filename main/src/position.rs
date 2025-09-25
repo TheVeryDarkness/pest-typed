@@ -10,18 +10,16 @@
 //! Copied from pest/pest/src/position.rs (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
 //! and modified.
 
-use core::borrow::Borrow;
-use core::cmp::Ordering;
-use core::fmt::{self, Write};
-use core::hash::{Hash, Hasher};
-use core::ops::Range;
-use core::ptr;
-use core::str;
-
-use crate::formatter::FormatOption;
-use crate::line_indexer::LineIndexer;
-
 use super::span;
+use crate::{formatter::FormatOption, line_indexer::LineIndexer};
+use core::{
+    borrow::Borrow,
+    cmp::Ordering,
+    fmt::{self, Write},
+    hash::{Hash, Hasher},
+    ops::Range,
+    ptr, str,
+};
 
 /// A cursor position in a `&str` which provides useful methods to manually parse that string.
 #[derive(Clone, Copy)]

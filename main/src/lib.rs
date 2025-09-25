@@ -75,12 +75,11 @@ mod position;
 mod span;
 
 pub use input::{AsInput, Input};
+// Re-export unicode.
+pub use pest::unicode;
 pub use pest::{error, Stack};
 pub use position::Position;
 pub use span::{merge_spans, Span};
-
-// Re-export unicode.
-pub use pest::unicode;
 
 /// A trait that is implemented for all pest rules. An extension of [`pest::RuleType`].
 pub trait RuleType: pest::RuleType {

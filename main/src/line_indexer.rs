@@ -207,10 +207,9 @@ impl<'i> LineIndexer<'i> for CachedLineIndexer {
 
 #[cfg(test)]
 mod tests {
+    use super::{CachedLineIndexer, LineIndexer};
     use rand::SeedableRng as _;
     use rand_utf8::rand_utf8;
-
-    use super::{CachedLineIndexer, LineIndexer};
 
     fn test_line_col<'i, T: LineIndexer<'i>>(input: &'i str, line_indexer: T) {
         assert_eq!(line_indexer.line_col(input, 0), (1, 1));

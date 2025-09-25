@@ -93,10 +93,8 @@ pub(crate) fn consume(pairs: Pairs<'_, Rule>) -> DocComment {
 
 #[cfg(test)]
 mod tests {
+    use pest_meta::{parser, parser::Rule};
     use std::collections::HashMap;
-
-    use pest_meta::parser;
-    use pest_meta::parser::Rule;
 
     #[test]
     fn test_doc_comment() {

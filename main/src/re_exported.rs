@@ -12,36 +12,28 @@
 /// `Box` in corresponding context.
 #[cfg(not(feature = "std"))]
 pub use ::alloc::boxed::Box;
-#[cfg(feature = "std")]
-pub use ::std::boxed::Box;
-
-/// `Result` in corresponding context.
-#[cfg(not(feature = "std"))]
-pub use ::core::result::Result;
-#[cfg(feature = "std")]
-pub use ::std::result::Result;
-
-/// `Option` in corresponding context.
-#[cfg(not(feature = "std"))]
-pub use ::core::option::Option;
-#[cfg(feature = "std")]
-pub use ::std::option::Option;
-
-/// `Vec` in corresponding context.
-#[cfg(not(feature = "std"))]
-pub use ::alloc::vec::Vec;
-#[cfg(feature = "std")]
-pub use ::std::vec::Vec;
-
 /// `vec` in corresponding context.
 #[cfg(not(feature = "std"))]
 pub use ::alloc::vec;
+/// `Vec` in corresponding context.
+#[cfg(not(feature = "std"))]
+pub use ::alloc::vec::Vec;
+/// `Option` in corresponding context.
+#[cfg(not(feature = "std"))]
+pub use ::core::option::Option;
+/// `Result` in corresponding context.
+#[cfg(not(feature = "std"))]
+pub use ::core::result::Result;
+pub use ::core::{ops::FnMut, primitive::char};
+#[cfg(feature = "std")]
+pub use ::std::boxed::Box;
+#[cfg(feature = "std")]
+pub use ::std::option::Option;
+#[cfg(feature = "std")]
+pub use ::std::result::Result;
 #[cfg(feature = "std")]
 pub use ::std::vec;
-
-pub use ::core::ops::FnMut;
-
-pub use ::core::primitive::char;
-
+#[cfg(feature = "std")]
+pub use ::std::vec::Vec;
 #[cfg(feature = "serde")]
 pub use serde;

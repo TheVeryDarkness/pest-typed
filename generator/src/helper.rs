@@ -10,11 +10,12 @@
 //! Copied from **pest/generator/src/lib.rs** (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
 //! and modified.
 
-use std::env;
-use std::fs::File;
-use std::io::{self, Read};
-use std::path::{Path, PathBuf};
-
+use std::{
+    env,
+    fs::File,
+    io::{self, Read},
+    path::{Path, PathBuf},
+};
 use syn::{Attribute, Expr, ExprLit, Lit, Meta};
 
 pub(crate) fn collect_data(contents: Vec<GrammarSource>) -> (String, Vec<PathBuf>) {

@@ -18,19 +18,25 @@
 
 //! Adapted from [generator.rs](./generator.rs) (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7).
 
-use super::docs::{consume, DocComment};
-use super::generator::{generate_enum, generate_include};
-use super::helper::{collect_data, get_string, GrammarSource};
-use crate::config::Config;
-use crate::graph::{generate_typed_pair_from_rule, pest_typed, Generate};
-use crate::helper::get_bool;
-use pest_meta::parser::{consume_rules, parse, rename_meta_rule, Rule};
-use pest_meta::{optimizer::optimize, unwrap_or_report};
+use super::{
+    docs::{consume, DocComment},
+    generator::{generate_enum, generate_include},
+    helper::{collect_data, get_string, GrammarSource},
+};
+use crate::{
+    config::Config,
+    graph::{generate_typed_pair_from_rule, pest_typed, Generate},
+    helper::get_bool,
+};
+use pest_meta::{
+    optimizer::optimize,
+    parser::{consume_rules, parse, rename_meta_rule, Rule},
+    unwrap_or_report,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::path::PathBuf;
-use syn::DeriveInput;
-use syn::{self, Generics, Ident};
+use syn::{self, DeriveInput, Generics, Ident};
 
 /// Processes the derive/proc macro input and generates the corresponding typed parser and nodes
 /// based on the parsed grammar. It will generate an explicit "include_str" statement.
