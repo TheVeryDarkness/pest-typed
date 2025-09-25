@@ -298,8 +298,9 @@ mod tests {
         use crate::RuleWrapper;
 
         macro_rules! wrap {
-            ($name:ident) => {
+            ($(#[$meta:meta])? $name:ident) => {
                 #[derive(Clone, PartialEq)]
+                $(#[$meta])?
                 pub(super) struct $name;
                 impl RuleWrapper<Rule> for $name {
                     const RULE: Rule = Rule::$name;
@@ -311,7 +312,11 @@ mod tests {
         wrap!(SOI);
         wrap!(Main);
         wrap!(Body);
-        // wrap!(EOI);
+
+        wrap!(
+            #[expect(dead_code)]
+            EOI
+        );
     }
     #[test]
     fn negative() -> Result<(), ()> {
