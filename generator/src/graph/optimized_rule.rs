@@ -153,17 +153,17 @@ impl Generate for OptimizedRule {
             OptimizedExpr::Ident(id) => {
                 let inner = ident(id);
                 let rules = rules_mod();
-                let has_life_time = rule_config.defined.contains(id.as_str())
+                let has_generic_s = rule_config.defined.contains(id.as_str())
                     || !rule_config.builtins_without_lifetime.contains(id.as_str());
                 let has_skip = rule_config.defined.contains(id.as_str());
-                let generics = match (has_life_time, has_skip) {
+                let generics = match (has_generic_s, has_skip) {
                     (true, true) => quote! {::<S, #skip>},
                     (true, false) => quote! {::<S>},
                     (false, true) => quote! {::<#skip>},
                     (false, false) => quote! {},
                 };
                 let getters = if config.emit_rule_reference {
-                    Getter::from_rule(id, id.as_str(), has_life_time, has_skip)
+                    Getter::from_rule(id, id.as_str(), has_generic_s, has_skip)
                 } else {
                     Getter::new()
                 };

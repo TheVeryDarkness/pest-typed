@@ -451,6 +451,109 @@ macro_rules! impl_try_parse_with {
     };
 }
 
+/// Implement [Clone](core::clone::Clone), [Hash](core::hash::Hash), [PartialEq](core::cmp::PartialEq) and [Eq](core::cmp::Eq) for structs.
+///
+/// Arguments:
+///
+/// - `$name:ident`. Name of generated struct.
+/// - `$Rule:ty`. Rule type. Must implement [RuleType](`crate::RuleType`).
+/// - `$inner:ty`. Type of inner parsing expression.
+/// - `$atomicity:tt`. `true`, `false` or `INHERITED`.
+/// - `$emission:tt`. `Span`, `Expression` or `Both`.
+#[macro_export]
+macro_rules! impl_common_traits {
+    ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Expression) => {
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::clone::Clone
+            for $name<S, INHERITED>
+        {
+            fn clone(&self) -> Self {
+                Self {
+                    content: self.content.clone(),
+                    _phantom: ::core::marker::PhantomData,
+                }
+            }
+        }
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::hash::Hash
+            for $name<S, INHERITED>
+        {
+            fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
+                self.content.hash(state);
+            }
+        }
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::cmp::PartialEq
+            for $name<S, INHERITED>
+        {
+            fn eq(&self, other: &Self) -> ::core::primitive::bool {
+                self.content == other.content
+            }
+        }
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::cmp::Eq
+            for $name<S, INHERITED>
+        {
+        }
+    };
+    ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Span) => {
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::clone::Clone
+            for $name<S, INHERITED>
+        {
+            fn clone(&self) -> Self {
+                Self {
+                    span: self.span.clone(),
+                }
+            }
+        }
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::hash::Hash
+            for $name<S, INHERITED>
+        {
+            fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
+                self.span.hash(state);
+            }
+        }
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::cmp::PartialEq
+            for $name<S, INHERITED>
+        {
+            fn eq(&self, other: &Self) -> ::core::primitive::bool {
+                self.span == other.span
+            }
+        }
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::cmp::Eq
+            for $name<S, INHERITED>
+        {
+        }
+    };
+    ($name:ident, $Rule:ty, $inner:ty, $atomicity:expr, Both) => {
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::clone::Clone
+            for $name<S, INHERITED>
+        {
+            fn clone(&self) -> Self {
+                Self {
+                    span: self.span.clone(),
+                    content: self.content.clone(),
+                }
+            }
+        }
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::hash::Hash
+            for $name<S, INHERITED>
+        {
+            fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
+                self.span.hash(state);
+                self.content.hash(state);
+            }
+        }
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::cmp::PartialEq
+            for $name<S, INHERITED>
+        {
+            fn eq(&self, other: &Self) -> ::core::primitive::bool {
+                self.span == other.span && self.content == other.content
+            }
+        }
+        impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::cmp::Eq
+            for $name<S, INHERITED>
+        {
+        }
+    };
+}
+
 /// Implement [RuleWrapper](crate::RuleWrapper) for the struct.
 ///
 /// Arguments:
@@ -502,8 +605,6 @@ macro_rules! declare_rule_struct {
             #[doc = $doc]
         )*
         #[allow(non_camel_case_types)]
-        #[$crate::re_exported::derive_where::derive_where(crate = $crate::re_exported::derive_where)]
-        #[derive_where(Clone, Hash, PartialEq, Eq; S: $crate::RefStr)]
         $vis struct $name<S, const INHERITED: ::core::primitive::usize = 1> {
             /// Matched expression.
             pub content: $crate::rule_inner!($inner, $boxed),
@@ -523,8 +624,6 @@ macro_rules! declare_rule_struct {
             #[doc = $doc]
         )*
         #[allow(non_camel_case_types)]
-        #[$crate::re_exported::derive_where::derive_where(crate = $crate::re_exported::derive_where)]
-        #[derive_where(Clone, Hash, PartialEq, Eq; S: $crate::RefStr)]
         $vis struct $name<S, const INHERITED: ::core::primitive::usize = 1> {
             /// Span of matched expression.
             pub span: $crate::Span<S>,
@@ -542,8 +641,6 @@ macro_rules! declare_rule_struct {
             #[doc = $doc]
         )*
         #[allow(non_camel_case_types)]
-        #[$crate::re_exported::derive_where::derive_where(crate = $crate::re_exported::derive_where)]
-        #[derive_where(Clone, Hash, PartialEq, Eq; S: $crate::RefStr)]
         $vis struct $name<S, const INHERITED: ::core::primitive::usize = 1> {
             /// Matched expression.
             pub content: $crate::rule_inner!($inner, $boxed),
@@ -591,6 +688,7 @@ macro_rules! rule {
         $crate::declare_rule_struct!($vis $name, $($doc)*, $Rule, $inner, $emission, $boxed);
         $crate::impl_rule_wrapper!($name, $Rule, $rule);
         $crate::impl_try_parse_with!($name, $Rule, $inner, $atomicity, $emission);
+        $crate::impl_common_traits!($name, $Rule, $inner, $atomicity, $emission);
         $crate::impl_parse!($name, $Rule, $ignored, $atomicity);
         $crate::impl_deref!($name, $inner, $emission);
         $crate::impl_pairs!($name, $Rule, $inner, $emission);
@@ -713,6 +811,7 @@ macro_rules! rule_eoi {
         );
         $crate::impl_rule_wrapper!($name, $Rule, <$Rule>::EOI);
         $crate::impl_try_parse_with!($name, $Rule, $crate::predefined_node::EOI, INHERITED, Both);
+        $crate::impl_common_traits!($name, $Rule, $crate::predefined_node::EOI, INHERITED, Both);
         impl<C: $crate::Cursor, const INHERITED: usize> $crate::ParsableTypedNode<C, $Rule> for $name<C::String, INHERITED> {
             #[inline]
             fn try_parse_with(
