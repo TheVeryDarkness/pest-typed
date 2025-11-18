@@ -299,18 +299,26 @@ pub trait Input: Clone {
 }
 
 /// A reference to a [`String`](alloc::string::String)-like type.
+///
+/// # Safety
+///
+/// This trait is `unsafe` because incorrect implementations may lead to memory safety issues.
 pub unsafe trait RefStr: Clone + Hash + PartialEq + Eq + fmt::Debug {
     /// Create from a static string.
     fn from_static(s: &'static str) -> Self;
     /// Get length in bytes.
     fn len(&self) -> usize;
+    /// Check if is empty.
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     /// Convert to a string.
     fn as_str(&self) -> &str;
     /// Get a substring.
     ///
     /// # Safety
     ///
-    /// The range must be in the bounds of the string.
+    /// The range must be in the bounds of the string and aligned to UTF-8 character boundaries.
     unsafe fn get_range_unchecked(&self, range: impl SliceIndex<str, Output = str>) -> Self;
     /// Get a substring.
     fn get(&self, range: impl SliceIndex<str, Output = str>) -> Option<Self>;
@@ -346,7 +354,7 @@ impl<'i> Input for &'i String {
     }
 }
 
-unsafe impl<'i> RefStr for &'i str {
+unsafe impl RefStr for &str {
     fn from_static(s: &'static str) -> Self {
         s
     }
@@ -364,7 +372,7 @@ unsafe impl<'i> RefStr for &'i str {
     }
 
     fn get(&self, range: impl SliceIndex<str, Output = str>) -> Option<Self> {
-        str::get(&self, range)
+        str::get(self, range)
     }
 
     fn get_checked(&self, range: impl SliceIndex<str, Output = str>) -> Self {
@@ -377,7 +385,7 @@ unsafe impl<'i> RefStr for &'i str {
 
     fn starts_with_insensitive(&self, string: &str) -> bool {
         self.get(0..string.len())
-            .map_or(false, |prefix| prefix.eq_ignore_ascii_case(string))
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case(string))
     }
 
     fn chars(&self) -> Chars<'_> {

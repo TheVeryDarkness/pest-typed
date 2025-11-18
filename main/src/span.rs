@@ -43,7 +43,7 @@ impl<S: RefStr> Span<S> {
     /// `input[start..end]` must be a valid subslice; that is, said indexing should not panic.
     pub(crate) unsafe fn new_unchecked(input: S, start: usize, end: usize) -> Self {
         debug_assert!(input.get(start..end).is_some());
-        Span { input, start, end }
+        Self { input, start, end }
     }
 
     /// Create a new span that contains the entire input.
@@ -57,7 +57,7 @@ impl<S: RefStr> Span<S> {
     /// assert_eq!(span.as_str(), input);
     /// ```
     pub fn new_full(input: S) -> Self {
-        Span {
+        Self {
             start: 0,
             end: input.len(),
             input,
@@ -75,7 +75,7 @@ impl<S: RefStr> Span<S> {
     /// assert_eq!(span.as_str(), "");
     /// ```
     pub fn new_at_end(input: S) -> Self {
-        Span {
+        Self {
             start: input.len(),
             end: input.len(),
             input,
@@ -95,7 +95,7 @@ impl<S: RefStr> Span<S> {
     /// ```
     pub fn new(input: S, start: usize, end: usize) -> Option<Self> {
         if input.get(start..end).is_some() {
-            Some(Span { input, start, end })
+            Some(Self { input, start, end })
         } else {
             None
         }
@@ -125,7 +125,7 @@ impl<S: RefStr> Span<S> {
             Bound::Unbounded => self.as_str().len(),
         };
 
-        self.as_str().get(start..end).map(|_| Span {
+        self.as_str().get(start..end).map(|_| Self {
             input: self.input.clone(),
             start: self.start + start,
             end: self.start + end,

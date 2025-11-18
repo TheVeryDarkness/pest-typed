@@ -95,10 +95,7 @@ impl<S: RefStr, R: RuleType> Tracker<S, R> {
     pub fn negative_during<Ret>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
         self.during::<Ret, false>(f)
     }
-    fn get_entry<'s>(
-        &'s mut self,
-        pos: impl Cursor,
-    ) -> &'s mut (Vec<R>, Vec<R>, Vec<SpecialError>) {
+    fn get_entry(&mut self, pos: impl Cursor) -> &mut (Vec<R>, Vec<R>, Vec<SpecialError>) {
         // Find lowest rule with the different position.
         let mut upper = None;
         let pos = &pos.byte_offset();
@@ -191,7 +188,7 @@ impl<S: RefStr, R: RuleType> Tracker<S, R> {
             .char_indices()
             .nth(col.saturating_sub(1))
             .map(|(idx, _)| idx)
-            .unwrap_or(line_string.len());
+            .unwrap_or_else(|| line_string.len());
         let line_matched = &line_string.as_str()[..line_remained_index];
 
         use core::fmt::Write;

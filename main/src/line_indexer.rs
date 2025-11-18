@@ -165,7 +165,11 @@ impl<S: RefStr> LineIndexer<S> for CachedLineIndexer {
         let line_start = line
             .checked_sub(1)
             .map_or_else(|| 0, |line| self.line_starts[line]);
-        let next_line_start = self.line_starts.get(line).copied().unwrap_or(input.len());
+        let next_line_start = self
+            .line_starts
+            .get(line)
+            .copied()
+            .unwrap_or_else(|| input.len());
         input.get_checked(line_start..next_line_start)
     }
 
@@ -177,7 +181,10 @@ impl<S: RefStr> LineIndexer<S> for CachedLineIndexer {
 
     fn find_line_end(&self, input: &S, pos: usize) -> usize {
         let line = self.line_starts.partition_point(|&start| start <= pos);
-        self.line_starts.get(line).copied().unwrap_or(input.len())
+        self.line_starts
+            .get(line)
+            .copied()
+            .unwrap_or_else(|| input.len())
     }
 }
 

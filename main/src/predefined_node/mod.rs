@@ -962,7 +962,7 @@ impl<C: Cursor, R: RuleType, T: TypedNode<C, R>> TypedNode<C, R> for Push<T> {
         tracker: &mut Tracker<C::String, R>,
     ) -> Option<C> {
         let start = input.clone();
-        let input = T::try_check_partial_with(input.clone(), stack, tracker)?;
+        let input = T::try_check_partial_with(input, stack, tracker)?;
         stack.push(start.span(&input));
         Some(input)
     }

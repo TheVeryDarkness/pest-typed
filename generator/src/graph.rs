@@ -121,7 +121,7 @@ impl<'g> Node<'g> {
         Self::Rule(value, has_lifetime, has_skip)
     }
     #[cfg(feature = "grammar-extras")]
-    fn from_tag(rule_name: &'g str, tag_name: &'g str, tokens: Vec<TokenStream>) -> Self {
+    const fn from_tag(rule_name: &'g str, tag_name: &'g str, tokens: Vec<TokenStream>) -> Self {
         Self::Tag(rule_name, tag_name, tokens)
     }
     fn flattenable(&self) -> bool {

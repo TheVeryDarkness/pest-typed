@@ -38,7 +38,7 @@ impl<S: RefStr> Position<S> {
     pub(crate) unsafe fn new_unchecked(input: S, pos: usize) -> Self {
         debug_assert!(input.get(pos..).is_some());
 
-        Position { input, pos }
+        Self { input, pos }
     }
 
     /// Attempts to create a new `Position` at the given position. If the specified position is
@@ -54,12 +54,12 @@ impl<S: RefStr> Position<S> {
     /// assert_ne!(Position::new(heart, cheart.len_utf8()), None);
     /// ```
     pub fn new(input: S, pos: usize) -> Option<Self> {
-        input.get(pos..).map(|_| Position { input, pos })
+        input.get(pos..).map(|_| Self { input, pos })
     }
 
     /// Create a new `Position` at the end of the input.
     pub fn new_at_end(input: S) -> Self {
-        Position {
+        Self {
             pos: input.len(),
             input,
         }
@@ -77,7 +77,7 @@ impl<S: RefStr> Position<S> {
     #[inline]
     pub const fn from_start(input: S) -> Self {
         // Position 0 is always safe because it's always a valid UTF-8 border.
-        Position { input, pos: 0 }
+        Self { input, pos: 0 }
     }
 
     /// Returns the byte position of this `Position` as a `usize`.
@@ -119,7 +119,7 @@ impl<S: RefStr> Position<S> {
         if !self.input.ptr_eq(&other.input) {
             panic!("span created from positions from different inputs")
         }
-        if !self.input.get(self.pos..other.pos).is_some() {
+        if self.input.get(self.pos..other.pos).is_none() {
             panic!("span created with positions in wrong order")
         }
         // This is safe because the pos field of a Position should always be a valid str index.
