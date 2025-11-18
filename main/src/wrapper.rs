@@ -28,11 +28,13 @@ pub trait StringWrapper {
     const CONTENT: &'static str;
 }
 impl<T: StringWrapper> Storage<&'static str> for T {
+    #[inline(always)]
     fn get_content(&self) -> &'static str {
         Self::CONTENT
     }
 }
 impl<T: StringWrapper> ConstantStorage<&'static str> for T {
+    #[inline(always)]
     fn get_constant(&self) -> &'static str {
         Self::CONTENT
     }
@@ -44,6 +46,7 @@ pub trait StringArrayWrapper {
     const CONTENT: &'static [&'static str];
 }
 impl<T: StringArrayWrapper> Storage<&'static [&'static str]> for T {
+    #[inline(always)]
     fn get_content(&self) -> &'static [&'static str] {
         Self::CONTENT
     }
@@ -57,6 +60,7 @@ pub trait RuleWrapper<R: RuleType> {
     type Rule;
 
     /// Get wrapped rule.
+    #[inline(always)]
     fn get_rule(&self) -> R {
         Self::RULE
     }
@@ -76,10 +80,12 @@ pub trait BoundWrapper {
     const MAX: usize;
 
     /// Get min length.
+    #[inline(always)]
     fn get_min_len(&self) -> usize {
         Self::MIN
     }
     /// Get max length.
+    #[inline(always)]
     fn get_max_len(&self) -> usize {
         Self::MAX
     }

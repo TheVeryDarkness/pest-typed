@@ -28,6 +28,7 @@ macro_rules! impl_pairs_with_self {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize>
             $crate::iterators::Pairs<S, $Rule> for $name<S, INHERITED>
         {
+            #[inline]
             fn for_self_or_each_child(
                 &self,
                 f: &mut impl $crate::re_exported::FnMut($crate::iterators::Token<S, $Rule>),
@@ -53,6 +54,7 @@ macro_rules! impl_pairs_with_inner {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize>
             $crate::iterators::Pairs<S, $Rule> for $name<S, INHERITED>
         {
+            #[inline]
             fn for_self_or_each_child(
                 &self,
                 f: &mut impl $crate::re_exported::FnMut($crate::iterators::Token<S, $Rule>),
@@ -94,6 +96,7 @@ macro_rules! impl_deref_with_content {
             for $name<S, INHERITED>
         {
             type Target = $inner;
+            #[inline]
             fn deref(&self) -> &Self::Target {
                 &self.content
             }
@@ -101,6 +104,7 @@ macro_rules! impl_deref_with_content {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::ops::DerefMut
             for $name<S, INHERITED>
         {
+            #[inline]
             fn deref_mut(&mut self) -> &mut Self::Target {
                 &mut self.content
             }
@@ -138,6 +142,7 @@ macro_rules! impl_pair_with_empty {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> $crate::Spanned<S, $Rule>
             for $name<S, INHERITED>
         {
+            #[inline]
             fn span(&self) -> $crate::Span<S> {
                 self.span.clone()
             }
@@ -145,6 +150,7 @@ macro_rules! impl_pair_with_empty {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize>
             $crate::iterators::Pair<S, $Rule> for $name<S, INHERITED>
         {
+            #[inline]
             fn for_each_child(
                 &self,
                 f: impl $crate::re_exported::FnMut($crate::iterators::Token<S, $Rule>),
@@ -180,6 +186,7 @@ macro_rules! impl_pair_with_content {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize>
             $crate::iterators::Pair<S, $Rule> for $name<S, INHERITED>
         {
+            #[inline]
             fn for_each_child(
                 &self,
                 mut f: impl $crate::re_exported::FnMut($crate::iterators::Token<S, $Rule>),
@@ -466,6 +473,7 @@ macro_rules! impl_common_traits {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::clone::Clone
             for $name<S, INHERITED>
         {
+            #[inline]
             fn clone(&self) -> Self {
                 Self {
                     content: self.content.clone(),
@@ -483,6 +491,7 @@ macro_rules! impl_common_traits {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::cmp::PartialEq
             for $name<S, INHERITED>
         {
+            #[inline]
             fn eq(&self, other: &Self) -> ::core::primitive::bool {
                 self.content == other.content
             }
@@ -496,6 +505,7 @@ macro_rules! impl_common_traits {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::clone::Clone
             for $name<S, INHERITED>
         {
+            #[inline]
             fn clone(&self) -> Self {
                 Self {
                     span: self.span.clone(),
@@ -512,6 +522,7 @@ macro_rules! impl_common_traits {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::cmp::PartialEq
             for $name<S, INHERITED>
         {
+            #[inline]
             fn eq(&self, other: &Self) -> ::core::primitive::bool {
                 self.span == other.span
             }
@@ -525,6 +536,7 @@ macro_rules! impl_common_traits {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::clone::Clone
             for $name<S, INHERITED>
         {
+            #[inline]
             fn clone(&self) -> Self {
                 Self {
                     span: self.span.clone(),
@@ -543,6 +555,7 @@ macro_rules! impl_common_traits {
         impl<S: $crate::RefStr, const INHERITED: ::core::primitive::usize> ::core::cmp::PartialEq
             for $name<S, INHERITED>
         {
+            #[inline]
             fn eq(&self, other: &Self) -> ::core::primitive::bool {
                 self.span == other.span && self.content == other.content
             }
@@ -849,6 +862,7 @@ macro_rules! rule_eoi {
 /// Full parse as a non-atomic rule.
 ///
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
+#[inline]
 pub fn parse<
     C: Cursor,
     R: RuleType,
@@ -879,6 +893,7 @@ pub fn parse<
 /// Check as a non-atomic rule.
 ///
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
+#[inline]
 pub fn check<
     C: Cursor,
     R: RuleType,
@@ -907,6 +922,7 @@ pub fn check<
 /// Full parse as an atomic rule.
 ///
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
+#[inline]
 pub fn parse_without_ignore<C: Cursor, R: RuleType, _Self: TypedNode<C, R>>(
     input: C,
     stack: &mut Stack<Span<C::String>>,
@@ -931,6 +947,7 @@ pub fn parse_without_ignore<C: Cursor, R: RuleType, _Self: TypedNode<C, R>>(
 /// Check without auto-skipped parsing expressions.
 ///
 /// For [rule](crate::rule!) to implement [ParsableTypedNode](crate::ParsableTypedNode).
+#[inline]
 pub fn check_without_ignore<C: Cursor, R: RuleType, _Self: TypedNode<C, R>>(
     input: C,
     stack: &mut Stack<Span<C::String>>,

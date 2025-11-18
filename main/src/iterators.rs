@@ -54,6 +54,7 @@ pub struct Token<S, R: RuleType> {
 
 impl<S, R: RuleType> Token<S, R> {
     /// To [`ThinToken`].
+    #[inline]
     pub fn to_thin(&self) -> ThinToken<R> {
         let rule = self.rule;
         let start = self.span.start();
@@ -89,6 +90,7 @@ pub trait Pairs<S, R: RuleType> {
     /// For each inner pair by reference if this is a container, otherwise for self.
     fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>));
     /// Collect inner pairs and make them into a [`Vec`].
+    #[inline]
     fn self_or_children(&self) -> Vec<Token<S, R>> {
         let mut children = Vec::new();
         self.for_self_or_each_child(&mut |token| children.push(token));
@@ -101,12 +103,14 @@ pub trait Pair<S: RefStr, R: RuleType>: Spanned<S, R> + RuleStorage<R> {
     /// Iterate over all inner children.
     fn for_each_child(&self, f: impl FnMut(Token<S, R>));
     /// Collect inner [Token]s and make them into a [`Vec`].
+    #[inline]
     fn children(&self) -> Vec<Token<S, R>> {
         let mut children = Vec::new();
         self.for_each_child(|token| children.push(token));
         children
     }
     /// As [Token]s. Call [`Pair::children`] inside.
+    #[inline]
     fn as_token(&self) -> Token<S, R> {
         let children = self.children();
         Token::<S, R> {
@@ -116,6 +120,7 @@ pub trait Pair<S: RefStr, R: RuleType>: Spanned<S, R> + RuleStorage<R> {
         }
     }
     /// As [Token]s. Call [`Pair::children`] inside.
+    #[inline]
     fn as_thin_token(&self) -> ThinToken<R> {
         self.as_token().to_thin()
     }
@@ -185,6 +190,7 @@ fn write_tree_to<'n, S: RefStr, R: RuleType + 'n>(
 /// A trait to traverse the pair as the root of a tree.
 pub trait PairTree<S: RefStr, R: RuleType>: Pair<S, R> + Sized {
     /// Level order traversal
+    #[inline]
     fn iterate_level_order<E>(
         &self,
         f: impl FnMut(&Token<S, R>, usize) -> Result<(), E>,
@@ -192,6 +198,7 @@ pub trait PairTree<S: RefStr, R: RuleType>: Pair<S, R> + Sized {
         iterate_level_order(self, f)
     }
     /// Pre-order traversal
+    #[inline]
     fn iterate_pre_order<E>(
         &self,
         f: impl FnMut(&Token<S, R>, usize) -> Result<(), E>,
@@ -200,11 +207,13 @@ pub trait PairTree<S: RefStr, R: RuleType>: Pair<S, R> + Sized {
     }
 
     /// Write the tree to the `buf`.
+    #[inline]
     fn write_tree_to(&self, buf: &mut impl core::fmt::Write) -> core::fmt::Result {
         write_tree_to(self, buf)
     }
 
     /// Format as a tree.
+    #[inline]
     fn format_as_tree(&self) -> Result<String, core::fmt::Error> {
         let mut buf = String::new();
         self.write_tree_to(&mut buf)?;
@@ -217,6 +226,7 @@ impl<S: RefStr, R: RuleType, T: RuleStruct<S, R> + Pairs<S, R> + Pair<S, R>> Pai
 macro_rules! impl_empty {
     ($node:ty $(, $($tt:tt)*)?) => {
         impl<S: RefStr, R: RuleType $(, $($tt)*)?> Pairs<S, R> for $node {
+            #[inline(always)]
             fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<S, R>)) {}
         }
     };
@@ -225,6 +235,7 @@ macro_rules! impl_empty {
 macro_rules! impl_forward_inner {
     ($node:ident) => {
         impl<S: RefStr, R: RuleType, T: Pairs<S, R>> Pairs<S, R> for $node<T> {
+            #[inline(always)]
             fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
                 self.content.for_self_or_each_child(f)
             }
@@ -243,6 +254,7 @@ impl_empty!(Positive<T>, T);
 impl_empty!(Negative<T>, T);
 
 impl<S: RefStr, R: RuleType, T1: Pairs<S, R>, T2: Pairs<S, R>> Pairs<S, R> for (T1, T2) {
+    #[inline]
     fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
         self.0.for_self_or_each_child(f);
         self.1.for_self_or_each_child(f);
@@ -250,6 +262,7 @@ impl<S: RefStr, R: RuleType, T1: Pairs<S, R>, T2: Pairs<S, R>> Pairs<S, R> for (
 }
 
 impl<S, R: RuleType, T: Pairs<S, R>, const N: usize> Pairs<S, R> for [T; N] {
+    #[inline]
     fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
         self.as_slice()
             .iter()
@@ -258,12 +271,14 @@ impl<S, R: RuleType, T: Pairs<S, R>, const N: usize> Pairs<S, R> for [T; N] {
 }
 
 impl<S, R: RuleType, T: Pairs<S, R>> Pairs<S, R> for Box<T> {
+    #[inline]
     fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
         self.as_ref().for_self_or_each_child(f)
     }
 }
 
 impl<S, R: RuleType, T: Pairs<S, R>> Pairs<S, R> for Option<T> {
+    #[inline]
     fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
         if let Some(node) = self {
             node.for_self_or_each_child(f)
@@ -274,6 +289,7 @@ impl<S, R: RuleType, T: Pairs<S, R>> Pairs<S, R> for Option<T> {
 impl<S, R: RuleType, T: Pairs<S, R>, Skip: Pairs<S, R>, const SKIP: usize> Pairs<S, R>
     for Skipped<T, Skip, SKIP>
 {
+    #[inline]
     fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
         self.skipped.for_self_or_each_child(f);
         self.matched.for_self_or_each_child(f);
@@ -289,6 +305,7 @@ macro_rules! impl_with_vec {
                 $(const $args: $t, )*
             > Pairs<S, R> for $name<T, $($args, )*>
         {
+            #[inline]
             fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
                 self.content.iter().for_each(|n| n.for_self_or_each_child(f));
             }
@@ -317,6 +334,7 @@ pub struct Maybe<Item, T: Iterator<Item = Item>>(Option<T>);
 impl<Item, T: Iterator<Item = Item>> Iterator for Maybe<Item, T> {
     type Item = Item;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.0 {
             Some(inner) => inner.next(),

@@ -26,6 +26,7 @@ macro_rules! seq {
         impl<$T0, $($T, )*> ::core::convert::From<( $T0, $($T, )* )>
             for $name<$T0, $($T, )*>
         {
+            #[inline]
             fn from(content: ( $T0, $($T, )* )) -> Self {
                 Self { content }
             }
@@ -105,6 +106,7 @@ macro_rules! seq {
                 $($T: $crate::iterators::Pairs<I, R>),*,
             > $crate::iterators::Pairs<I, R> for $name<$T0, $($T, )*>
         {
+            #[inline]
             fn for_self_or_each_child(&self, f: &mut impl $crate::re_exported::FnMut($crate::iterators::Token<I, R>)) {
                 self.content.0.for_self_or_each_child(f);
                 $(
@@ -114,11 +116,13 @@ macro_rules! seq {
         }
         impl<$T0, $($T, )*> ::core::ops::Deref for $name<T0, $($T, )*> {
             type Target = ( T0, $($T, )* );
+            #[inline]
             fn deref(&self) -> &Self::Target {
                 &self.content
             }
         }
         impl<$T0, $($T, )*> ::core::ops::DerefMut for $name<T0, $($T, )*> {
+            #[inline]
             fn deref_mut(&mut self) -> &mut Self::Target {
                 &mut self.content
             }
@@ -126,6 +130,7 @@ macro_rules! seq {
         impl<$T0: ::core::cmp::PartialEq, $($T: ::core::cmp::PartialEq, )*>
             ::core::cmp::PartialEq for $name<T0, $($T, )*>
         {
+            #[inline]
             fn eq(&self, other: &Self) -> ::core::primitive::bool {
                 self.content.$t0 == other.content.$t0
                 $(

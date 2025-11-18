@@ -351,11 +351,13 @@ impl<N> From<N> for Positive<N> {
 }
 impl<N> Deref for Positive<N> {
     type Target = N;
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.content
     }
 }
 impl<N> DerefMut for Positive<N> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.content
     }
@@ -1127,6 +1129,7 @@ pub type ASCII = CharRange<'\x00', '\x7f'>;
 /// Match char by a predicate.
 ///
 /// Return Some(char) if matched.
+#[inline]
 pub fn match_char_by(position: &mut impl Cursor, pred: impl FnOnce(char) -> bool) -> Option<char> {
     let mut res = None;
     position.match_char_by(|c| {

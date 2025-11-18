@@ -35,6 +35,7 @@ impl<S: RefStr> Position<S> {
     /// # Safety:
     ///
     /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
+    #[inline]
     pub(crate) unsafe fn new_unchecked(input: S, pos: usize) -> Self {
         debug_assert!(input.get(pos..).is_some());
 
@@ -53,11 +54,13 @@ impl<S: RefStr> Position<S> {
     /// assert_eq!(Position::new(heart, 1), None);
     /// assert_ne!(Position::new(heart, cheart.len_utf8()), None);
     /// ```
+    #[inline]
     pub fn new(input: S, pos: usize) -> Option<Self> {
         input.get(pos..).map(|_| Self { input, pos })
     }
 
     /// Create a new `Position` at the end of the input.
+    #[inline]
     pub fn new_at_end(input: S) -> Self {
         Self {
             pos: input.len(),
@@ -138,10 +141,12 @@ impl<S: RefStr> Position<S> {
         indexer.line_of(&self.input, self.pos)
     }
 
+    #[inline]
     pub(crate) fn find_line_start(&self, indexer: impl LineIndexer<S>) -> usize {
         indexer.find_line_start(&self.input, self.pos)
     }
 
+    #[inline]
     pub(crate) fn find_line_end(&self, indexer: impl LineIndexer<S>) -> usize {
         indexer.find_line_end(&self.input, self.pos)
     }
@@ -349,6 +354,7 @@ impl<S: RefStr> fmt::Display for Position<S> {
 }
 
 impl<S: RefStr> PartialEq for Position<S> {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.input.ptr_eq(&other.input) && self.pos == other.pos
     }
@@ -357,12 +363,14 @@ impl<S: RefStr> PartialEq for Position<S> {
 impl<S: RefStr> Eq for Position<S> {}
 
 impl<S: RefStr> PartialOrd for Position<S> {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl<S: RefStr> Ord for Position<S> {
+    #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         debug_assert_eq!(
             self.input, other.input,

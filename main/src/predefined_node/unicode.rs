@@ -56,6 +56,7 @@ macro_rules! unicode {
             }
         }
         impl<S, R: RuleType> Pairs<S, R> for $property_ident {
+            #[inline]
             fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<S, R>)) {}
         }
     };

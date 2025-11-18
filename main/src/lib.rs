@@ -92,16 +92,19 @@ pub trait RuleType: pest::RuleType {
 /// A trait with a single method that parses strings into typed concrete syntax tree.
 pub trait TypedParser<R: RuleType> {
     /// Try to parse a `&str` into a tree starting from T.
+    #[inline]
     fn try_parse<I: Input, T: ParsableTypedNode<I::Cursor, R>>(
         input: I,
     ) -> Result<T, Box<error::Error<R>>> {
         T::try_parse(input)
     }
     /// Parse a `&str` into a tree starting from T.
+    #[inline]
     fn parse<I: Input, T: NeverFailedParsableTypedNode<I::Cursor, R>>(input: I) -> T {
         T::parse(input.as_cursor())
     }
     /// Check whether a `&str` can be parsed into a tree starting from T.
+    #[inline]
     fn try_check<I: Input, T: ParsableTypedNode<I::Cursor, R>>(
         input: I,
     ) -> Result<(), Box<error::Error<R>>> {

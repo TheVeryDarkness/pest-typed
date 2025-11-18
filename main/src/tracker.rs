@@ -57,6 +57,7 @@ pub struct Tracker<S, R: RuleType> {
 }
 impl<S: RefStr, R: RuleType> Tracker<S, R> {
     /// Create an empty tracker for attempts.
+    #[inline]
     pub const fn new(position: Position<S>) -> Self {
         Self {
             position,
@@ -65,9 +66,11 @@ impl<S: RefStr, R: RuleType> Tracker<S, R> {
             stack: Vec::new(),
         }
     }
+    #[inline]
     fn clear(&mut self) {
         self.attempts.clear();
     }
+    #[inline]
     fn prepare(&mut self, pos: Position<S>) -> bool {
         debug_assert_eq!(pos.input(), self.position.input());
         match pos.cmp(&self.position) {
@@ -80,6 +83,7 @@ impl<S: RefStr, R: RuleType> Tracker<S, R> {
             }
         }
     }
+    #[inline]
     fn during<Ret, const POSTIVE: bool>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
         let original = self.positive;
         self.positive = POSTIVE;
@@ -88,13 +92,16 @@ impl<S: RefStr, R: RuleType> Tracker<S, R> {
         res
     }
     /// Set the tracker to positive during calling `f`.
+    #[inline]
     pub fn positive_during<Ret>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
         self.during::<Ret, true>(f)
     }
     /// Set the tracker to negative during calling `f`.
+    #[inline]
     pub fn negative_during<Ret>(&mut self, f: impl FnOnce(&mut Self) -> Ret) -> Ret {
         self.during::<Ret, false>(f)
     }
+    #[inline]
     fn get_entry(&mut self, pos: impl Cursor) -> &mut (Vec<R>, Vec<R>, Vec<SpecialError>) {
         // Find lowest rule with the different position.
         let mut upper = None;
@@ -264,6 +271,7 @@ impl<S: RefStr, R: RuleType> Tracker<S, R> {
     /// - Attempts on current position.
     ///
     /// This information is all you need to generate an [Error].
+    #[inline]
     pub fn finish(self) -> (Position<S>, BTreeMap<Option<R>, Tracked<R>>) {
         (self.position, self.attempts)
     }

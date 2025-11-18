@@ -41,6 +41,7 @@ impl<S: RefStr> Span<S> {
     /// # Safety
     ///
     /// `input[start..end]` must be a valid subslice; that is, said indexing should not panic.
+    #[inline]
     pub(crate) unsafe fn new_unchecked(input: S, start: usize, end: usize) -> Self {
         debug_assert!(input.get(start..end).is_some());
         Self { input, start, end }
@@ -56,6 +57,7 @@ impl<S: RefStr> Span<S> {
     /// let span = Span::new_full(input);
     /// assert_eq!(span.as_str(), input);
     /// ```
+    #[inline]
     pub fn new_full(input: S) -> Self {
         Self {
             start: 0,
@@ -74,6 +76,7 @@ impl<S: RefStr> Span<S> {
     /// let span = Span::new_at_end(input);
     /// assert_eq!(span.as_str(), "");
     /// ```
+    #[inline]
     pub fn new_at_end(input: S) -> Self {
         Self {
             start: input.len(),
@@ -93,6 +96,7 @@ impl<S: RefStr> Span<S> {
     /// assert_eq!(None, Span::new(input, 100, 0));
     /// assert!(Span::new(input, 0, input.len()).is_some());
     /// ```
+    #[inline]
     pub fn new(input: S, start: usize, end: usize) -> Option<Self> {
         if input.get(start..end).is_some() {
             Some(Self { input, start, end })
@@ -113,6 +117,7 @@ impl<S: RefStr> Span<S> {
     /// ```
     ///
     /// # Examples
+    #[inline]
     pub fn get(&self, range: impl RangeBounds<usize>) -> Option<Self> {
         let start = match range.start_bound() {
             Bound::Included(offset) => *offset,
@@ -272,6 +277,7 @@ impl<S: RefStr> Span<S> {
     /// let span = Span::new(input, 1, 7).unwrap();
     /// assert_eq!(span.get_input(), input);
     /// ```
+    #[inline]
     pub fn get_input(&self) -> S {
         self.input.clone()
     }
@@ -318,6 +324,7 @@ impl<S: RefStr> Span<S> {
     /// let span = start_pos.span(&state.position().clone());
     /// assert_eq!(span.lines_span().collect::<Vec<_>>(), vec![Span::new(input, 2, 4).unwrap(), Span::new(input, 4, 5).unwrap()]);
     /// ```
+    #[inline]
     pub const fn lines_span<L: LineIndexer<S>>(&self, indexer: L) -> LinesSpan<'_, S, L> {
         LinesSpan {
             span: self,
@@ -522,6 +529,7 @@ impl<S: RefStr> fmt::Debug for Span<S> {
 }
 
 impl<S: RefStr> PartialEq for Span<S> {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.input.ptr_eq(&other.input) && self.start == other.start && self.end == other.end
     }
@@ -605,6 +613,7 @@ impl<S: RefStr> fmt::Display for Span<S> {
 /// let merged = merge_spans(&span1, &span2);
 /// assert!(merged.is_none());
 /// ```
+#[inline]
 pub fn merge_spans<S: RefStr>(a: &Span<S>, b: &Span<S>) -> Option<Span<S>> {
     if a.end() >= b.start() && a.start() <= b.end() {
         // The spans overlap or are contiguous, so they can be merged.

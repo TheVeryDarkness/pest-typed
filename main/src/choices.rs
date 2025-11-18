@@ -39,6 +39,7 @@ macro_rules! choices_helper {
         }
         impl<Ret, $V0, $V1, $($V, )*> $v0<Ret, $V0, $V1, $($V, )*>
         {
+            #[inline]
             pub fn else_if(self, f: impl FnOnce($V0) -> Ret) -> <Self as $crate::choices::NextChoice>::Next {
                 match self {
                     Self::$v0(c) => $v1::Res(f(c)),
@@ -58,6 +59,7 @@ macro_rules! choices_helper {
             Res(Ret),
         }
         impl<Ret, $V0> $v0<Ret, $V0> {
+            #[inline]
             pub fn else_then(self, f: impl FnOnce($V0) -> Ret) -> Ret {
                 match self {
                     Self::$v0(c) => f(c),
@@ -92,6 +94,7 @@ macro_rules! choices {
             impl<$V0, $($V, )* > $name<$V0, $($V, )* > {
                 /// Traverse all branches with reference.
                 #[allow(clippy::needless_lifetimes)]
+                #[inline]
                 pub const fn reference<'n, Ret>(&'n self) -> helper::$v0<Ret, &'n $V0, $(&'n $V, )*> {
                     match self {
                         Self::$v0(c) => helper::$v0::$v0(c),
@@ -101,10 +104,12 @@ macro_rules! choices {
                     }
                 }
                 /// Invoke if is not None and is the first case.
+                #[inline]
                 pub fn if_then<'n, Ret>(&'n self, f: impl FnOnce(&'n $V0) -> Ret) -> <helper::$v0<Ret, &'n $V0, $(&'n $V, )* > as $crate::choices::NextChoice>::Next {
                     self.reference().else_if(f)
                 }
                 /// Traverse all branches with reference.
+                #[inline]
                 pub fn consume<Ret>(self) -> helper::$v0<Ret, $V0, $($V, )*> {
                     match self {
                         Self::$v0(c) => helper::$v0::$v0(c),
@@ -114,10 +119,12 @@ macro_rules! choices {
                     }
                 }
                 /// Invoke if is not None and is the first case.
+                #[inline]
                 pub fn consume_if_then<Ret>(self, f: impl FnOnce($V0) -> Ret) -> <helper::$v0<Ret, $V0, $($V, )* > as $crate::choices::NextChoice>::Next {
                     self.consume().else_if(f)
                 }
                 /// Access inner node if matched.
+                #[inline]
                 pub const fn $v0(&self) -> ::core::option::Option<&$V0> {
                     if let Self::$v0(res) = self {
                         ::core::option::Option::Some(res)
@@ -184,6 +191,7 @@ macro_rules! choices {
                 $($V: $crate::iterators::Pairs<S, R>, )*
             > $crate::iterators::Pairs<S, R> for $name<$V0, $($V, )* >
             {
+                #[inline]
                 fn for_self_or_each_child(&self, f: &mut impl FnMut($crate::iterators::Token<S, R>)) {
                     match self {
                         Self::$v0($v0) =>$v0.for_self_or_each_child(f),

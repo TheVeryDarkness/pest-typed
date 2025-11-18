@@ -43,6 +43,7 @@ impl<T> Default for AtomicRepeat<T> {
     }
 }
 impl<C: Cursor, R: RuleType, T: TypedNode<C, R>> NeverFailedTypedNode<C, R> for AtomicRepeat<T> {
+    #[inline]
     fn parse_with(mut input: C, stack: &mut Stack<Span<C::String>>) -> (C, Self) {
         let mut vec = Vec::new();
         let mut tracker = Tracker::new(input.as_position());
@@ -61,6 +62,7 @@ impl<C: Cursor, R: RuleType, T: TypedNode<C, R>> NeverFailedTypedNode<C, R> for 
         (input, Self { content: vec })
     }
 
+    #[inline]
     fn check_with(mut input: C, stack: &mut Stack<Span<C::String>>) -> C {
         let mut tracker = Tracker::new(input.as_position());
 
@@ -127,6 +129,7 @@ impl<
         const SKIP: usize,
     > NeverFailedTypedNode<C, R> for RepeatMin<Skipped<T, Skip, SKIP>, 0>
 {
+    #[inline]
     fn parse_with(mut input: C, stack: &mut Stack<Span<C::String>>) -> (C, Self) {
         let mut vec = Vec::new();
         let mut tracker = Tracker::new(input.as_position());
@@ -145,6 +148,7 @@ impl<
         (input, Self { content: vec })
     }
 
+    #[inline]
     fn check_with(mut input: C, stack: &mut Stack<Span<C::String>>) -> C {
         let mut tracker = Tracker::new(input.as_position());
 
@@ -302,6 +306,7 @@ impl<
         (input, Self { content: vec })
     }
 
+    #[inline]
     fn check_with(mut input: C, stack: &mut Stack<Span<C::String>>) -> C {
         let mut tracker = Tracker::new(input.as_position());
 

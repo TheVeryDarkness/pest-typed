@@ -56,6 +56,7 @@ pub trait ParsableTypedNode<C: Cursor, R: RuleType>: TypedNode<C, R> {
     ) -> Option<Self>;
     /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
+    #[inline]
     fn try_parse_with_cache(
         input: impl Input<Cursor = C>,
         indexer: impl LineIndexer<C::String>,
@@ -70,6 +71,7 @@ pub trait ParsableTypedNode<C: Cursor, R: RuleType>: TypedNode<C, R> {
     }
     /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
+    #[inline]
     fn try_parse_partial_with_cache(
         input: impl Input<Cursor = C>,
         indexer: impl LineIndexer<C::String>,
@@ -84,11 +86,13 @@ pub trait ParsableTypedNode<C: Cursor, R: RuleType>: TypedNode<C, R> {
     }
     /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
+    #[inline]
     fn try_parse(input: impl Input<Cursor = C>) -> Result<Self, Box<Error<R>>> {
         Self::try_parse_with_cache(input, ())
     }
     /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
+    #[inline]
     fn try_parse_partial(input: impl Input<Cursor = C>) -> Result<(C, Self), Box<Error<R>>> {
         Self::try_parse_partial_with_cache(input, ())
     }
@@ -100,6 +104,7 @@ pub trait ParsableTypedNode<C: Cursor, R: RuleType>: TypedNode<C, R> {
         tracker: &mut Tracker<C::String, R>,
     ) -> bool;
     /// Check whether the typed node match the whole input.
+    #[inline]
     fn try_check_with_cache(
         input: impl Input<Cursor = C>,
         indexer: impl LineIndexer<C::String>,
@@ -114,6 +119,7 @@ pub trait ParsableTypedNode<C: Cursor, R: RuleType>: TypedNode<C, R> {
     }
     /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
+    #[inline]
     fn try_check_partial_with_cache(
         input: impl Input<Cursor = C>,
         indexer: impl LineIndexer<C::String>,
@@ -127,11 +133,13 @@ pub trait ParsableTypedNode<C: Cursor, R: RuleType>: TypedNode<C, R> {
         }
     }
     /// Check whether the typed node match the whole input.
+    #[inline]
     fn try_check(input: impl Input<Cursor = C>) -> Result<(), Box<Error<R>>> {
         Self::try_check_with_cache(input, ())
     }
     /// Try to parse the whole input into given typed node.
     /// A rule is not atomic by default.
+    #[inline]
     fn try_check_partial(input: impl Input<Cursor = C>) -> Result<C, Box<Error<R>>> {
         Self::try_check_partial_with_cache(input, ())
     }
@@ -143,12 +151,14 @@ pub trait NeverFailedParsableTypedNode<C: Cursor, R: RuleType>: NeverFailedTyped
     fn parse_with_until_end(cursor: C, stack: &mut Stack<Span<C::String>>) -> Self;
     /// Parse the whole input into given typed node.
     /// A rule is not atomic by default.
+    #[inline]
     fn parse(cursor: C) -> Self {
         let mut stack = Stack::new();
         Self::parse_with_until_end(cursor, &mut stack)
     }
     /// Parse the whole input into given typed node.
     /// A rule is not atomic by default.
+    #[inline]
     fn parse_partial(cursor: C) -> (C, Self) {
         let mut stack = Stack::new();
         Self::parse_with(cursor, &mut stack)
@@ -159,6 +169,7 @@ pub trait RuleStorage<R: RuleType> {
     fn rule(&self) -> R;
 }
 impl<R: RuleType, T: RuleWrapper<R>> RuleStorage<R> for T {
+    #[inline(always)]
     fn rule(&self) -> R {
         T::RULE
     }
@@ -260,6 +271,7 @@ impl<C: Cursor, R: RuleType, T: TypedNode<C, R>> TypedNode<C, R> for Option<T> {
         }
     }
 
+    #[inline]
     fn try_check_partial_with(
         input: C,
         stack: &mut Stack<Span<C::String>>,

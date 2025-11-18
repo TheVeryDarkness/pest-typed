@@ -31,18 +31,22 @@ pub trait LineIndexer<S: RefStr> {
 }
 
 impl<S: RefStr, T: LineIndexer<S>> LineIndexer<S> for &T {
+    #[inline(always)]
     fn line_col(&self, input: &S, pos: usize) -> (usize, usize) {
         T::line_col(*self, input, pos)
     }
 
+    #[inline(always)]
     fn line_of(&self, input: &S, pos: usize) -> S {
         T::line_of(*self, input, pos)
     }
 
+    #[inline(always)]
     fn find_line_start(&self, input: &S, pos: usize) -> usize {
         T::find_line_start(*self, input, pos)
     }
 
+    #[inline(always)]
     fn find_line_end(&self, input: &S, pos: usize) -> usize {
         T::find_line_end(*self, input, pos)
     }
@@ -94,10 +98,12 @@ impl<S: RefStr> LineIndexer<S> for () {
         line_col
     }
 
+    #[inline]
     fn line_of(&self, input: &S, pos: usize) -> S {
         input.get_checked(self.find_line_start(input, pos)..self.find_line_end(input, pos))
     }
 
+    #[inline]
     fn find_line_start(&self, input: &S, pos: usize) -> usize {
         let start = input
             .as_str()
@@ -111,6 +117,7 @@ impl<S: RefStr> LineIndexer<S> for () {
         }
     }
 
+    #[inline]
     fn find_line_end(&self, input: &S, pos: usize) -> usize {
         let end = input
             .as_str()
@@ -133,6 +140,7 @@ pub struct CachedLineIndexer {
 
 impl CachedLineIndexer {
     /// Creates a new `CachedLineIndexer` from the input string.
+    #[inline]
     pub fn new(input: &str) -> Self {
         let mut line_starts = Vec::new();
         for (i, c) in input.char_indices() {
@@ -143,6 +151,7 @@ impl CachedLineIndexer {
         Self { line_starts }
     }
     /// Creates a new `CachedLineIndexer` with no lines.
+    #[inline]
     pub const fn empty() -> Self {
         Self {
             line_starts: Vec::new(),
@@ -151,6 +160,7 @@ impl CachedLineIndexer {
 }
 
 impl<S: RefStr> LineIndexer<S> for CachedLineIndexer {
+    #[inline]
     fn line_col(&self, input: &S, pos: usize) -> (usize, usize) {
         let line = self.line_starts.partition_point(|&start| start <= pos);
         let line_start = line
@@ -160,6 +170,7 @@ impl<S: RefStr> LineIndexer<S> for CachedLineIndexer {
         (line + 1, col + 1)
     }
 
+    #[inline]
     fn line_of(&self, input: &S, pos: usize) -> S {
         let line = self.line_starts.partition_point(|&start| start <= pos);
         let line_start = line
@@ -173,12 +184,14 @@ impl<S: RefStr> LineIndexer<S> for CachedLineIndexer {
         input.get_checked(line_start..next_line_start)
     }
 
+    #[inline]
     fn find_line_start(&self, _: &S, pos: usize) -> usize {
         let line = self.line_starts.partition_point(|&start| start <= pos);
         line.checked_sub(1)
             .map_or_else(|| 0, |line| self.line_starts[line])
     }
 
+    #[inline]
     fn find_line_end(&self, input: &S, pos: usize) -> usize {
         let line = self.line_starts.partition_point(|&start| start <= pos);
         self.line_starts

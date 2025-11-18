@@ -37,15 +37,18 @@ pub unsafe trait Cursor: Sized + Clone {
     // fn line_of(&self) -> &'i str;
 
     /// To position.
+    #[inline]
     fn as_position(&self) -> Position<Self::String> {
         unsafe { Position::new_unchecked(self.input(), self.byte_offset()) }
     }
     /// Create a [Span].
+    #[inline]
     fn span(&self, end: &Self) -> Span<Self::String> {
         self.as_position().span(&end.as_position())
     }
 
     /// Match a string.
+    #[inline]
     fn match_string(&mut self, string: &str) -> bool {
         let res = self.get().starts_with(string);
         if res {
@@ -54,6 +57,7 @@ pub unsafe trait Cursor: Sized + Clone {
         res
     }
     /// Match an string insensitively.
+    #[inline]
     fn match_insensitive(&mut self, string: &str) -> bool {
         let res = self.get().starts_with_insensitive(string);
         if res {
@@ -62,6 +66,7 @@ pub unsafe trait Cursor: Sized + Clone {
         res
     }
     /// Skip until one of several strings.
+    #[inline]
     fn skip_until(&mut self, strings: &[&str]) -> bool {
         for from in self.byte_offset()..self.end() {
             let Some(string) = self.input().get(from..) else {
@@ -82,6 +87,7 @@ pub unsafe trait Cursor: Sized + Clone {
         false
     }
     /// Skip several characters.
+    #[inline]
     fn skip(&mut self, n: usize) -> bool {
         let skipped = {
             let mut len = 0;
@@ -101,6 +107,7 @@ pub unsafe trait Cursor: Sized + Clone {
         true
     }
     /// Match a character in a range.
+    #[inline]
     fn match_range(&mut self, range: Range<char>) -> bool {
         if let Some(c) = self.get().chars().next() {
             if range.start <= c && c <= range.end {
@@ -114,6 +121,7 @@ pub unsafe trait Cursor: Sized + Clone {
         }
     }
     /// Match a character by a predicate.
+    #[inline]
     fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool {
         if let Some(c) = self.get().chars().next() {
             if f(c) {
@@ -127,6 +135,7 @@ pub unsafe trait Cursor: Sized + Clone {
         }
     }
     /// Progress to next character.
+    #[inline]
     fn advance_char(&mut self) -> Option<char> {
         let c = self.get().chars().next();
         if let Some(c) = c {
@@ -148,10 +157,12 @@ pub unsafe trait Cursor: Sized + Clone {
     fn end(&self) -> usize;
 
     /// Check if is at the start of the input.
+    #[inline]
     fn at_start(&self) -> bool {
         self.byte_offset() == self.start()
     }
     /// Check if is at the end of the input.
+    #[inline]
     fn at_end(&self) -> bool {
         self.byte_offset() == self.end()
     }
@@ -160,18 +171,22 @@ pub unsafe trait Cursor: Sized + Clone {
 unsafe impl<S: RefStr> Cursor for Position<S> {
     type String = S;
 
+    #[inline(always)]
     fn byte_offset(&self) -> usize {
         self.pos
     }
 
+    #[inline(always)]
     fn input(&self) -> S {
         self.input.clone()
     }
 
+    #[inline]
     fn get(&self) -> S {
         unsafe { self.input().get_range_unchecked(self.pos..) }
     }
 
+    #[inline]
     fn advance_char(&mut self) -> Option<char> {
         let c = self.get().chars().next();
         if c.is_some() {
@@ -180,13 +195,16 @@ unsafe impl<S: RefStr> Cursor for Position<S> {
         c
     }
 
+    #[inline(always)]
     unsafe fn cursor(&mut self) -> &mut usize {
         &mut self.pos
     }
 
+    #[inline(always)]
     fn start(&self) -> usize {
         0
     }
+    #[inline(always)]
     fn end(&self) -> usize {
         self.input().len()
     }
@@ -232,25 +250,31 @@ pub struct SpanCursor<I> {
 unsafe impl<S: RefStr> Cursor for PositionCursor<S> {
     type String = S;
 
+    #[inline(always)]
     fn byte_offset(&self) -> usize {
         self.cursor
     }
 
+    #[inline(always)]
     fn input(&self) -> S {
         self.input.clone()
     }
 
+    #[inline]
     fn get(&self) -> S {
         unsafe { self.input.get_range_unchecked(self.cursor..) }
     }
 
+    #[inline(always)]
     unsafe fn cursor(&mut self) -> &mut usize {
         &mut self.cursor
     }
 
+    #[inline(always)]
     fn start(&self) -> usize {
         self.start
     }
+    #[inline(always)]
     fn end(&self) -> usize {
         self.input().len()
     }
@@ -259,25 +283,31 @@ unsafe impl<S: RefStr> Cursor for PositionCursor<S> {
 unsafe impl<S: RefStr> Cursor for SpanCursor<S> {
     type String = S;
 
+    #[inline(always)]
     fn byte_offset(&self) -> usize {
         self.cursor
     }
 
+    #[inline(always)]
     fn input(&self) -> S {
         self.input.clone()
     }
 
+    #[inline]
     fn get(&self) -> S {
         unsafe { self.input.get_range_unchecked(self.cursor..self.end) }
     }
 
+    #[inline(always)]
     unsafe fn cursor(&mut self) -> &mut usize {
         &mut self.cursor
     }
 
+    #[inline(always)]
     fn start(&self) -> usize {
         self.start
     }
+    #[inline(always)]
     fn end(&self) -> usize {
         self.end
     }
@@ -309,6 +339,7 @@ pub unsafe trait RefStr: Clone + Hash + PartialEq + Eq + fmt::Debug {
     /// Get length in bytes.
     fn len(&self) -> usize;
     /// Check if is empty.
+    #[inline(always)]
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -340,6 +371,7 @@ impl<S: RefStr> Input for S {
     type Cursor = Position<Self>;
     type String = Self;
 
+    #[inline]
     fn as_cursor(&self) -> Self::Cursor {
         Position::from_start(self.clone())
     }
@@ -349,84 +381,75 @@ impl<'i> Input for &'i String {
     type Cursor = Position<&'i str>;
     type String = &'i str;
 
+    #[inline]
     fn as_cursor(&self) -> Self::Cursor {
         Position::from_start(self)
     }
 }
 
 unsafe impl RefStr for &str {
+    #[inline(always)]
     fn from_static(s: &'static str) -> Self {
         s
     }
 
+    #[inline(always)]
     fn len(&self) -> usize {
         str::len(self)
     }
 
+    #[inline(always)]
     fn as_str(&self) -> &str {
         self
     }
 
+    #[inline(always)]
     unsafe fn get_range_unchecked(&self, range: impl SliceIndex<str, Output = str>) -> Self {
         &self[range]
     }
 
+    #[inline(always)]
     fn get(&self, range: impl SliceIndex<str, Output = str>) -> Option<Self> {
         str::get(self, range)
     }
 
+    #[inline(always)]
     fn get_checked(&self, range: impl SliceIndex<str, Output = str>) -> Self {
         &self[range]
     }
 
+    #[inline(always)]
     fn starts_with(&self, string: &str) -> bool {
         str::starts_with(self, string)
     }
 
+    #[inline]
     fn starts_with_insensitive(&self, string: &str) -> bool {
         self.get(0..string.len())
             .is_some_and(|prefix| prefix.eq_ignore_ascii_case(string))
     }
 
+    #[inline(always)]
     fn chars(&self) -> Chars<'_> {
         str::chars(self)
     }
 
+    #[inline(always)]
     fn ptr_eq(&self, other: &Self) -> bool {
         ptr::eq::<str>(*self, *other)
     }
 
+    #[inline(always)]
     fn ptr_hash<H: core::hash::Hasher>(&self, state: &mut H) {
         ptr::hash::<str, H>(*self, state);
     }
 }
 
-// unsafe impl<'i> Str for &'i String {
-//     fn len(&self) -> usize {
-//         String::len(self)
-//     }
-
-//     unsafe fn get_unchecked(&self, range: Range<usize>) -> &str {
-//         &self[range]
-//     }
-
-//     fn get(&self, range: Range<usize>) -> Option<&str> {
-//         str::get(self, range)
-//     }
-
-//     fn starts_with(&self, string: &str) -> bool {
-//         str::starts_with(self, string)
-//     }
-
-//     fn chars(&self) -> Chars<'_> {
-//         str::chars(self)
-//     }
-// }
-
 impl<S: RefStr> Input for Position<S> {
     type Cursor = PositionCursor<S>;
     type String = S;
 
+    #[inline]
     fn as_cursor(&self) -> Self::Cursor {
         let input = self.input.clone();
         let start = self.pos();
@@ -443,6 +466,7 @@ impl<S: RefStr> Input for Span<S> {
     type Cursor = SpanCursor<S>;
     type String = S;
 
+    #[inline]
     fn as_cursor(&self) -> Self::Cursor {
         let input = self.get_input();
         let start = self.start();
