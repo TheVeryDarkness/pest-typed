@@ -503,144 +503,99 @@ pub mod rules_impl {
         }
         :: pest_typed :: rule ! (pub r#repeat_once_atomic , "Corresponds to expression: `string+`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_once_atomic , super :: super :: generics :: RepOnce :: < super :: super :: rules :: r#string :: < S , 0 > , S , 0 > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_once_atomic<S, INHERITED> {}
-        :: pest_typed :: rule ! (pub r#repeat_min_max , "Corresponds to expression: `(string ~ string ~ string?)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min_max , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < :: pest_typed :: re_exported :: Option :: < super :: super :: rules :: r#string :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#repeat_min_max , "Corresponds to expression: `string{2, 3}`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min_max , super :: super :: generics :: RepMinMax :: < super :: super :: rules :: r#string :: < S , INHERITED > , S , INHERITED , 2usize , 3usize > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_min_max<S, INHERITED> {
             #[doc = "A helper function to access [`string`]."]
             #[allow(non_snake_case)]
             pub fn r#string<'s>(
                 &'s self,
-            ) -> (
-                &'s super::super::rules::r#string<S, INHERITED>,
-                &'s super::super::rules::r#string<S, INHERITED>,
-                ::pest_typed::re_exported::Option<&'s super::super::rules::r#string<S, INHERITED>>,
-            ) {
+            ) -> ::pest_typed::re_exported::Vec<&'s super::super::rules::r#string<S, INHERITED>>
+            {
                 let res = &*self.content;
                 {
-                    let res = (
-                        {
-                            let res = &res.content.0.matched;
+                    let res = res
+                        .content
+                        .iter()
+                        .map(|res| {
+                            let res = &res.matched;
                             res
-                        },
-                        {
-                            let res = &res.content.1.matched;
-                            res
-                        },
-                        {
-                            let res = &res.content.2.matched;
-                            {
-                                let res = res.as_ref().map(|res| res);
-                                res
-                            }
-                        },
-                    );
+                        })
+                        .collect::<::pest_typed::re_exported::Vec<_>>();
                     res
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat_min_max_atomic , "Corresponds to expression: `(string ~ string ~ string?)`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min_max_atomic , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < :: pest_typed :: re_exported :: Option :: < super :: super :: rules :: r#string :: < S , 0 > > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
+        :: pest_typed :: rule ! (pub r#repeat_min_max_atomic , "Corresponds to expression: `string{2, 3}`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min_max_atomic , super :: super :: generics :: RepMinMax :: < super :: super :: rules :: r#string :: < S , 0 > , S , 0 , 2usize , 3usize > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_min_max_atomic<S, INHERITED> {}
-        :: pest_typed :: rule ! (pub r#repeat_exact , "Corresponds to expression: `(string ~ string)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_exact , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#repeat_exact , "Corresponds to expression: `string{2}`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_exact , super :: super :: generics :: RepExact :: < super :: super :: rules :: r#string :: < S , INHERITED > , S , INHERITED , 2usize > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_exact<S, INHERITED> {
             #[doc = "A helper function to access [`string`]."]
             #[allow(non_snake_case)]
             pub fn r#string<'s>(
                 &'s self,
-            ) -> (
-                &'s super::super::rules::r#string<S, INHERITED>,
-                &'s super::super::rules::r#string<S, INHERITED>,
-            ) {
+            ) -> ::pest_typed::re_exported::Vec<&'s super::super::rules::r#string<S, INHERITED>>
+            {
                 let res = &*self.content;
                 {
-                    let res = (
-                        {
-                            let res = &res.content.0.matched;
+                    let res = res
+                        .content
+                        .iter()
+                        .map(|res| {
+                            let res = &res.matched;
                             res
-                        },
-                        {
-                            let res = &res.content.1.matched;
-                            res
-                        },
-                    );
+                        })
+                        .collect::<::pest_typed::re_exported::Vec<_>>();
                     res
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat_min , "Corresponds to expression: `(string ~ string ~ string*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#string :: < S , INHERITED > , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#repeat_min , "Corresponds to expression: `string{2,}`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min , super :: super :: generics :: RepMin :: < super :: super :: rules :: r#string :: < S , INHERITED > , S , INHERITED , 2usize > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_min<S, INHERITED> {
             #[doc = "A helper function to access [`string`]."]
             #[allow(non_snake_case)]
             pub fn r#string<'s>(
                 &'s self,
-            ) -> (
-                &'s super::super::rules::r#string<S, INHERITED>,
-                &'s super::super::rules::r#string<S, INHERITED>,
-                ::pest_typed::re_exported::Vec<&'s super::super::rules::r#string<S, INHERITED>>,
-            ) {
+            ) -> ::pest_typed::re_exported::Vec<&'s super::super::rules::r#string<S, INHERITED>>
+            {
                 let res = &*self.content;
                 {
-                    let res = (
-                        {
-                            let res = &res.content.0.matched;
+                    let res = res
+                        .content
+                        .iter()
+                        .map(|res| {
+                            let res = &res.matched;
                             res
-                        },
-                        {
-                            let res = &res.content.1.matched;
-                            res
-                        },
-                        {
-                            let res = &res.content.2.matched;
-                            {
-                                let res = res
-                                    .content
-                                    .iter()
-                                    .map(|res| {
-                                        let res = &res.matched;
-                                        res
-                                    })
-                                    .collect::<::pest_typed::re_exported::Vec<_>>();
-                                res
-                            }
-                        },
-                    );
+                        })
+                        .collect::<::pest_typed::re_exported::Vec<_>>();
                     res
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat_min_atomic , "Corresponds to expression: `(string ~ string ~ string*)`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min_atomic , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#string :: < S , 0 > , S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
+        :: pest_typed :: rule ! (pub r#repeat_min_atomic , "Corresponds to expression: `string{2,}`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min_atomic , super :: super :: generics :: RepMin :: < super :: super :: rules :: r#string :: < S , 0 > , S , 0 , 2usize > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_min_atomic<S, INHERITED> {}
-        :: pest_typed :: rule ! (pub r#repeat_max , "Corresponds to expression: `(string? ~ string?)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_max , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < :: pest_typed :: re_exported :: Option :: < super :: super :: rules :: r#string :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < :: pest_typed :: re_exported :: Option :: < super :: super :: rules :: r#string :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#repeat_max , "Corresponds to expression: `string{,2}`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_max , super :: super :: generics :: RepMax :: < super :: super :: rules :: r#string :: < S , INHERITED > , S , INHERITED , 2usize > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_max<S, INHERITED> {
             #[doc = "A helper function to access [`string`]."]
             #[allow(non_snake_case)]
             pub fn r#string<'s>(
                 &'s self,
-            ) -> (
-                ::pest_typed::re_exported::Option<&'s super::super::rules::r#string<S, INHERITED>>,
-                ::pest_typed::re_exported::Option<&'s super::super::rules::r#string<S, INHERITED>>,
-            ) {
+            ) -> ::pest_typed::re_exported::Vec<&'s super::super::rules::r#string<S, INHERITED>>
+            {
                 let res = &*self.content;
                 {
-                    let res = (
-                        {
-                            let res = &res.content.0.matched;
-                            {
-                                let res = res.as_ref().map(|res| res);
-                                res
-                            }
-                        },
-                        {
-                            let res = &res.content.1.matched;
-                            {
-                                let res = res.as_ref().map(|res| res);
-                                res
-                            }
-                        },
-                    );
+                    let res = res
+                        .content
+                        .iter()
+                        .map(|res| {
+                            let res = &res.matched;
+                            res
+                        })
+                        .collect::<::pest_typed::re_exported::Vec<_>>();
                     res
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat_max_atomic , "Corresponds to expression: `(string? ~ string?)`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_max_atomic , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < :: pest_typed :: re_exported :: Option :: < super :: super :: rules :: r#string :: < S , 0 > > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < :: pest_typed :: re_exported :: Option :: < super :: super :: rules :: r#string :: < S , 0 > > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
+        :: pest_typed :: rule ! (pub r#repeat_max_atomic , "Corresponds to expression: `string{,2}`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_max_atomic , super :: super :: generics :: RepMax :: < super :: super :: rules :: r#string :: < S , 0 > , S , 0 , 2usize > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_max_atomic<S, INHERITED> {}
         :: pest_typed :: rule ! (pub r#soi_at_start , "Corresponds to expression: `(SOI ~ string)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#soi_at_start , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#SOI , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#soi_at_start<S, INHERITED> {
@@ -663,30 +618,43 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat_mutate_stack , "Corresponds to expression: `((PUSH(('a'..'c')) ~ \",\")* ~ POP ~ POP ~ POP)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_mutate_stack , super :: super :: generics :: Seq4 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: generics :: CharRange :: < 'a' , 'c' > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_2 > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#repeat_mutate_stack , "Corresponds to expression: `((((PUSH(('a'..'c')) ~ \",\")* ~ POP) ~ POP) ~ POP)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_mutate_stack , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: generics :: CharRange :: < 'a' , 'c' > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_2 > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_mutate_stack<S, INHERITED> {
             #[doc = "A helper function to access [`POP`]."]
             #[allow(non_snake_case)]
             pub fn r#POP<'s>(
                 &'s self,
             ) -> (
-                &'s super::super::rules::r#POP<S>,
-                &'s super::super::rules::r#POP<S>,
+                (
+                    &'s super::super::rules::r#POP<S>,
+                    &'s super::super::rules::r#POP<S>,
+                ),
                 &'s super::super::rules::r#POP<S>,
             ) {
                 let res = &*self.content;
                 {
                     let res = (
                         {
+                            let res = &res.content.0.matched;
+                            {
+                                let res = (
+                                    {
+                                        let res = &res.content.0.matched;
+                                        {
+                                            let res = &res.content.1.matched;
+                                            res
+                                        }
+                                    },
+                                    {
+                                        let res = &res.content.1.matched;
+                                        res
+                                    },
+                                );
+                                res
+                            }
+                        },
+                        {
                             let res = &res.content.1.matched;
-                            res
-                        },
-                        {
-                            let res = &res.content.2.matched;
-                            res
-                        },
-                        {
-                            let res = &res.content.3.matched;
                             res
                         },
                     );
@@ -748,7 +716,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#peek_ , "Corresponds to expression: `(PUSH(range) ~ PUSH(range) ~ PEEK ~ PEEK)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#peek_ , super :: super :: generics :: Seq4 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#PEEK :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#PEEK :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#peek_ , "Corresponds to expression: `(((PUSH(range) ~ PUSH(range)) ~ PEEK) ~ PEEK)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#peek_ , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#PEEK :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#PEEK :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#peek_<S, INHERITED> {
             #[doc = "A helper function to access [`PEEK`]."]
             #[allow(non_snake_case)]
@@ -762,11 +730,14 @@ pub mod rules_impl {
                 {
                     let res = (
                         {
-                            let res = &res.content.2.matched;
-                            res
+                            let res = &res.content.0.matched;
+                            {
+                                let res = &res.content.1.matched;
+                                res
+                            }
                         },
                         {
-                            let res = &res.content.3.matched;
+                            let res = &res.content.1.matched;
                             res
                         },
                     );
@@ -783,34 +754,40 @@ pub mod rules_impl {
             ) {
                 let res = &*self.content;
                 {
-                    let res = (
+                    let res = &res.content.0.matched;
+                    {
+                        let res = &res.content.0.matched;
                         {
-                            let res = &res.content.0.matched;
-                            {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                        {
-                            let res = &res.content.1.matched;
-                            {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                    );
-                    res
+                            let res = (
+                                {
+                                    let res = &res.content.0.matched;
+                                    {
+                                        let res = &res.content;
+                                        res
+                                    }
+                                },
+                                {
+                                    let res = &res.content.1.matched;
+                                    {
+                                        let res = &res.content;
+                                        res
+                                    }
+                                },
+                            );
+                            res
+                        }
+                    }
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#peek_all , "Corresponds to expression: `(PUSH(range) ~ PUSH(range) ~ PEEK_ALL)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#peek_all , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#PEEK_ALL :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#peek_all , "Corresponds to expression: `((PUSH(range) ~ PUSH(range)) ~ PEEK_ALL)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#peek_all , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#PEEK_ALL :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#peek_all<S, INHERITED> {
             #[doc = "A helper function to access [`PEEK_ALL`]."]
             #[allow(non_snake_case)]
             pub fn r#PEEK_ALL<'s>(&'s self) -> &'s super::super::rules::r#PEEK_ALL<S> {
                 let res = &*self.content;
                 {
-                    let res = &res.content.2.matched;
+                    let res = &res.content.1.matched;
                     res
                 }
             }
@@ -824,83 +801,121 @@ pub mod rules_impl {
             ) {
                 let res = &*self.content;
                 {
-                    let res = (
-                        {
-                            let res = &res.content.0.matched;
+                    let res = &res.content.0.matched;
+                    {
+                        let res = (
                             {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                        {
-                            let res = &res.content.1.matched;
+                                let res = &res.content.0.matched;
+                                {
+                                    let res = &res.content;
+                                    res
+                                }
+                            },
                             {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                    );
-                    res
+                                let res = &res.content.1.matched;
+                                {
+                                    let res = &res.content;
+                                    res
+                                }
+                            },
+                        );
+                        res
+                    }
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#peek_slice_23 , "Corresponds to expression: `(PUSH(range) ~ PUSH(range) ~ PUSH(range) ~ PUSH(range) ~ PUSH(range) ~ PEEK[1..-2])`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#peek_slice_23 , super :: super :: generics :: Seq6 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: PeekSlice2 :: < 1i32 , - 2i32 > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#peek_slice_23 , "Corresponds to expression: `(((((PUSH(range) ~ PUSH(range)) ~ PUSH(range)) ~ PUSH(range)) ~ PUSH(range)) ~ PEEK[1..-2])`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#peek_slice_23 , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: PeekSlice2 :: < 1i32 , - 2i32 > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#peek_slice_23<S, INHERITED> {
             #[doc = "A helper function to access [`range`]."]
             #[allow(non_snake_case)]
             pub fn r#range<'s>(
                 &'s self,
             ) -> (
-                &'s super::super::rules::r#range<S, INHERITED>,
-                &'s super::super::rules::r#range<S, INHERITED>,
-                &'s super::super::rules::r#range<S, INHERITED>,
-                &'s super::super::rules::r#range<S, INHERITED>,
+                (
+                    (
+                        (
+                            &'s super::super::rules::r#range<S, INHERITED>,
+                            &'s super::super::rules::r#range<S, INHERITED>,
+                        ),
+                        &'s super::super::rules::r#range<S, INHERITED>,
+                    ),
+                    &'s super::super::rules::r#range<S, INHERITED>,
+                ),
                 &'s super::super::rules::r#range<S, INHERITED>,
             ) {
                 let res = &*self.content;
                 {
-                    let res = (
-                        {
-                            let res = &res.content.0.matched;
+                    let res = &res.content.0.matched;
+                    {
+                        let res = (
                             {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                        {
-                            let res = &res.content.1.matched;
+                                let res = &res.content.0.matched;
+                                {
+                                    let res = (
+                                        {
+                                            let res = &res.content.0.matched;
+                                            {
+                                                let res = (
+                                                    {
+                                                        let res = &res.content.0.matched;
+                                                        {
+                                                            let res = (
+                                                                {
+                                                                    let res =
+                                                                        &res.content.0.matched;
+                                                                    {
+                                                                        let res = &res.content;
+                                                                        res
+                                                                    }
+                                                                },
+                                                                {
+                                                                    let res =
+                                                                        &res.content.1.matched;
+                                                                    {
+                                                                        let res = &res.content;
+                                                                        res
+                                                                    }
+                                                                },
+                                                            );
+                                                            res
+                                                        }
+                                                    },
+                                                    {
+                                                        let res = &res.content.1.matched;
+                                                        {
+                                                            let res = &res.content;
+                                                            res
+                                                        }
+                                                    },
+                                                );
+                                                res
+                                            }
+                                        },
+                                        {
+                                            let res = &res.content.1.matched;
+                                            {
+                                                let res = &res.content;
+                                                res
+                                            }
+                                        },
+                                    );
+                                    res
+                                }
+                            },
                             {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                        {
-                            let res = &res.content.2.matched;
-                            {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                        {
-                            let res = &res.content.3.matched;
-                            {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                        {
-                            let res = &res.content.4.matched;
-                            {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                    );
-                    res
+                                let res = &res.content.1.matched;
+                                {
+                                    let res = &res.content;
+                                    res
+                                }
+                            },
+                        );
+                        res
+                    }
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#pop_ , "Corresponds to expression: `(PUSH(range) ~ PUSH(range) ~ POP ~ POP)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#pop_ , super :: super :: generics :: Seq4 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#pop_ , "Corresponds to expression: `(((PUSH(range) ~ PUSH(range)) ~ POP) ~ POP)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#pop_ , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#pop_<S, INHERITED> {
             #[doc = "A helper function to access [`POP`]."]
             #[allow(non_snake_case)]
@@ -914,11 +929,14 @@ pub mod rules_impl {
                 {
                     let res = (
                         {
-                            let res = &res.content.2.matched;
-                            res
+                            let res = &res.content.0.matched;
+                            {
+                                let res = &res.content.1.matched;
+                                res
+                            }
                         },
                         {
-                            let res = &res.content.3.matched;
+                            let res = &res.content.1.matched;
                             res
                         },
                     );
@@ -935,34 +953,40 @@ pub mod rules_impl {
             ) {
                 let res = &*self.content;
                 {
-                    let res = (
+                    let res = &res.content.0.matched;
+                    {
+                        let res = &res.content.0.matched;
                         {
-                            let res = &res.content.0.matched;
-                            {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                        {
-                            let res = &res.content.1.matched;
-                            {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                    );
-                    res
+                            let res = (
+                                {
+                                    let res = &res.content.0.matched;
+                                    {
+                                        let res = &res.content;
+                                        res
+                                    }
+                                },
+                                {
+                                    let res = &res.content.1.matched;
+                                    {
+                                        let res = &res.content;
+                                        res
+                                    }
+                                },
+                            );
+                            res
+                        }
+                    }
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#pop_all , "Corresponds to expression: `(PUSH(range) ~ PUSH(range) ~ POP_ALL)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#pop_all , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP_ALL :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#pop_all , "Corresponds to expression: `((PUSH(range) ~ PUSH(range)) ~ POP_ALL)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#pop_all , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP_ALL :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#pop_all<S, INHERITED> {
             #[doc = "A helper function to access [`POP_ALL`]."]
             #[allow(non_snake_case)]
             pub fn r#POP_ALL<'s>(&'s self) -> &'s super::super::rules::r#POP_ALL<S> {
                 let res = &*self.content;
                 {
-                    let res = &res.content.2.matched;
+                    let res = &res.content.1.matched;
                     res
                 }
             }
@@ -976,34 +1000,37 @@ pub mod rules_impl {
             ) {
                 let res = &*self.content;
                 {
-                    let res = (
-                        {
-                            let res = &res.content.0.matched;
+                    let res = &res.content.0.matched;
+                    {
+                        let res = (
                             {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                        {
-                            let res = &res.content.1.matched;
+                                let res = &res.content.0.matched;
+                                {
+                                    let res = &res.content;
+                                    res
+                                }
+                            },
                             {
-                                let res = &res.content;
-                                res
-                            }
-                        },
-                    );
-                    res
+                                let res = &res.content.1.matched;
+                                {
+                                    let res = &res.content;
+                                    res
+                                }
+                            },
+                        );
+                        res
+                    }
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#pop_fail , "Corresponds to expression: `(PUSH(range) ~ !POP ~ range ~ POP)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#pop_fail , super :: super :: generics :: Seq4 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Negative :: < super :: super :: rules :: r#POP :: < S > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#range :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#pop_fail , "Corresponds to expression: `(((PUSH(range) ~ !POP) ~ range) ~ POP)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#pop_fail , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: rules :: r#range :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Negative :: < super :: super :: rules :: r#POP :: < S > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#range :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#pop_fail<S, INHERITED> {
             #[doc = "A helper function to access [`POP`]."]
             #[allow(non_snake_case)]
             pub fn r#POP<'s>(&'s self) -> &'s super::super::rules::r#POP<S> {
                 let res = &*self.content;
                 {
-                    let res = &res.content.3.matched;
+                    let res = &res.content.1.matched;
                     res
                 }
             }
@@ -1017,24 +1044,30 @@ pub mod rules_impl {
             ) {
                 let res = &*self.content;
                 {
-                    let res = (
-                        {
-                            let res = &res.content.0.matched;
+                    let res = &res.content.0.matched;
+                    {
+                        let res = (
                             {
-                                let res = &res.content;
+                                let res = &res.content.0.matched;
+                                {
+                                    let res = &res.content.0.matched;
+                                    {
+                                        let res = &res.content;
+                                        res
+                                    }
+                                }
+                            },
+                            {
+                                let res = &res.content.1.matched;
                                 res
-                            }
-                        },
-                        {
-                            let res = &res.content.2.matched;
-                            res
-                        },
-                    );
-                    res
+                            },
+                        );
+                        res
+                    }
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#checkpoint_restore , "Corresponds to expression: `(PUSH(\"\") ~ ((PUSH(\"a\") ~ \"b\" ~ POP) | (DROP ~ \"b\") | (POP ~ \"a\")) ~ EOI)`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#checkpoint_restore , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_5 > > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Choice3 :: < super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_6 > > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_7 > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#DROP , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_8 > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_9 > , super :: super :: generics :: Skipped < S > , 0 >) , > , > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#EOI :: < S > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Skipped :: < S > , true , Both , true);
+        :: pest_typed :: rule ! (pub r#checkpoint_restore , "Corresponds to expression: `((PUSH(\"\") ~ ((((PUSH(\"a\") ~ \"b\") ~ POP) | (DROP ~ \"b\")) | (POP ~ \"a\"))) ~ EOI)`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#checkpoint_restore , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_5 > > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Choice2 :: < super :: super :: generics :: Choice2 :: < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_6 > > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_7 > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#DROP , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_8 > , super :: super :: generics :: Skipped < S > , 0 >) , > , > , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_9 > , super :: super :: generics :: Skipped < S > , 0 >) , > , > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#EOI :: < S > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Skipped :: < S > , true , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#checkpoint_restore<S, INHERITED> {
             #[doc = "A helper function to access [`DROP`]."]
             #[allow(non_snake_case)]
@@ -1043,13 +1076,22 @@ pub mod rules_impl {
             ) -> ::pest_typed::re_exported::Option<&'s super::super::rules::r#DROP> {
                 let res = &*self.content;
                 {
-                    let res = &res.content.1.matched;
+                    let res = &res.content.0.matched;
                     {
-                        let res = res._1().map(|res| {
-                            let res = &res.content.0.matched;
+                        let res = &res.content.1.matched;
+                        {
+                            let res = res
+                                ._0()
+                                .map(|res| {
+                                    let res = res._1().map(|res| {
+                                        let res = &res.content.0.matched;
+                                        res
+                                    });
+                                    res
+                                })
+                                .flatten();
                             res
-                        });
-                        res
+                        }
                     }
                 }
             }
@@ -1058,7 +1100,7 @@ pub mod rules_impl {
             pub fn r#EOI<'s>(&'s self) -> &'s super::super::rules::r#EOI<S> {
                 let res = &*self.content;
                 {
-                    let res = &res.content.2.matched;
+                    let res = &res.content.1.matched;
                     res
                 }
             }
@@ -1072,25 +1114,34 @@ pub mod rules_impl {
             ) {
                 let res = &*self.content;
                 {
-                    let res = &res.content.1.matched;
+                    let res = &res.content.0.matched;
                     {
-                        let res = (
-                            {
-                                let res = res._0().map(|res| {
-                                    let res = &res.content.2.matched;
+                        let res = &res.content.1.matched;
+                        {
+                            let res = (
+                                {
+                                    let res = res
+                                        ._0()
+                                        .map(|res| {
+                                            let res = res._0().map(|res| {
+                                                let res = &res.content.1.matched;
+                                                res
+                                            });
+                                            res
+                                        })
+                                        .flatten();
                                     res
-                                });
-                                res
-                            },
-                            {
-                                let res = res._2().map(|res| {
-                                    let res = &res.content.0.matched;
+                                },
+                                {
+                                    let res = res._1().map(|res| {
+                                        let res = &res.content.0.matched;
+                                        res
+                                    });
                                     res
-                                });
-                                res
-                            },
-                        );
-                        res
+                                },
+                            );
+                            res
+                        }
                     }
                 }
             }
@@ -1511,11 +1562,7 @@ pub mod generics {
         ::pest_typed::choices::Choice2<super::rules::WHITESPACE<S, 0>, super::rules::COMMENT<S, 0>>,
     >;
     pub use pest_typed::choices::Choice2;
-    pub use pest_typed::choices::Choice3;
     pub use pest_typed::sequence::Seq2;
-    pub use pest_typed::sequence::Seq3;
-    pub use pest_typed::sequence::Seq4;
-    pub use pest_typed::sequence::Seq6;
     pub use predefined_node::{
         CharRange, Insens, Negative, PeekSlice1, PeekSlice2, Positive, Push, PushLiteral, Skip, Str,
     };

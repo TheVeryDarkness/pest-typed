@@ -828,13 +828,21 @@ pub(crate) fn generate_typed_pair_from_rule<R: Generate>(
                 use #pest_typed::predefined_node;
                 /// Skipped content.
                 pub type Skipped<S> = #skip;
-                pub use predefined_node::{Str, Insens, PeekSlice1, PeekSlice2, Push, PushLiteral, Skip, CharRange, Positive, Negative};
+                pub use predefined_node::{CharRange, Insens, Negative, PeekSlice1, PeekSlice2, Positive, Push, PushLiteral, Skip, Str};
                 #(#seq)*
                 #(#chs)*
                 /// Repeat arbitrary times.
-                pub type Rep<S, const SKIP: #usize, T> = predefined_node::Rep<T, Skipped<S>, SKIP>;
+                pub type Rep<T, S, const SKIP: #usize> = predefined_node::Rep<T, Skipped<S>, SKIP>;
                 /// Repeat at least once.
-                pub type RepOnce<S, const SKIP: #usize, T> = predefined_node::RepOnce<T, Skipped<S>, SKIP>;
+                pub type RepOnce<T, S, const SKIP: #usize> = predefined_node::RepOnce<T, Skipped<S>, SKIP>;
+                /// Repeat at least `MIN` times.
+                pub type RepMin<T, S, const SKIP: #usize, const MIN: #usize> = predefined_node::RepMin<T, Skipped<S>, SKIP, MIN>;
+                /// Repeat at most `MAX` times.
+                pub type RepMax<T, S, const SKIP: #usize, const MAX: #usize> = predefined_node::RepMax<T, Skipped<S>, SKIP, MAX>;
+                /// Repeat between `MIN` and `MAX` times.
+                pub type RepMinMax<T, S, const SKIP: #usize, const MIN: #usize, const MAX: #usize> = predefined_node::RepMinMax<T, Skipped<S>, SKIP, MIN, MAX>;
+                /// Repeat exactly `TIMES` times.
+                pub type RepExact<T, S, const SKIP: #usize, const TIMES: #usize> = predefined_node::RepExact<T, Skipped<S>, SKIP, TIMES>;
             }
         }
     };

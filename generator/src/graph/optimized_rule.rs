@@ -324,7 +324,7 @@ impl Generate for OptimizedRule {
                 process_single_alias(
                     map,
                     rule_config,
-                    quote! { #root::#generics::Rep::<S, #skip, #inner_name> },
+                    quote! { #root::#generics::Rep::<#inner_name, S, #skip> },
                     getters.contents(),
                     root,
                     emission,
@@ -345,7 +345,7 @@ impl Generate for OptimizedRule {
                 process_single_alias(
                     map,
                     rule_config,
-                    quote! { #root::#generics::RepOnce::<S, #skip, #inner_name> },
+                    quote! { #root::#generics::RepOnce::<#inner_name, S, #skip> },
                     getters.contents(),
                     root,
                     emission,

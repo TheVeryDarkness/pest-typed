@@ -318,7 +318,7 @@ impl Generate for Rule {
                 process_single_alias(
                     map,
                     rule_config,
-                    quote! { #root::#generics::Rep::<S, #skip, #inner_name> },
+                    quote! { #root::#generics::Rep::<#inner_name, S, #skip> },
                     getters.contents(),
                     root,
                     emission,
@@ -326,6 +326,7 @@ impl Generate for Rule {
                 )
             }
             Expr::RepExact(inner, times) => {
+                let times = usize::try_from(*times).unwrap();
                 let (inner_name, getters) = Self::generate_graph_node(
                     inner,
                     rule_config,
@@ -338,7 +339,7 @@ impl Generate for Rule {
                 process_single_alias(
                     map,
                     rule_config,
-                    quote! { #root::#generics::RepExact::<S, #skip, #inner_name, #times> },
+                    quote! { #root::#generics::RepExact::<#inner_name, S, #skip, #times> },
                     getters.contents(),
                     root,
                     emission,
@@ -346,6 +347,7 @@ impl Generate for Rule {
                 )
             }
             Expr::RepMin(inner, min) => {
+                let min = usize::try_from(*min).unwrap();
                 let (inner_name, getters) = Self::generate_graph_node(
                     inner,
                     rule_config,
@@ -358,7 +360,7 @@ impl Generate for Rule {
                 process_single_alias(
                     map,
                     rule_config,
-                    quote! { #root::#generics::RepMin::<S, #skip, #inner_name, #min> },
+                    quote! { #root::#generics::RepMin::<#inner_name, S, #skip, #min> },
                     getters.contents(),
                     root,
                     emission,
@@ -366,6 +368,7 @@ impl Generate for Rule {
                 )
             }
             Expr::RepMax(inner, max) => {
+                let max = usize::try_from(*max).unwrap();
                 let (inner_name, getters) = Self::generate_graph_node(
                     inner,
                     rule_config,
@@ -378,7 +381,7 @@ impl Generate for Rule {
                 process_single_alias(
                     map,
                     rule_config,
-                    quote! { #root::#generics::RepMax::<S, #skip, #inner_name, #max> },
+                    quote! { #root::#generics::RepMax::<#inner_name, S, #skip, #max> },
                     getters.contents(),
                     root,
                     emission,
@@ -386,6 +389,8 @@ impl Generate for Rule {
                 )
             }
             Expr::RepMinMax(inner, min, max) => {
+                let min = usize::try_from(*min).unwrap();
+                let max = usize::try_from(*max).unwrap();
                 let (inner_name, getters) = Self::generate_graph_node(
                     inner,
                     rule_config,
@@ -398,7 +403,7 @@ impl Generate for Rule {
                 process_single_alias(
                     map,
                     rule_config,
-                    quote! { #root::#generics::RepMax::<S, #skip, #inner_name, #min, #max> },
+                    quote! { #root::#generics::RepMinMax::<#inner_name, S, #skip, #min, #max> },
                     getters.contents(),
                     root,
                     emission,
@@ -418,7 +423,7 @@ impl Generate for Rule {
                 process_single_alias(
                     map,
                     rule_config,
-                    quote! { #root::#generics::RepOnce::<S, #skip, #inner_name> },
+                    quote! { #root::#generics::RepOnce::<#inner_name, S, #skip> },
                     getters.contents(),
                     root,
                     emission,

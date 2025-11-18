@@ -451,7 +451,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat , "Corresponds to expression: `string*`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat , super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#string :: < S , INHERITED > > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#repeat , "Corresponds to expression: `string*`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat , super :: super :: generics :: Rep :: < super :: super :: rules :: r#string :: < S , INHERITED > , S , INHERITED > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat<S, INHERITED> {
             #[doc = "A helper function to access [`string`]."]
             #[allow(non_snake_case)]
@@ -473,9 +473,9 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat_atomic , "Corresponds to expression: `string*`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_atomic , super :: super :: generics :: Rep :: < S , 0 , super :: super :: rules :: r#string :: < S , 0 > > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
+        :: pest_typed :: rule ! (pub r#repeat_atomic , "Corresponds to expression: `string*`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_atomic , super :: super :: generics :: Rep :: < super :: super :: rules :: r#string :: < S , 0 > , S , 0 > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_atomic<S, INHERITED> {}
-        :: pest_typed :: rule ! (pub r#repeat_once , "Corresponds to expression: `(string ~ string*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_once , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#string :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#repeat_once , "Corresponds to expression: `(string ~ string*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_once , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#string :: < S , INHERITED > , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_once<S, INHERITED> {
             #[doc = "A helper function to access [`string`]."]
             #[allow(non_snake_case)]
@@ -511,7 +511,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat_once_atomic , "Corresponds to expression: `(string ~ string*)`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_once_atomic , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , 0 , super :: super :: rules :: r#string :: < S , 0 > > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
+        :: pest_typed :: rule ! (pub r#repeat_once_atomic , "Corresponds to expression: `(string ~ string*)`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_once_atomic , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#string :: < S , 0 > , S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_once_atomic<S, INHERITED> {}
         :: pest_typed :: rule ! (pub r#repeat_min_max , "Corresponds to expression: `(string ~ string ~ string?)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min_max , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < :: pest_typed :: re_exported :: Option :: < super :: super :: rules :: r#string :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_min_max<S, INHERITED> {
@@ -575,7 +575,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat_min , "Corresponds to expression: `(string ~ string ~ string*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#string :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#repeat_min , "Corresponds to expression: `(string ~ string ~ string*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#string :: < S , INHERITED > , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_min<S, INHERITED> {
             #[doc = "A helper function to access [`string`]."]
             #[allow(non_snake_case)]
@@ -616,7 +616,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat_min_atomic , "Corresponds to expression: `(string ~ string ~ string*)`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min_atomic , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , 0 , super :: super :: rules :: r#string :: < S , 0 > > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
+        :: pest_typed :: rule ! (pub r#repeat_min_atomic , "Corresponds to expression: `(string ~ string ~ string*)`. Atomic rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_min_atomic , super :: super :: generics :: Seq3 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#string :: < S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#string :: < S , 0 > , S , 0 > , super :: super :: generics :: Skipped < S > , 0 >) , > , super :: super :: generics :: Skipped :: < S > , true , Span , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_min_atomic<S, INHERITED> {}
         :: pest_typed :: rule ! (pub r#repeat_max , "Corresponds to expression: `(string? ~ string?)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_max , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < :: pest_typed :: re_exported :: Option :: < super :: super :: rules :: r#string :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < :: pest_typed :: re_exported :: Option :: < super :: super :: rules :: r#string :: < S , INHERITED > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_max<S, INHERITED> {
@@ -673,7 +673,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat_mutate_stack , "Corresponds to expression: `((PUSH(('a'..'c')) ~ \",\")* ~ POP ~ POP ~ POP)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_mutate_stack , super :: super :: generics :: Seq4 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: generics :: CharRange :: < 'a' , 'c' > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_2 > , super :: super :: generics :: Skipped < S > , INHERITED >) , > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#repeat_mutate_stack , "Corresponds to expression: `((PUSH(('a'..'c')) ~ \",\")* ~ POP ~ POP ~ POP)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_mutate_stack , super :: super :: generics :: Seq4 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: generics :: CharRange :: < 'a' , 'c' > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_2 > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_mutate_stack<S, INHERITED> {
             #[doc = "A helper function to access [`POP`]."]
             #[allow(non_snake_case)]
@@ -704,7 +704,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#repeat_mutate_stack_pop_all , "Corresponds to expression: `((PUSH(('a'..'c')) ~ \",\")* ~ POP_ALL)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_mutate_stack_pop_all , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: generics :: CharRange :: < 'a' , 'c' > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_3 > , super :: super :: generics :: Skipped < S > , INHERITED >) , > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP_ALL :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#repeat_mutate_stack_pop_all , "Corresponds to expression: `((PUSH(('a'..'c')) ~ \",\")* ~ POP_ALL)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#repeat_mutate_stack_pop_all , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Push :: < super :: super :: generics :: CharRange :: < 'a' , 'c' > > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_3 > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#POP_ALL :: < S > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#repeat_mutate_stack_pop_all<S, INHERITED> {
             #[doc = "A helper function to access [`POP_ALL`]."]
             #[allow(non_snake_case)]
@@ -1105,7 +1105,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#ascii_digits , "Corresponds to expression: `(ASCII_DIGIT ~ ASCII_DIGIT*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_digits , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_DIGIT , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#ASCII_DIGIT > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#ascii_digits , "Corresponds to expression: `(ASCII_DIGIT ~ ASCII_DIGIT*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_digits , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_DIGIT , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#ASCII_DIGIT , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#ascii_digits<S, INHERITED> {
             #[doc = "A helper function to access [`ASCII_DIGIT`]."]
             #[allow(non_snake_case)]
@@ -1141,7 +1141,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#ascii_nonzero_digits , "Corresponds to expression: `(ASCII_NONZERO_DIGIT ~ ASCII_NONZERO_DIGIT*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_nonzero_digits , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_NONZERO_DIGIT , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#ASCII_NONZERO_DIGIT > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#ascii_nonzero_digits , "Corresponds to expression: `(ASCII_NONZERO_DIGIT ~ ASCII_NONZERO_DIGIT*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_nonzero_digits , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_NONZERO_DIGIT , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#ASCII_NONZERO_DIGIT , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#ascii_nonzero_digits<S, INHERITED> {
             #[doc = "A helper function to access [`ASCII_NONZERO_DIGIT`]."]
             #[allow(non_snake_case)]
@@ -1177,7 +1177,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#ascii_bin_digits , "Corresponds to expression: `(ASCII_BIN_DIGIT ~ ASCII_BIN_DIGIT*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_bin_digits , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_BIN_DIGIT , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#ASCII_BIN_DIGIT > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#ascii_bin_digits , "Corresponds to expression: `(ASCII_BIN_DIGIT ~ ASCII_BIN_DIGIT*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_bin_digits , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_BIN_DIGIT , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#ASCII_BIN_DIGIT , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#ascii_bin_digits<S, INHERITED> {
             #[doc = "A helper function to access [`ASCII_BIN_DIGIT`]."]
             #[allow(non_snake_case)]
@@ -1213,7 +1213,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#ascii_oct_digits , "Corresponds to expression: `(ASCII_OCT_DIGIT ~ ASCII_OCT_DIGIT*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_oct_digits , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_OCT_DIGIT , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#ASCII_OCT_DIGIT > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#ascii_oct_digits , "Corresponds to expression: `(ASCII_OCT_DIGIT ~ ASCII_OCT_DIGIT*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_oct_digits , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_OCT_DIGIT , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#ASCII_OCT_DIGIT , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#ascii_oct_digits<S, INHERITED> {
             #[doc = "A helper function to access [`ASCII_OCT_DIGIT`]."]
             #[allow(non_snake_case)]
@@ -1249,7 +1249,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#ascii_hex_digits , "Corresponds to expression: `(ASCII_HEX_DIGIT ~ ASCII_HEX_DIGIT*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_hex_digits , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_HEX_DIGIT , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#ASCII_HEX_DIGIT > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#ascii_hex_digits , "Corresponds to expression: `(ASCII_HEX_DIGIT ~ ASCII_HEX_DIGIT*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_hex_digits , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_HEX_DIGIT , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#ASCII_HEX_DIGIT , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#ascii_hex_digits<S, INHERITED> {
             #[doc = "A helper function to access [`ASCII_HEX_DIGIT`]."]
             #[allow(non_snake_case)]
@@ -1285,7 +1285,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#ascii_alpha_lowers , "Corresponds to expression: `(ASCII_ALPHA_LOWER ~ ASCII_ALPHA_LOWER*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_alpha_lowers , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_ALPHA_LOWER , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#ASCII_ALPHA_LOWER > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#ascii_alpha_lowers , "Corresponds to expression: `(ASCII_ALPHA_LOWER ~ ASCII_ALPHA_LOWER*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_alpha_lowers , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_ALPHA_LOWER , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#ASCII_ALPHA_LOWER , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#ascii_alpha_lowers<S, INHERITED> {
             #[doc = "A helper function to access [`ASCII_ALPHA_LOWER`]."]
             #[allow(non_snake_case)]
@@ -1321,7 +1321,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#ascii_alpha_uppers , "Corresponds to expression: `(ASCII_ALPHA_UPPER ~ ASCII_ALPHA_UPPER*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_alpha_uppers , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_ALPHA_UPPER , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#ASCII_ALPHA_UPPER > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#ascii_alpha_uppers , "Corresponds to expression: `(ASCII_ALPHA_UPPER ~ ASCII_ALPHA_UPPER*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_alpha_uppers , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_ALPHA_UPPER , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#ASCII_ALPHA_UPPER , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#ascii_alpha_uppers<S, INHERITED> {
             #[doc = "A helper function to access [`ASCII_ALPHA_UPPER`]."]
             #[allow(non_snake_case)]
@@ -1357,7 +1357,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#ascii_alphas , "Corresponds to expression: `(ASCII_ALPHA ~ ASCII_ALPHA*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_alphas , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_ALPHA , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#ASCII_ALPHA > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#ascii_alphas , "Corresponds to expression: `(ASCII_ALPHA ~ ASCII_ALPHA*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_alphas , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_ALPHA , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#ASCII_ALPHA , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#ascii_alphas<S, INHERITED> {
             #[doc = "A helper function to access [`ASCII_ALPHA`]."]
             #[allow(non_snake_case)]
@@ -1393,7 +1393,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#ascii_alphanumerics , "Corresponds to expression: `(ASCII_ALPHANUMERIC ~ ASCII_ALPHANUMERIC*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_alphanumerics , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_ALPHANUMERIC , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#ASCII_ALPHANUMERIC > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#ascii_alphanumerics , "Corresponds to expression: `(ASCII_ALPHANUMERIC ~ ASCII_ALPHANUMERIC*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#ascii_alphanumerics , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII_ALPHANUMERIC , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#ASCII_ALPHANUMERIC , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#ascii_alphanumerics<S, INHERITED> {
             #[doc = "A helper function to access [`ASCII_ALPHANUMERIC`]."]
             #[allow(non_snake_case)]
@@ -1429,7 +1429,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#asciis , "Corresponds to expression: `(ASCII ~ ASCII*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#asciis , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#ASCII > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#asciis , "Corresponds to expression: `(ASCII ~ ASCII*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#asciis , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ASCII , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#ASCII , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#asciis<S, INHERITED> {
             #[doc = "A helper function to access [`ASCII`]."]
             #[allow(non_snake_case)]
@@ -1465,7 +1465,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#newline , "Corresponds to expression: `(NEWLINE ~ NEWLINE*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#newline , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#NEWLINE , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#NEWLINE > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#newline , "Corresponds to expression: `(NEWLINE ~ NEWLINE*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#newline , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#NEWLINE , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#NEWLINE , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#newline<S, INHERITED> {
             #[doc = "A helper function to access [`NEWLINE`]."]
             #[allow(non_snake_case)]
@@ -1501,7 +1501,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#unicode , "Corresponds to expression: `(XID_START ~ XID_CONTINUE*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#unicode , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#XID_START , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#XID_CONTINUE > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#unicode , "Corresponds to expression: `(XID_START ~ XID_CONTINUE*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#unicode , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#XID_START , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#XID_CONTINUE , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#unicode<S, INHERITED> {
             #[doc = "A helper function to access [`XID_CONTINUE`]."]
             #[allow(non_snake_case)]
@@ -1537,7 +1537,7 @@ pub mod rules_impl {
         }
         :: pest_typed :: rule ! (pub r#SYMBOL , "Corresponds to expression: `\"shadows builtin\"`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#SYMBOL , super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_10 > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#SYMBOL<S, INHERITED> {}
-        :: pest_typed :: rule ! (pub r#han , "Corresponds to expression: `(HAN ~ HAN*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#han , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#HAN , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#HAN > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#han , "Corresponds to expression: `(HAN ~ HAN*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#han , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#HAN , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#HAN , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#han<S, INHERITED> {
             #[doc = "A helper function to access [`HAN`]."]
             #[allow(non_snake_case)]
@@ -1573,7 +1573,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#hangul , "Corresponds to expression: `(HANGUL ~ HANGUL*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#hangul , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#HANGUL , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#HANGUL > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#hangul , "Corresponds to expression: `(HANGUL ~ HANGUL*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#hangul , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#HANGUL , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#HANGUL , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#hangul<S, INHERITED> {
             #[doc = "A helper function to access [`HANGUL`]."]
             #[allow(non_snake_case)]
@@ -1609,7 +1609,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#hiragana , "Corresponds to expression: `(HIRAGANA ~ HIRAGANA*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#hiragana , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#HIRAGANA , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#HIRAGANA > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#hiragana , "Corresponds to expression: `(HIRAGANA ~ HIRAGANA*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#hiragana , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#HIRAGANA , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#HIRAGANA , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#hiragana<S, INHERITED> {
             #[doc = "A helper function to access [`HIRAGANA`]."]
             #[allow(non_snake_case)]
@@ -1645,7 +1645,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#arabic , "Corresponds to expression: `(ARABIC ~ ARABIC*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#arabic , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ARABIC , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#ARABIC > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#arabic , "Corresponds to expression: `(ARABIC ~ ARABIC*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#arabic , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#ARABIC , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#ARABIC , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#arabic<S, INHERITED> {
             #[doc = "A helper function to access [`ARABIC`]."]
             #[allow(non_snake_case)]
@@ -1681,7 +1681,7 @@ pub mod rules_impl {
                 }
             }
         }
-        :: pest_typed :: rule ! (pub r#emoji , "Corresponds to expression: `(EMOJI ~ EMOJI*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#emoji , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#EMOJI , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: rules :: r#EMOJI > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
+        :: pest_typed :: rule ! (pub r#emoji , "Corresponds to expression: `(EMOJI ~ EMOJI*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#emoji , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: rules :: r#EMOJI , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: rules :: r#EMOJI , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Both , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#emoji<S, INHERITED> {
             #[doc = "A helper function to access [`EMOJI`]."]
             #[allow(non_snake_case)]
@@ -1719,7 +1719,7 @@ pub mod rules_impl {
         }
         :: pest_typed :: rule ! (pub r#WHITESPACE , "Corresponds to expression: `\" \"`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#WHITESPACE , super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_11 > , super :: super :: generics :: Skipped :: < S > , INHERITED , Expression , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#WHITESPACE<S, INHERITED> {}
-        :: pest_typed :: rule ! (pub r#COMMENT , "Corresponds to expression: `(\"$\" ~ \"$\"*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#COMMENT , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_12 > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < S , INHERITED , super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_13 > > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Expression , true);
+        :: pest_typed :: rule ! (pub r#COMMENT , "Corresponds to expression: `(\"$\" ~ \"$\"*)`. Normal rule." "" , super :: super :: Rule , super :: super :: Rule :: r#COMMENT , super :: super :: generics :: Seq2 :: < (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_12 > , super :: super :: generics :: Skipped < S > , INHERITED >) , (:: pest_typed :: predefined_node :: Skipped < super :: super :: generics :: Rep :: < super :: super :: generics :: Str :: < super :: super :: constant_wrappers :: r#w_13 > , S , INHERITED > , super :: super :: generics :: Skipped < S > , INHERITED >) , > , super :: super :: generics :: Skipped :: < S > , INHERITED , Expression , true);
         impl<S, const INHERITED: ::core::primitive::usize> r#COMMENT<S, INHERITED> {}
         #[allow(unused_imports)]
         use super::super::unicode::*;
@@ -1761,11 +1761,40 @@ pub mod generics {
         CharRange, Insens, Negative, PeekSlice1, PeekSlice2, Positive, Push, PushLiteral, Skip, Str,
     };
     #[doc = r" Repeat arbitrary times."]
-    pub type Rep<S, const SKIP: ::core::primitive::usize, T> =
+    pub type Rep<T, S, const SKIP: ::core::primitive::usize> =
         predefined_node::Rep<T, Skipped<S>, SKIP>;
     #[doc = r" Repeat at least once."]
-    pub type RepOnce<S, const SKIP: ::core::primitive::usize, T> =
+    pub type RepOnce<T, S, const SKIP: ::core::primitive::usize> =
         predefined_node::RepOnce<T, Skipped<S>, SKIP>;
+    #[doc = r" Repeat at least `MIN` times."]
+    pub type RepMin<
+        T,
+        S,
+        const SKIP: ::core::primitive::usize,
+        const MIN: ::core::primitive::usize,
+    > = predefined_node::RepMin<T, Skipped<S>, SKIP, MIN>;
+    #[doc = r" Repeat at most `MAX` times."]
+    pub type RepMax<
+        T,
+        S,
+        const SKIP: ::core::primitive::usize,
+        const MAX: ::core::primitive::usize,
+    > = predefined_node::RepMax<T, Skipped<S>, SKIP, MAX>;
+    #[doc = r" Repeat between `MIN` and `MAX` times."]
+    pub type RepMinMax<
+        T,
+        S,
+        const SKIP: ::core::primitive::usize,
+        const MIN: ::core::primitive::usize,
+        const MAX: ::core::primitive::usize,
+    > = predefined_node::RepMinMax<T, Skipped<S>, SKIP, MIN, MAX>;
+    #[doc = r" Repeat exactly `TIMES` times."]
+    pub type RepExact<
+        T,
+        S,
+        const SKIP: ::core::primitive::usize,
+        const TIMES: ::core::primitive::usize,
+    > = predefined_node::RepExact<T, Skipped<S>, SKIP, TIMES>;
 }
 #[doc = "Re-export some types from rules to simplify the usage."]
 pub use rules as pairs;

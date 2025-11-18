@@ -29,7 +29,7 @@ use core::{
 };
 use derive_where::derive_where;
 pub use repetition::{
-    AtomicRepeat, Rep, RepExact, RepMin, RepMinMax, RepOnce, RepeatMin, RepeatMinMax,
+    AtomicRepeat, Rep, RepExact, RepMax, RepMin, RepMinMax, RepOnce, RepeatMin, RepeatMinMax,
 };
 
 /// Match given string case sensitively.

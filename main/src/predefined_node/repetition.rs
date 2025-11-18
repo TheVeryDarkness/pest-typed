@@ -428,6 +428,9 @@ pub type RepExact<T, IGNORED, const SKIP: usize, const TIMES: usize> =
 /// Repeat at least `MIN` times.
 pub type RepMin<T, IGNORED, const SKIP: usize, const MIN: usize> =
     RepeatMin<Skipped<T, IGNORED, SKIP>, MIN>;
+/// Repeat at most `MAX` times.
+pub type RepMax<T, IGNORED, const SKIP: usize, const MAX: usize> =
+    RepeatMinMax<Skipped<T, IGNORED, SKIP>, 0, MAX>;
 /// Repeat at least `MIN` and at most `MAX` times (both inclusive).
 pub type RepMinMax<T, IGNORED, const SKIP: usize, const MIN: usize, const MAX: usize> =
     RepeatMinMax<Skipped<T, IGNORED, SKIP>, MIN, MAX>;
