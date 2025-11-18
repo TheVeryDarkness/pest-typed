@@ -1,4 +1,4 @@
-use crate::{line_indexer::LineIndexer, Position, Span};
+use crate::{input::RefStr, line_indexer::LineIndexer, Position, Span};
 use alloc::{format, string::String, vec::Vec};
 use core::{fmt, marker::PhantomData};
 use unicode_width::UnicodeWidthStr;
@@ -320,14 +320,14 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
 
         Ok(())
     }
-    pub(crate) fn display_span<'i, L, Writer>(
+    pub(crate) fn display_span<S: RefStr, L, Writer>(
         self,
-        span: &Span<'i>,
+        span: &Span<S>,
         indexer: L,
         f: &mut Writer,
     ) -> fmt::Result
     where
-        L: LineIndexer<'i>,
+        L: LineIndexer<S>,
         Writer: fmt::Write,
         SF: FnMut(&str, &mut Writer) -> fmt::Result,
         MF: FnMut(&str, &mut Writer) -> fmt::Result,
@@ -365,27 +365,28 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
             .take(end.line - start.line + 1);
         let index_digit = Self::ceil_log10(end.line + 1);
         if start.line == end.line {
-            let cur_line = lines.next().unwrap_or("");
+            let cur_line = lines.next();
+            let cur_line = cur_line.as_ref().map(S::as_str).unwrap_or("");
             let line = Partition2::new(start.line, cur_line, start.col, end.col);
             self.display_snippet_single_line(f, index_digit, line)?;
         } else {
             let lines: Vec<_> = lines.collect();
-            let start_line = lines.first().unwrap();
-            let end_line = lines.last().unwrap();
+            let start_line = lines.first().unwrap().as_str();
+            let end_line = lines.last().unwrap().as_str();
             let start = Partition::new(start.line, start_line, start.col);
             let end = Partition::new(end.line, end_line, end.col);
             let inner_first = if lines.len() >= 3 {
-                Some(visualize_ws_and_cntrl(lines[1]))
+                Some(visualize_ws_and_cntrl(lines[1].as_str()))
             } else {
                 None
             };
             let inner_mid = match lines.len() {
                 6.. => (None, true),
-                5 => (Some(visualize_ws_and_cntrl(lines[2])), false),
+                5 => (Some(visualize_ws_and_cntrl(lines[2].as_str())), false),
                 _ => (None, false),
             };
             let inner_last = if lines.len() >= 4 {
-                Some(visualize_ws_and_cntrl(lines[lines.len() - 2]))
+                Some(visualize_ws_and_cntrl(lines[lines.len() - 2].as_str()))
             } else {
                 None
             };
@@ -400,28 +401,28 @@ impl<SF, MF, NF> FormatOption<SF, MF, NF> {
         Ok(())
     }
     #[allow(clippy::needless_lifetimes)]
-    pub(crate) fn display_position<'i, Writer, L>(
+    pub(crate) fn display_position<S: RefStr, Writer, L>(
         self,
-        position: &Position<'i>,
+        position: &Position<S>,
         indexer: L,
         f: &mut Writer,
     ) -> fmt::Result
     where
-        L: LineIndexer<'i>,
+        L: LineIndexer<S>,
         Writer: fmt::Write,
         SF: FnMut(&str, &mut Writer) -> fmt::Result,
         MF: FnMut(&str, &mut Writer) -> fmt::Result,
         NF: FnMut(&str, &mut Writer) -> fmt::Result,
     {
         let mut pos = 0usize;
-        let input = Span::new_full(position.input);
+        let input = Span::new_full(position.input.clone());
         let mut iter = input.lines(indexer).enumerate().peekable();
         while let Some((index, line)) = iter.peek() {
             if pos + line.len() > position.pos() {
                 let l = *index;
                 let c = position.pos() - pos;
                 let index_digit = Self::ceil_log10(l + 1);
-                let line = Partition::new(l, line, c);
+                let line = Partition::new(l, line.as_str(), c);
                 self.display_snippet_single_pos(f, index_digit, line)?;
                 break;
             }
@@ -707,13 +708,13 @@ mod span {
     fn display_span_single_line_far() {
         let mut s = String::new();
         for c in 0..1000u16 {
-            s.push_str(c.to_string().as_str());
+            write!(s, "{}", c).unwrap();
             s.push('\n');
         }
         //   0 -   9 -> 2 ->   20
         //  10 -  99 -> 3 ->  270
         // 100 - 999 -> 4 -> 3600
-        let msg = Span::new(&s, 290, 3889).unwrap().to_string();
+        let msg = Span::<&str>::new(&s, 290, 3889).unwrap().to_string();
         assert_eq!(
             msg,
             "     \

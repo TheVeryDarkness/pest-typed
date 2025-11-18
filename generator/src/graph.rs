@@ -68,7 +68,7 @@ fn pairs_mod() -> TokenStream {
 fn ignore(root: &TokenStream) -> TokenStream {
     let generics = generics();
     quote! {
-        #root::#generics::Skipped::<'i>
+        #root::#generics::Skipped::<S>
     }
 }
 
@@ -194,8 +194,8 @@ impl<'g> Node<'g> {
                     None => quote! {INHERITED},
                 };
                 let generics = match (has_life_time, has_skip) {
-                    (true, true) => quote! {::<'i, #skip>},
-                    (true, false) => quote! {::<'i>},
+                    (true, true) => quote! {::<S, #skip>},
+                    (true, false) => quote! {::<S>},
                     (false, true) => quote! {::<#skip>},
                     (false, false) => quote! {},
                 };
@@ -446,7 +446,7 @@ fn rule<'g>(
         let usize = _usize();
         quote! {
             #pest_typed::rule!(pub #name, #(#docs)*, #root::Rule, #root::Rule::#name, #inner_type, #ignore, #atomicity, #emission, #boxed);
-            impl<'i, const INHERITED: #usize> #name<'i, INHERITED> {
+            impl<S, const INHERITED: #usize> #name<S, INHERITED> {
                 #getter_impl
             }
         }
@@ -579,16 +579,16 @@ impl<'g> Output<'g> {
                 quote! {
                     #[doc = #comment]
                     #[allow(non_camel_case_types)]
-                    pub type #tag_name<'i, 's, const INHERITED: #usize> = ( #(&'s #types),* );
+                    pub type #tag_name<'s, S, const INHERITED: #usize> = ( #(&'s #types),* );
                 }
                 /*
                 quote! {
                     #[doc = #comment]
-                    pub struct #tag_name<'s, 'i, const INHERITED: #usize>{
+                    pub struct #tag_name<'s, S, const INHERITED: #usize>{
                         /// Tag contents.
                         pub content: ( #(&'s #types, )* )
                     }
-                    impl<'s, 'i, const INHERITED: #usize> #tag_name<'s, 'i, INHERITED> {
+                    impl<'s, S, const INHERITED: #usize> #tag_name<'s, S, INHERITED> {
                         #getter
                     }
                 }
@@ -802,23 +802,23 @@ pub(crate) fn generate_typed_pair_from_rule<R: Generate>(
             (true, true) => quote! {
                 predefined_node::AtomicRepeat<
                     #pest_typed::choices::Choice2<
-                        #root::#rules_mod::WHITESPACE<'i, 0>,
-                        #root::#rules_mod::COMMENT<'i, 0>,
+                        #root::#rules_mod::WHITESPACE<S, 0>,
+                        #root::#rules_mod::COMMENT<S, 0>,
                     >,
                 >
             },
             (true, false) => quote! {
                 predefined_node::AtomicRepeat<
-                    #root::#rules_mod::WHITESPACE<'i, 0>,
+                    #root::#rules_mod::WHITESPACE<S, 0>,
                 >
             },
             (false, true) => quote! {
                 predefined_node::AtomicRepeat<
-                    #root::#rules_mod::COMMENT<'i, 0>,
+                    #root::#rules_mod::COMMENT<S, 0>,
                 >
             },
             (false, false) => quote! {
-                predefined_node::Empty<'i>
+                predefined_node::Empty<S>
             },
         };
 
@@ -827,14 +827,14 @@ pub(crate) fn generate_typed_pair_from_rule<R: Generate>(
             pub mod generics {
                 use #pest_typed::predefined_node;
                 /// Skipped content.
-                pub type Skipped<'i> = #skip;
+                pub type Skipped<S> = #skip;
                 pub use predefined_node::{Str, Insens, PeekSlice1, PeekSlice2, Push, PushLiteral, Skip, CharRange, Positive, Negative};
                 #(#seq)*
                 #(#chs)*
                 /// Repeat arbitrary times.
-                pub type Rep<'i, const SKIP: #usize, T> = predefined_node::Rep<T, Skipped<'i>, SKIP>;
+                pub type Rep<S, const SKIP: #usize, T> = predefined_node::Rep<T, Skipped<S>, SKIP>;
                 /// Repeat at least once.
-                pub type RepOnce<'i, const SKIP: #usize, T> = predefined_node::RepOnce<T, Skipped<'i>, SKIP>;
+                pub type RepOnce<S, const SKIP: #usize, T> = predefined_node::RepOnce<T, Skipped<S>, SKIP>;
             }
         }
     };

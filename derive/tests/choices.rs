@@ -53,7 +53,7 @@ macro_rules! test {
             const INPUT : &'static str = concat!($($input,)*);
             #[test]
             fn success() -> Result<(), Error> {
-                let res = Parser::try_parse::<pairs::$name>(INPUT)?;
+                let res = Parser::try_parse::<&str, pairs::$name<&str>>(INPUT)?;
                 let span = res.span;
                 assert_eq!(span, res.self_or_children()[0].span);
                 assert!(res.children().is_empty());
@@ -67,7 +67,7 @@ macro_rules! test {
             fn failed() {
                 let mut buf = String::from(INPUT);
                 buf.pop();
-                Parser::try_parse::<pairs::$name>(buf.as_str()).unwrap_err();
+                Parser::try_parse::<&str, pairs::$name<&str>>(buf.as_str()).unwrap_err();
             }
         }
     };
@@ -87,7 +87,7 @@ test!(c12, "a""b""c""d""e""f""g""h""i""j""k""l");
 
 #[test]
 fn choices() {
-    let c4 = Parser::try_parse::<pairs::c4>("abcd").unwrap();
+    let c4 = Parser::try_parse::<&str, pairs::c4<&str>>("abcd").unwrap();
     let (_0, _1, _2, _3) = c4.as_ref();
     macro_rules! t {
         ($branch:ident) => {

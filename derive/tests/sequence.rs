@@ -33,7 +33,7 @@ macro_rules! test {
     ($name:ident, $input:literal, $($fields:tt)*) => {
         mod $name {
             use super::{pairs, Deref};
-            use pest_typed::{ParsableTypedNode, ConstantStorage};
+            use pest_typed::{ ParsableTypedNode, ConstantStorage};
             use anyhow::Error;
 
             #[test]

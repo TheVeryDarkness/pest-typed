@@ -136,21 +136,21 @@ macro_rules! choices {
                     }
                 )*
             }
-            impl<'i, R: $crate::RuleType, $V0: $crate::TypedNode<'i, R>, $($V: $crate::TypedNode<'i, R>, )* > $crate::TypedNode<'i, R>
+            impl<C: $crate::Cursor, R: $crate::RuleType, $V0: $crate::TypedNode<C, R>, $($V: $crate::TypedNode<C, R>, )* > $crate::TypedNode<C, R>
                 for $name<$V0, $($V, )* >
             {
                 #[inline]
-                fn try_parse_partial_with<I: $crate::Input<'i>>(
-                    input: I,
-                    stack: &mut $crate::Stack<$crate::Span<'i>>,
-                    tracker: &mut $crate::tracker::Tracker<'i, R>,
-                ) -> ::core::option::Option<(I, Self)> {
-                    let res = $crate::predefined_node::restore_on_none(stack, |stack| $V0::try_parse_partial_with(input, stack, tracker));
+                fn try_parse_partial_with(
+                    input: C,
+                    stack: &mut $crate::Stack<$crate::Span<C::String>>,
+                    tracker: &mut $crate::tracker::Tracker<C::String, R>,
+                ) -> ::core::option::Option<(C, Self)> {
+                    let res = $crate::predefined_node::restore_on_none(stack, |stack| $V0::try_parse_partial_with(input.clone(), stack, tracker));
                     if let Some((input, res)) = res {
                         return Some((input, Self::$v0(res)));
                     }
                     $(
-                        let res = $crate::predefined_node::restore_on_none(stack, |stack| $V::try_parse_partial_with(input, stack, tracker));
+                        let res = $crate::predefined_node::restore_on_none(stack, |stack| $V::try_parse_partial_with(input.clone(), stack, tracker));
                         if let Some((input, res)) = res {
                             return Some((input, Self::$v(res)));
                         }
@@ -159,17 +159,17 @@ macro_rules! choices {
                 }
 
                 #[inline]
-                fn try_check_partial_with<I: $crate::Input<'i>>(
-                    input: I,
-                    stack: &mut $crate::Stack<$crate::Span<'i>>,
-                    tracker: &mut $crate::tracker::Tracker<'i, R>,
-                ) -> ::core::option::Option<I> {
-                    let res = $crate::predefined_node::restore_on_none(stack, |stack| $V0::try_check_partial_with(input, stack, tracker));
+                fn try_check_partial_with(
+                    input: C,
+                    stack: &mut $crate::Stack<$crate::Span<C::String>>,
+                    tracker: &mut $crate::tracker::Tracker<C::String, R>,
+                ) -> ::core::option::Option<C> {
+                    let res = $crate::predefined_node::restore_on_none(stack, |stack| $V0::try_check_partial_with(input.clone(), stack, tracker));
                     if let Some(input) = res {
                         return Some(input);
                     }
                     $(
-                        let res = $crate::predefined_node::restore_on_none(stack, |stack| $V::try_check_partial_with(input, stack, tracker));
+                        let res = $crate::predefined_node::restore_on_none(stack, |stack| $V::try_check_partial_with(input.clone(), stack, tracker));
                         if let Some(input) = res {
                             return Some(input);
                         }
@@ -178,13 +178,13 @@ macro_rules! choices {
                 }
             }
             impl<
-                'i,
-                R: $crate::RuleType + 'i,
-                $V0: $crate::TypedNode<'i, R> + $crate::iterators::Pairs<'i, R>,
-                $($V: $crate::TypedNode<'i, R> + $crate::iterators::Pairs<'i, R>, )*
-            > $crate::iterators::Pairs<'i, R> for $name<$V0, $($V, )* >
+                S: $crate::RefStr,
+                R: $crate::RuleType,
+                $V0: $crate::iterators::Pairs<S, R>,
+                $($V: $crate::iterators::Pairs<S, R>, )*
+            > $crate::iterators::Pairs<S, R> for $name<$V0, $($V, )* >
             {
-                fn for_self_or_each_child(&self, f: &mut impl FnMut($crate::iterators::Token<'i, R>)) {
+                fn for_self_or_each_child(&self, f: &mut impl FnMut($crate::iterators::Token<S, R>)) {
                     match self {
                         Self::$v0($v0) =>$v0.for_self_or_each_child(f),
                         $(

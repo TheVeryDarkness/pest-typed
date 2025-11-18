@@ -13,7 +13,7 @@ d = ${ "d" }
 struct Parser;
 
 fn parse(input: &'static str) -> Result<(), Error> {
-    let a = Parser::try_parse::<pairs::a>(input)?;
+    let a = Parser::try_parse::<&str, pairs::a<&str>>(input)?;
     // With getter API.
     // Call `b()` to get reference to `b`.
     // Call `c()` to get reference to `c`.
@@ -36,9 +36,9 @@ fn parse(input: &'static str) -> Result<(), Error> {
     match b_or_c {
         Choice2::_0(b) => assert_eq!(
             std::mem::size_of_val(b.ref_inner()),
-            std::mem::size_of::<Box<rules::b>>()
+            std::mem::size_of::<Box<rules::b<&str>>>()
         ),
-        Choice2::_1(c) => assert_eq!(std::mem::size_of_val(c), std::mem::size_of::<Span>()),
+        Choice2::_1(c) => assert_eq!(std::mem::size_of_val(c), std::mem::size_of::<Span<&str>>()),
     }
     // Or match_choices from `pest_typed_derive`.
     // Note that if module `generics` is not in current scope,

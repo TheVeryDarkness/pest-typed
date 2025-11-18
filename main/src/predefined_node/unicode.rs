@@ -3,7 +3,7 @@
 use crate::{
     iterators::{Pairs, Token},
     tracker::Tracker,
-    Input, RuleType, Span, Stack, TypedNode,
+    Cursor, RuleType, Span, Stack, TypedNode,
 };
 use core::fmt;
 
@@ -24,24 +24,24 @@ macro_rules! unicode {
                 Self { content }
             }
         }
-        impl<'i, R: RuleType> TypedNode<'i, R> for $property_ident {
+        impl<C: Cursor, R: RuleType> TypedNode<C, R> for $property_ident {
             #[inline]
-            fn try_parse_partial_with<I: Input<'i>>(
-                mut input: I,
-                _stack: &mut Stack<Span<'i>>,
-                _tracker: &mut Tracker<'i, R>,
-            ) -> Option<(I, Self)> {
+            fn try_parse_partial_with(
+                mut input: C,
+                _stack: &mut Stack<Span<C::String>>,
+                _tracker: &mut Tracker<C::String, R>,
+            ) -> Option<(C, Self)> {
                 match super::match_char_by(&mut input, pest::unicode::$property_ident) {
                     Some(content) => Some((input, Self::from(content))),
                     None => None,
                 }
             }
             #[inline]
-            fn try_check_partial_with<I: Input<'i>>(
-                mut input: I,
-                _stack: &mut Stack<Span<'i>>,
-                _tracker: &mut Tracker<'i, R>,
-            ) -> Option<I> {
+            fn try_check_partial_with(
+                mut input: C,
+                _stack: &mut Stack<Span<C::String>>,
+                _tracker: &mut Tracker<C::String, R>,
+            ) -> Option<C> {
                 match super::match_char_by(&mut input, pest::unicode::$property_ident) {
                     Some(_) => Some(input),
                     None => None,
@@ -55,8 +55,8 @@ macro_rules! unicode {
                     .finish()
             }
         }
-        impl<'i, R: RuleType> Pairs<'i, R> for $property_ident {
-            fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<'i, R>)) {}
+        impl<S, R: RuleType> Pairs<S, R> for $property_ident {
+            fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<S, R>)) {}
         }
     };
 }

@@ -75,7 +75,7 @@ impl Generate for OptimizedRule {
                     map,
                     rule_config,
                     quote! {
-                        #root::#generics::Insens::<'i, #root::#wrapper>
+                        #root::#generics::Insens::<S, #root::#wrapper>
                     },
                     Getter::new(),
                     root,
@@ -127,7 +127,7 @@ impl Generate for OptimizedRule {
                     map,
                     rule_config,
                     quote! {
-                        #root::#generics::Skip::<#root::#wrapper>
+                        #root::#generics::Skip::<S, #root::#wrapper>
                     },
                     Getter::new(),
                     root,
@@ -157,8 +157,8 @@ impl Generate for OptimizedRule {
                     || !rule_config.builtins_without_lifetime.contains(id.as_str());
                 let has_skip = rule_config.defined.contains(id.as_str());
                 let generics = match (has_life_time, has_skip) {
-                    (true, true) => quote! {::<'i, #skip>},
-                    (true, false) => quote! {::<'i>},
+                    (true, true) => quote! {::<S, #skip>},
+                    (true, false) => quote! {::<S>},
                     (false, true) => quote! {::<#skip>},
                     (false, false) => quote! {},
                 };
@@ -248,7 +248,7 @@ impl Generate for OptimizedRule {
 
                 let pest_typed = pest_typed();
                 let args = types.iter().map(
-                |t| quote! {(#pest_typed::predefined_node::Skipped<#t, #root::generics::Skipped<'i>, #skip>)},
+                |t| quote! {(#pest_typed::predefined_node::Skipped<#t, #root::generics::Skipped<S>, #skip>)},
             );
                 process_single_alias(
                     map,
@@ -324,7 +324,7 @@ impl Generate for OptimizedRule {
                 process_single_alias(
                     map,
                     rule_config,
-                    quote! { #root::#generics::Rep::<'i, #skip, #inner_name> },
+                    quote! { #root::#generics::Rep::<S, #skip, #inner_name> },
                     getters.contents(),
                     root,
                     emission,
@@ -345,7 +345,7 @@ impl Generate for OptimizedRule {
                 process_single_alias(
                     map,
                     rule_config,
-                    quote! { #root::#generics::RepOnce::<'i, #skip, #inner_name> },
+                    quote! { #root::#generics::RepOnce::<S, #skip, #inner_name> },
                     getters.contents(),
                     root,
                     emission,

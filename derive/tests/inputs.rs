@@ -17,9 +17,9 @@ fn string() -> anyhow::Result<()> {
     let main = rules::main::try_parse(input)?;
     assert_eq!(main.span(), Span::new_full(input));
 
-    let input = &input.to_owned();
+    let input = input.to_owned();
 
-    let main = rules::main::try_parse(input)?;
+    let main = rules::main::try_parse(input.as_str())?;
     assert_eq!(main.span(), Span::new_full(input.as_str()));
 
     Ok(())
@@ -30,6 +30,7 @@ fn position() -> anyhow::Result<()> {
     let input = "aab😃 456yybccd";
     let pos = Position::new(input, 1).unwrap();
     let span = pos.span(&Position::new(input, input.len()).unwrap());
+    debug_assert_eq!(span, Span::new(input, 1, input.len()).unwrap());
 
     let main = rules::main::try_parse(pos)?;
     assert_eq!(main.span(), span);

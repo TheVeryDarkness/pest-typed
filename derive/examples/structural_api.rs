@@ -13,7 +13,7 @@ b3 = { "d" }
 struct Parser;
 
 fn parse(input: &str) -> Result<(), Error> {
-    let a = Parser::try_parse::<pairs::a>(input)?;
+    let a = Parser::try_parse::<&str, pairs::a<&str>>(input)?;
     let (str_a, var_b, c) = a.as_ref();
     assert_eq!(str_a.get_content(), "a");
     match_choices!(var_b {
@@ -34,9 +34,9 @@ fn parse(input: &str) -> Result<(), Error> {
     // This method is no longer recommended and may be deprecated in the future.
     // However, at current this is the only way that you can place a type innotation after the identifier.
     var_b
-        .if_then(|b1: &pairs::b1<'_>| assert_eq!(b1.get_content(), "bbb"))
-        .else_if(|b2: &pairs::b2<'_>| assert_eq!(b2.get_content(), "cc"))
-        .else_then(|b3: &pairs::b3<'_>| assert_eq!(b3.get_content(), "d"));
+        .if_then(|b1: &pairs::b1<&str>| assert_eq!(b1.get_content(), "bbb"))
+        .else_if(|b2: &pairs::b2<&str>| assert_eq!(b2.get_content(), "cc"))
+        .else_then(|b3: &pairs::b3<&str>| assert_eq!(b3.get_content(), "d"));
 
     assert_eq!(c.get_content(), "c");
     assert!(c.content == "C" || c.content == "c");

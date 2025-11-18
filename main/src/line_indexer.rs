@@ -9,56 +9,54 @@
 
 //! A trait and a type for splitting a string into lines.
 
+use crate::input::RefStr;
 use alloc::vec::Vec;
 
 /// A trait for splitting a string into lines.
 ///
 /// It supports getting the line of a given position in the string,
 /// and finding the start and end of the line.
-pub trait LineIndexer<'i> {
+pub trait LineIndexer<S: RefStr> {
     /// Returns the line and column number of this `Position`.
-    fn line_col(&self, input: &'i str, pos: usize) -> (usize, usize);
+    fn line_col(&self, input: &S, pos: usize) -> (usize, usize);
 
     /// Returns the entire line of the input that contains the position at `pos`.
-    fn line_of(&self, input: &'i str, pos: usize) -> &'i str;
+    fn line_of(&self, input: &S, pos: usize) -> S;
 
     /// Returns the start of the line that contains the position at `pos`.
-    fn find_line_start(&self, input: &'i str, pos: usize) -> usize;
+    fn find_line_start(&self, input: &S, pos: usize) -> usize;
 
     /// Returns the end of the line that contains the position at `pos`.
-    fn find_line_end(&self, input: &'i str, pos: usize) -> usize;
+    fn find_line_end(&self, input: &S, pos: usize) -> usize;
 }
 
-impl<'i, T: LineIndexer<'i>> LineIndexer<'i> for &T {
-    fn line_col(&self, input: &'i str, pos: usize) -> (usize, usize) {
+impl<S: RefStr, T: LineIndexer<S>> LineIndexer<S> for &T {
+    fn line_col(&self, input: &S, pos: usize) -> (usize, usize) {
         T::line_col(*self, input, pos)
     }
 
-    fn line_of(&self, input: &'i str, pos: usize) -> &'i str {
+    fn line_of(&self, input: &S, pos: usize) -> S {
         T::line_of(*self, input, pos)
     }
 
-    fn find_line_start(&self, input: &'i str, pos: usize) -> usize {
+    fn find_line_start(&self, input: &S, pos: usize) -> usize {
         T::find_line_start(*self, input, pos)
     }
 
-    fn find_line_end(&self, input: &'i str, pos: usize) -> usize {
+    fn find_line_end(&self, input: &S, pos: usize) -> usize {
         T::find_line_end(*self, input, pos)
     }
 }
 
-impl<'i> LineIndexer<'i> for () {
+impl<S: RefStr> LineIndexer<S> for () {
     /// Returns the line and column number of this `Position`.
     ///
     /// This is an O(n) operation, where n is the number of chars in the input.
     /// You better use [`pair.line_col()`](struct.Pair.html#method.line_col) instead.
     #[inline]
-    fn line_col(&self, input: &'i str, pos: usize) -> (usize, usize) {
-        if pos > input.len() {
-            panic!("position out of bounds");
-        }
+    fn line_col(&self, input: &S, pos: usize) -> (usize, usize) {
         let mut pos = pos;
-        let slice = &input[..pos];
+        let slice = &input.get_checked(..pos);
         let mut chars = slice.chars().peekable();
 
         let mut line_col = (1, 1);
@@ -96,20 +94,13 @@ impl<'i> LineIndexer<'i> for () {
         line_col
     }
 
-    fn line_of(&self, input: &'i str, pos: usize) -> &'i str {
-        if pos > input.len() {
-            panic!("position out of bounds");
-        };
-        // Safe since start and end can only be valid UTF-8 borders.
-        &input[self.find_line_start(input, pos)..self.find_line_end(input, pos)]
+    fn line_of(&self, input: &S, pos: usize) -> S {
+        input.get_checked(self.find_line_start(input, pos)..self.find_line_end(input, pos))
     }
 
-    fn find_line_start(&self, input: &'i str, pos: usize) -> usize {
-        if input.is_empty() {
-            return 0;
-        };
-        // Position's pos is always a UTF-8 border.
+    fn find_line_start(&self, input: &S, pos: usize) -> usize {
         let start = input
+            .as_str()
             .char_indices()
             .rev()
             .skip_while(|&(i, _)| i >= pos)
@@ -120,21 +111,15 @@ impl<'i> LineIndexer<'i> for () {
         }
     }
 
-    fn find_line_end(&self, input: &'i str, pos: usize) -> usize {
-        if input.is_empty() {
-            0
-        } else if pos == input.len() - 1 {
-            input.len()
-        } else {
-            // Position's pos is always a UTF-8 border.
-            let end = input
-                .char_indices()
-                .skip_while(|&(i, _)| i < pos)
-                .find(|&(_, c)| c == '\n');
-            match end {
-                Some((i, _)) => i + 1,
-                None => input.len(),
-            }
+    fn find_line_end(&self, input: &S, pos: usize) -> usize {
+        let end = input
+            .as_str()
+            .char_indices()
+            .skip_while(|&(i, _)| i < pos)
+            .find(|&(_, c)| c == '\n');
+        match end {
+            Some((i, _)) => i + 1,
+            None => input.len(),
         }
     }
 }
@@ -165,41 +150,32 @@ impl CachedLineIndexer {
     }
 }
 
-impl<'i> LineIndexer<'i> for CachedLineIndexer {
-    fn line_col(&self, input: &'i str, pos: usize) -> (usize, usize) {
-        if pos > input.len() {
-            panic!("position out of bounds");
-        }
+impl<S: RefStr> LineIndexer<S> for CachedLineIndexer {
+    fn line_col(&self, input: &S, pos: usize) -> (usize, usize) {
         let line = self.line_starts.partition_point(|&start| start <= pos);
         let line_start = line
             .checked_sub(1)
             .map_or_else(|| 0, |line| self.line_starts[line]);
-        let col = input[line_start..pos].chars().count(); // Still O(n) but faster than the above.
+        let col = input.get_checked(line_start..pos).chars().count(); // Still O(n) but faster than the above.
         (line + 1, col + 1)
     }
 
-    fn line_of(&self, input: &'i str, pos: usize) -> &'i str {
-        if pos > input.len() {
-            panic!("position out of bounds");
-        };
+    fn line_of(&self, input: &S, pos: usize) -> S {
         let line = self.line_starts.partition_point(|&start| start <= pos);
         let line_start = line
             .checked_sub(1)
             .map_or_else(|| 0, |line| self.line_starts[line]);
         let next_line_start = self.line_starts.get(line).copied().unwrap_or(input.len());
-        &input[line_start..next_line_start]
+        input.get_checked(line_start..next_line_start)
     }
 
-    fn find_line_start(&self, input: &'i str, pos: usize) -> usize {
-        if input.is_empty() {
-            return 0;
-        };
+    fn find_line_start(&self, _: &S, pos: usize) -> usize {
         let line = self.line_starts.partition_point(|&start| start <= pos);
         line.checked_sub(1)
             .map_or_else(|| 0, |line| self.line_starts[line])
     }
 
-    fn find_line_end(&self, input: &'i str, pos: usize) -> usize {
+    fn find_line_end(&self, input: &S, pos: usize) -> usize {
         let line = self.line_starts.partition_point(|&start| start <= pos);
         self.line_starts.get(line).copied().unwrap_or(input.len())
     }
@@ -211,18 +187,18 @@ mod tests {
     use rand::SeedableRng as _;
     use rand_utf8::rand_utf8;
 
-    fn test_line_col<'i, T: LineIndexer<'i>>(input: &'i str, line_indexer: T) {
-        assert_eq!(line_indexer.line_col(input, 0), (1, 1));
-        assert_eq!(line_indexer.line_col(input, 5), (1, 6));
-        assert_eq!(line_indexer.line_col(input, 6), (2, 1));
-        assert_eq!(line_indexer.line_col(input, 11), (2, 6));
+    fn test_line_col<'i, T: LineIndexer<&'i str>>(input: &'i str, line_indexer: T) {
+        assert_eq!(line_indexer.line_col(&input, 0), (1, 1));
+        assert_eq!(line_indexer.line_col(&input, 5), (1, 6));
+        assert_eq!(line_indexer.line_col(&input, 6), (2, 1));
+        assert_eq!(line_indexer.line_col(&input, 11), (2, 6));
     }
 
-    fn test_line_of<'i, T: LineIndexer<'i>>(input: &'i str, line_indexer: T) {
-        assert_eq!(line_indexer.line_of(input, 0), "Hello\n");
-        assert_eq!(line_indexer.line_of(input, 5), "Hello\n");
-        assert_eq!(line_indexer.line_of(input, 6), "World\n");
-        assert_eq!(line_indexer.line_of(input, 11), "World\n");
+    fn test_line_of<'i, T: LineIndexer<&'i str>>(input: &'i str, line_indexer: T) {
+        assert_eq!(line_indexer.line_of(&input, 0), "Hello\n");
+        assert_eq!(line_indexer.line_of(&input, 5), "Hello\n");
+        assert_eq!(line_indexer.line_of(&input, 6), "World\n");
+        assert_eq!(line_indexer.line_of(&input, 11), "World\n");
     }
 
     #[test]
@@ -241,15 +217,15 @@ mod tests {
         let f = |input: &str| {
             let line_indexer = CachedLineIndexer::new(input);
             for (pos, _) in input.char_indices() {
-                assert_eq!(line_indexer.line_col(input, pos), ().line_col(input, pos));
-                assert_eq!(line_indexer.line_of(input, pos), ().line_of(input, pos));
+                assert_eq!(line_indexer.line_col(&input, pos), ().line_col(&input, pos));
+                assert_eq!(line_indexer.line_of(&input, pos), ().line_of(&input, pos));
                 assert_eq!(
-                    line_indexer.find_line_start(input, pos),
-                    ().find_line_start(input, pos)
+                    line_indexer.find_line_start(&input, pos),
+                    ().find_line_start(&input, pos)
                 );
                 assert_eq!(
-                    line_indexer.find_line_end(input, pos),
-                    ().find_line_end(input, pos)
+                    line_indexer.find_line_end(&input, pos),
+                    ().find_line_end(&input, pos)
                 );
             }
         };

@@ -37,6 +37,8 @@ enum Rule {
     EOI,
     String,
     Quote,
+    NestedRep,
+    Bar,
 }
 impl RuleType for Rule {
     fn name(&self) -> &'static str {
@@ -50,6 +52,8 @@ impl RuleType for Rule {
             Rule::EOI => "EOI",
             Rule::String => "String",
             Rule::Quote => "Quote",
+            Rule::NestedRep => "NestedRep",
+            Rule::Bar => "Bar",
         }
     }
 }
@@ -85,14 +89,17 @@ normal_rule!(
     Rule,
     Rule::Foo,
     Str::<Foo>,
-    AtomicRepeat<Choice2<WHITESPACE<'i>, COMMENT<'i>>>,
+    AtomicRepeat<Choice2<WHITESPACE<C::String>, COMMENT<C::String>>>,
     false
 );
 rule_eoi!(EOI, Rule);
 
 #[test]
 fn string() {
-    assert_eq!(<StrFoo<'_, 0> as TypeWrapper>::Inner::CONTENT, Foo::CONTENT);
+    assert_eq!(
+        <StrFoo<&str, 0> as TypeWrapper>::Inner::CONTENT,
+        Foo::CONTENT
+    );
     StrFoo::try_check("foo").unwrap();
     let s = StrFoo::try_parse("foo").unwrap();
     assert_eq!(s.content.get_content(), "foo");
@@ -118,7 +125,7 @@ fn range() {
             "COMMENT { content: CharRange { content: '\\t' }, span: Span { str: \"\\t\", start: 0, end: 1 } }"
         );
 }
-type Ignore<'i> = AtomicRepeat<Choice2<WHITESPACE<'i>, COMMENT<'i>>>;
+type Ignore<S> = AtomicRepeat<Choice2<WHITESPACE<S>, COMMENT<S>>>;
 
 #[test]
 fn ignore() {
@@ -127,8 +134,8 @@ fn ignore() {
         "Temporary rule.",
         Rule,
         Rule::RepFoo,
-        Ignore<'i>,
-        Empty<'i>,
+        Ignore<S>,
+        Empty<S>,
         false
     );
     tmp::try_check(" ").unwrap();
@@ -137,14 +144,14 @@ fn ignore() {
 
 #[test]
 fn repetition() {
-    type REP<'i> = Rep<StrFoo<'i, 0>, Ignore<'i>, 1>;
+    type REP<S> = Rep<StrFoo<S, 0>, Ignore<S>, 1>;
     non_atomic_rule!(
         R,
         "Repetion of [StrFoo].",
         Rule,
         Rule::RepFoo,
-        REP<'i>,
-        Ignore<'i>,
+        REP<S>,
+        Ignore<S>,
         false
     );
 
@@ -168,7 +175,7 @@ fn repetition() {
     assert_ne!(rep1, rep2);
     assert_ne!(rep1, rep3);
 
-    let format = |rep: &R<'_, 1>| -> String {
+    let format = |rep: &R<&str, 1>| -> String {
         rep.iter_matched()
             .map(|e| e.get_content())
             .collect::<Vec<_>>()
@@ -191,22 +198,22 @@ fn repetition() {
         rep3.iter_matched().collect::<Vec<_>>()
     );
 
-    assert_eq!(REP::MIN, 0);
+    assert_eq!(REP::<&str>::MIN, 0);
     assert_eq!(rep1.deref().get_min_len(), 0);
     assert_eq!(rep1.deref().get_max_len(), usize::MAX);
-    assert_eq!(<R<'_, 0> as TypeWrapper>::Inner::MIN, 0);
+    assert_eq!(<R<&str, 0> as TypeWrapper>::Inner::MIN, 0);
 }
 
 #[test]
 fn repetition_at_least_once() {
-    type REP<'i> = RepOnce<Insens<'i, Foo>, Ignore<'i>, 1>;
+    type REP<S> = RepOnce<Insens<S, Foo>, Ignore<S>, 1>;
     non_atomic_rule!(
         R,
         "Repetion of [StrFoo].",
         Rule,
         Rule::RepFoo,
-        REP<'i>,
-        Ignore<'i>,
+        REP<S>,
+        Ignore<S>,
         false
     );
 
@@ -216,7 +223,7 @@ fn repetition_at_least_once() {
     assert_ne!(rep1, rep3);
     assert_ne!(rep1, rep4);
 
-    let collect = |r: &R<'_, 1>| {
+    let collect = |r: &R<&str, 1>| {
         r.iter_matched()
             .map(|r| r.get_content())
             .collect::<Vec<_>>()
@@ -243,10 +250,10 @@ fn repetition_at_least_once() {
         );
     }
 
-    assert_eq!(REP::MIN, 1);
+    assert_eq!(REP::<&str>::MIN, 1);
     assert_eq!(rep1.deref().get_min_len(), 1);
     assert_eq!(rep1.deref().get_max_len(), usize::MAX);
-    assert_eq!(<R<'_, 0> as TypeWrapper>::Inner::MIN, 1);
+    assert_eq!(<R<&str, 0> as TypeWrapper>::Inner::MIN, 1);
 }
 
 #[test]
@@ -261,12 +268,12 @@ fn skip() {
         "Quoted string.",
         Rule,
         Rule::String,
-        Seq2<Skipped<Skip<'i, NewLine>, Ignore<'i>, 0>, Skipped<NEWLINE, Ignore<'i>, 0>>,
+        Seq2<Skipped<Skip<S, NewLine>, Ignore<S>, 0>, Skipped<NEWLINE, Ignore<S>, 0>>,
         false
     );
 
-    let s1 = QuotedString::<1>::try_parse("2\r\n").unwrap();
-    let s2 = QuotedString::<1>::try_parse("\r\n").unwrap();
+    let s1 = QuotedString::<&str, 1>::try_parse("2\r\n").unwrap();
+    let s2 = QuotedString::<&str, 1>::try_parse("\r\n").unwrap();
     assert_ne!(s1, s2);
 
     let new_line = NewLine;
@@ -280,39 +287,53 @@ fn skip_char() {
         "Skip 3 characters.",
         Rule,
         Rule::Foo,
-        SkipChar<'i, 3>,
+        SkipChar<S, 3>,
         false
     );
-    three::<1>::try_parse("foo").unwrap();
-    three::<1>::try_parse("foobar").unwrap_err();
+    three::<&str, 1>::try_parse("foo").unwrap();
+    three::<&str, 1>::try_parse("foobar").unwrap_err();
 }
 
 #[test]
 fn positive_predicate() {
-    atomic_rule!(Quote,"A single `'`.", Rule,Rule::Quote,CharRange<'\'', '\''>);
+    struct A;
+    impl StringWrapper for A {
+        const CONTENT: &'static str = "a";
+    }
+
+    atomic_rule!(
+        PositiveAThenA,
+        "Match 'a'.",
+        Rule,
+        Rule::Quote,
+        (Positive<Str<A>>, Str<A>)
+    );
+    PositiveAThenA::try_parse("ab").unwrap_err();
+    PositiveAThenA::try_parse("a").unwrap();
+    PositiveAThenA::try_parse("aa").unwrap_err();
+
+    atomic_rule!(Quote, "A single `'`.", Rule, Rule::Quote, CharRange<'\'', '\''>);
     compound_atomic_rule!(
         Lifetime,
         "A simplified example of rust lifetime specifier.",
         Rule,
         Rule::Life,
         Seq3<
-            Skipped<Quote<'i, 0>, Ignore<'i>, 0>,
+            Skipped<Quote<S, 0>, Ignore<S>, 0>,
             Skipped<
                 Positive<
-                    Seq2<
-                        Skipped<ANY, Ignore<'i>, 0>,
-                        Skipped<Negative<Quote<'i, 0>>, Ignore<'i>, 0>,
-                    >,
+                    Seq2<Skipped<ANY, Ignore<S>, 0>, Skipped<Negative<Quote<S, 0>>, Ignore<S>, 0>>,
                 >,
-                Ignore<'i>,
+                Ignore<S>,
                 0,
             >,
-            Skipped<AtomicRepeat<CharRange<'a', 'z'>>, Ignore<'i>, 0>,
+            Skipped<AtomicRepeat<CharRange<'a', 'z'>>, Ignore<S>, 0>,
         >,
         false
     );
 
-    let l = Lifetime::<1>::try_parse("'i").unwrap();
+    let l = Lifetime::<&str, 1>::try_parse("'i").unwrap();
+    dbg!(&l);
     let (quote, peeked, name) = l.as_ref();
     assert_eq!(quote.span.as_str(), "'");
     let (any, _) = peeked.as_ref();
@@ -326,7 +347,7 @@ fn positive_predicate() {
         "i"
     );
 
-    let l = Lifetime::<1>::try_parse("'input").unwrap();
+    let l = Lifetime::<&str, 1>::try_parse("'input").unwrap();
     let (_, peeked, name) = l.as_ref();
     let (any, _) = peeked.as_ref();
     assert_eq!(any.content, 'i');
@@ -340,7 +361,7 @@ fn positive_predicate() {
         "input"
     );
 
-    Lifetime::<1>::try_parse("'i'").unwrap_err();
+    Lifetime::<&str, 1>::try_parse("'i'").unwrap_err();
 }
 
 #[test]
@@ -363,18 +384,18 @@ fn negative_predicate() {
         AtomicRepeat<(Negative<Choice2<Str<StrFoo>, Str<StrBar>>>, ANY)>,
         false
     );
-    let _ = not_foo_bar::<1>::try_parse("").unwrap();
-    let baz = not_foo_bar::<1>::try_parse("baz").unwrap();
+    let _ = not_foo_bar::<&str, 1>::try_parse("").unwrap();
+    let baz = not_foo_bar::<&str, 1>::try_parse("baz").unwrap();
     for i in baz.iter() {
         let (neg, any) = i;
         assert_eq!(
-            <Negative<_> as Pairs<'_, Rule>>::self_or_children(neg).len(),
+            <Negative<_> as Pairs<&str, Rule>>::self_or_children(neg).len(),
             0
         );
-        assert_eq!(<ANY as Pairs<'_, Rule>>::self_or_children(any).len(), 0);
+        assert_eq!(<ANY as Pairs<&str, Rule>>::self_or_children(any).len(), 0);
     }
-    let _ = not_foo_bar::<1>::try_parse("Foofoo").unwrap_err();
-    let _ = not_foo_bar::<1>::try_parse("bazfoo").unwrap_err();
+    let _ = not_foo_bar::<&str, 1>::try_parse("Foofoo").unwrap_err();
+    let _ = not_foo_bar::<&str, 1>::try_parse("bazfoo").unwrap_err();
 }
 
 #[test]
@@ -385,12 +406,12 @@ fn peek() {
         Rule,
         Rule::RepFoo,
         Seq2<
-            Skipped<Push<Insens<'i, Foo>>, Ignore<'i>, 0>,
-            Skipped<RepeatMinMax<Skipped<PEEK<'i>, Ignore<'i>, 0>, 1, 3>, Ignore<'i>, 0>,
+            Skipped<Push<Insens<S, Foo>>, Ignore<S>, 0>,
+            Skipped<RepeatMinMax<Skipped<PEEK<S>, Ignore<S>, 0>, 1, 3>, Ignore<S>, 0>,
         >,
         false
     );
-    let r = Rep_1_3::<1>::try_parse("foOfoO").unwrap();
+    let r = Rep_1_3::<&str, 1>::try_parse("foOfoO").unwrap();
     assert_eq!(
         format!("{:#?}", r),
         "Rep_1_3 {
@@ -456,7 +477,7 @@ fn rep() {
         "Repeat previously matched expression 0 to 3 times",
         Rule,
         Rule::RepFoo,
-        RepeatMin<Skipped<Str<Foo>, Ignore<'i>, 0>, 0>,
+        RepeatMin<Skipped<Str<Foo>, Ignore<S>, 0>, 0>,
         false
     );
 
@@ -490,7 +511,7 @@ fn rep() {
         "Repeat \"foo\" 2 times",
         Rule,
         Rule::RepFoo,
-        [Insens<'i, Foo>; 2],
+        [Insens<S, Foo>; 2],
         false
     );
     for input in ["", "foo", "foofoofoo"] {
@@ -507,4 +528,50 @@ fn rep() {
         set.insert(Rep_2::try_parse(input).unwrap());
     }
     assert_eq!(set.len(), 3);
+}
+
+#[test]
+fn nested_rep() {
+    #[derive(Clone, Hash, PartialEq, Eq)]
+    struct Bar1;
+    impl StringWrapper for Bar1 {
+        const CONTENT: &'static str = "a";
+    }
+    impl RuleWrapper<Rule> for Bar1 {
+        const RULE: Rule = Rule::Bar;
+        type Rule = Rule;
+    }
+    #[derive(Clone, Hash, PartialEq, Eq)]
+    struct Bar2;
+    impl StringWrapper for Bar2 {
+        const CONTENT: &'static str = "b";
+    }
+    impl RuleWrapper<Rule> for Bar2 {
+        const RULE: Rule = Rule::Bar;
+        type Rule = Rule;
+    }
+
+    compound_atomic_rule!(
+        Nested_Rep,
+        "Match \"a\"* ~ (SOI ~ ANY | \"b\")",
+        Rule,
+        Rule::NestedRep,
+        (
+            RepeatMin<Skipped<Str<Bar1>, Ignore<S>, 0>, 0>,
+            Choice2<(SOI, ANY), Str<Bar2>>
+        ),
+        false
+    );
+
+    let x = Nested_Rep::try_parse("x").unwrap();
+    assert_eq!(
+        format!("{:?}", x),
+        "Nested_Rep { content: (RepeatMin { content: [] }, Choice2 { _0: (SOI, ANY { content: 'x' }) }), span: Span { str: \"x\", start: 0, end: 1 } }"
+    );
+
+    let x = Nested_Rep::try_parse("ab").unwrap();
+    assert_eq!(
+        format!("{:?}", x),
+        "Nested_Rep { content: (RepeatMin { content: [Str] }, Choice2 { _1: Str }), span: Span { str: \"ab\", start: 0, end: 2 } }"
+    );
 }

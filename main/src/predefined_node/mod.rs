@@ -23,11 +23,10 @@ use super::{
     RuleType, Stack, TypedNode,
 };
 use core::{
-    fmt::Debug,
+    fmt::{self, Debug},
     marker::PhantomData,
     ops::{Deref, DerefMut},
 };
-use custom_debug_derive::Debug as Dbg;
 use derive_where::derive_where;
 pub use repetition::{
     AtomicRepeat, Rep, RepExact, RepMin, RepMinMax, RepOnce, RepeatMin, RepeatMinMax,
@@ -39,9 +38,8 @@ pub use repetition::{
 ///
 /// See [`Insens`] for case-insensitive matching.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Clone, Dbg, Hash, PartialEq, Eq)]
+#[derive_where(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Str<T: StringWrapper + 'static> {
-    #[debug(skip)]
     _phantom: PhantomData<&'static T>,
 }
 impl<T: StringWrapper> StringWrapper for Str<T> {
@@ -54,13 +52,13 @@ impl<T: StringWrapper> From<()> for Str<T> {
         }
     }
 }
-impl<'i, R: RuleType, T: StringWrapper + 'static> TypedNode<'i, R> for Str<T> {
+impl<C: Cursor, R: RuleType, T: StringWrapper + 'static> TypedNode<C, R> for Str<T> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         if input.match_string(Self::CONTENT) {
             Some((input, Self::from(())))
         } else {
@@ -69,16 +67,21 @@ impl<'i, R: RuleType, T: StringWrapper + 'static> TypedNode<'i, R> for Str<T> {
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         if input.match_string(Self::CONTENT) {
             Some(input)
         } else {
             None
         }
+    }
+}
+impl<T: StringWrapper> Debug for Str<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Str").finish()
     }
 }
 
@@ -91,34 +94,33 @@ impl<'i, R: RuleType, T: StringWrapper + 'static> TypedNode<'i, R> for Str<T> {
 ///
 /// See [`Str`] for case-sensitive matching.
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-#[derive(Clone, Dbg, Hash, PartialEq, Eq)]
-pub struct Insens<'i, T: StringWrapper> {
+#[derive_where(Clone, Hash, PartialEq, Eq; S: RefStr)]
+pub struct Insens<S, T> {
     /// Matched content.
-    pub content: &'i str,
-    #[debug(skip)]
-    _phantom: PhantomData<&'i T>,
+    pub content: S,
+    _phantom: PhantomData<T>,
 }
-impl<T: StringWrapper> StringWrapper for Insens<'_, T> {
+impl<S, T: StringWrapper> StringWrapper for Insens<S, T> {
     const CONTENT: &'static str = T::CONTENT;
 }
-impl<'i, T: StringWrapper> From<&'i str> for Insens<'i, T> {
-    fn from(content: &'i str) -> Self {
+impl<S, T> From<S> for Insens<S, T> {
+    fn from(content: S) -> Self {
         Self {
             content,
             _phantom: PhantomData,
         }
     }
 }
-impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, T> {
+impl<C: Cursor, R: RuleType, T: StringWrapper> TypedNode<C, R> for Insens<C::String, T> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
-        let start = input;
+    fn try_parse_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
+        let start = input.clone();
         if input.match_insensitive(Self::CONTENT) {
-            let span = start.span(input);
+            let span = start.span(&input);
             Some((input, Self::from(span.as_str())))
         } else {
             None
@@ -126,11 +128,11 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, T> {
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         if input.match_insensitive(Self::CONTENT) {
             Some(input)
         } else {
@@ -138,79 +140,94 @@ impl<'i, R: RuleType, T: StringWrapper> TypedNode<'i, R> for Insens<'i, T> {
         }
     }
 }
+impl<S: Debug, T> Debug for Insens<S, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Insens")
+            .field("content", &self.content)
+            .finish()
+    }
+}
 
 /// Skips until one of the given strings.
-#[derive_where(Clone, Hash, PartialEq, Eq)]
-#[derive(Dbg)]
-pub struct Skip<'i, Strings: StringArrayWrapper> {
+#[derive_where(Clone, Hash, PartialEq, Eq; S: RefStr)]
+pub struct Skip<S, Strings> {
     /// Skipped span.
-    pub span: Span<'i>,
-    #[debug(skip)]
-    _phantom: PhantomData<&'i Strings>,
+    pub span: Span<S>,
+    _phantom: PhantomData<Strings>,
 }
-impl<Strings: StringArrayWrapper> StringArrayWrapper for Skip<'_, Strings> {
+impl<S, Strings: StringArrayWrapper> StringArrayWrapper for Skip<S, Strings> {
     const CONTENT: &'static [&'static str] = Strings::CONTENT;
 }
-impl<'i, Strings: StringArrayWrapper> From<Span<'i>> for Skip<'i, Strings> {
-    fn from(span: Span<'i>) -> Self {
+impl<S, Strings> From<Span<S>> for Skip<S, Strings> {
+    fn from(span: Span<S>) -> Self {
         Self {
             span,
             _phantom: PhantomData,
         }
     }
 }
-impl<'i, R: RuleType, Strings: StringArrayWrapper> TypedNode<'i, R> for Skip<'i, Strings> {
+impl<C: Cursor, R: RuleType, Strings: StringArrayWrapper> TypedNode<C, R>
+    for Skip<C::String, Strings>
+{
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
-        let start = input;
+    fn try_parse_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
+        let start = input.clone();
         match input.skip_until(Strings::CONTENT) {
             true => {
-                let span = start.span(input);
+                let span = start.span(&input);
                 Some((input, Self::from(span)))
             }
-            false => Some((input, Self::from(start.span(input)))), // return the original input if not found
+            false => {
+                let span = start.span(&input);
+                Some((input, Self::from(span))) // return the original input if not found
+            }
         }
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         match input.skip_until(Strings::CONTENT) {
             true => Some(input),
             false => Some(input), // return the original input if not found
         }
     }
 }
+impl<S: RefStr, Strings> Debug for Skip<S, Strings> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Skip").field("span", &self.span).finish()
+    }
+}
 
 /// Skip `n` characters if there are.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct SkipChar<'i, const N: usize> {
+#[derive_where(Clone, Debug, Hash, PartialEq, Eq; S: RefStr)]
+pub struct SkipChar<S, const N: usize> {
     /// Skipped span.
-    pub span: Span<'i>,
+    pub span: Span<S>,
 }
-impl<'i, const N: usize> From<Span<'i>> for SkipChar<'i, N> {
-    fn from(span: Span<'i>) -> Self {
+impl<S, const N: usize> From<Span<S>> for SkipChar<S, N> {
+    fn from(span: Span<S>) -> Self {
         Self { span }
     }
 }
-impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, N> {
+impl<C: Cursor, R: RuleType, const N: usize> TypedNode<C, R> for SkipChar<C::String, N> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
-        let start = input;
+    fn try_parse_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
+        let start = input.clone();
         match input.skip(N) {
             true => {
-                let span = start.span(input);
+                let span = start.span(&input);
                 Some((input, Self::from(span)))
             }
             false => None,
@@ -218,11 +235,11 @@ impl<'i, R: RuleType, const N: usize> TypedNode<'i, R> for SkipChar<'i, N> {
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         match input.skip(N) {
             true => Some(input),
             false => None,
@@ -238,17 +255,19 @@ pub struct CharRange<const MIN: char, const MAX: char> {
     /// Matched character.
     pub content: char,
 }
-impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R> for CharRange<MIN, MAX> {
+impl<C: Cursor, R: RuleType, const MIN: char, const MAX: char> TypedNode<C, R>
+    for CharRange<MIN, MAX>
+{
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
-        let start = input;
+    fn try_parse_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
+        let start = input.clone();
         match input.match_range(MIN..MAX) {
             true => {
-                let span = start.span(input);
+                let span = start.span(&input);
                 let content = span.as_str().chars().next().unwrap();
                 Some((input, Self { content }))
             }
@@ -257,11 +276,11 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R> for Cha
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         match input.match_range(MIN..MAX) {
             true => Some(input),
             false => None,
@@ -271,13 +290,13 @@ impl<'i, R: RuleType, const MIN: char, const MAX: char> TypedNode<'i, R> for Cha
 
 /// Try to create stack slice.
 #[inline]
-fn stack_slice<'i, 's, I: Input<'i>, R: RuleType>(
-    input: I,
+fn stack_slice<'s, C: Cursor, R: RuleType>(
+    input: C,
     start: i32,
     end: Option<i32>,
-    stack: &'s Stack<Span<'i>>,
-    tracker: &mut Tracker<'i, R>,
-) -> Option<core::slice::Iter<'s, Span<'i>>> {
+    stack: &'s Stack<Span<C::String>>,
+    tracker: &mut Tracker<C::String, R>,
+) -> Option<core::slice::Iter<'s, Span<C::String>>> {
     let range = match constrain_idxs(start, end, stack.len()) {
         Some(range) => range,
         None => {
@@ -295,21 +314,25 @@ fn stack_slice<'i, 's, I: Input<'i>, R: RuleType>(
 /// Match a part of the stack without popping.
 /// Will match (consume) input.
 #[inline]
-fn peek_spans<'s, 'i: 's, I: Input<'i>, R: RuleType>(
-    input: I,
-    iter: impl Iterator<Item = &'s Span<'i>>,
-    _tracker: &mut Tracker<'i, R>,
-) -> Option<(I, Span<'i>)> {
-    let mut matching_pos = input;
+fn peek_spans<'s, C: Cursor, R: RuleType>(
+    input: C,
+    iter: impl Iterator<Item = &'s Span<C::String>>,
+    _tracker: &mut Tracker<C::String, R>,
+) -> Option<(C, Span<C::String>)>
+where
+    C::String: 's,
+{
+    let mut matching_pos = input.clone();
     for span in iter {
-        match matching_pos.match_string(span.as_str()) {
+        match matching_pos.match_string(span.as_str().as_str()) {
             true => (),
             false => {
                 return None;
             }
         }
     }
-    Some((matching_pos, input.span(matching_pos)))
+    let span = input.span(&matching_pos);
+    Some((matching_pos, span))
 }
 
 /// Positive predicate.
@@ -337,16 +360,16 @@ impl<N> DerefMut for Positive<N> {
         &mut self.content
     }
 }
-impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
+impl<C: Cursor, R: RuleType, N: TypedNode<C, R>> TypedNode<C, R> for Positive<N> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         tracker.positive_during(|tracker| {
             stack.snapshot();
-            match N::try_parse_partial_with(input, stack, tracker) {
+            match N::try_parse_partial_with(input.clone(), stack, tracker) {
                 Some((_, content)) => {
                     stack.restore();
                     Some((input, Self::from(content)))
@@ -360,14 +383,14 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         tracker.positive_during(|tracker| {
             stack.snapshot();
-            match N::try_check_partial_with(input, stack, tracker) {
+            match N::try_check_partial_with(input.clone(), stack, tracker) {
                 Some(_) => {
                     stack.restore();
                     Some(input)
@@ -385,9 +408,8 @@ impl<'i, R: RuleType, N: TypedNode<'i, R>> TypedNode<'i, R> for Positive<N> {
 ///
 /// Will not contain anything.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Clone, Dbg, Hash, PartialEq, Eq)]
+#[derive_where(Clone, Hash, PartialEq, Eq)]
 pub struct Negative<T> {
-    #[debug(skip)]
     _phantom: PhantomData<T>,
 }
 impl<T> From<()> for Negative<T> {
@@ -397,16 +419,16 @@ impl<T> From<()> for Negative<T> {
         }
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
+impl<C: Cursor, R: RuleType, T: TypedNode<C, R>> TypedNode<C, R> for Negative<T> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         tracker.negative_during(|tracker| {
             stack.snapshot();
-            match T::try_check_partial_with(input, stack, tracker) {
+            match T::try_check_partial_with(input.clone(), stack, tracker) {
                 Some(_) => {
                     stack.restore();
                     None
@@ -420,14 +442,14 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         tracker.negative_during(|tracker| {
             stack.snapshot();
-            match T::try_check_partial_with(input, stack, tracker) {
+            match T::try_check_partial_with(input.clone(), stack, tracker) {
                 Some(_) => {
                     stack.restore();
                     None
@@ -440,6 +462,11 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Negative<T> {
         })
     }
 }
+impl<T> Debug for Negative<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Negative").finish()
+    }
+}
 
 /// Match any character.
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -448,23 +475,23 @@ pub struct ANY {
     /// Matched character.
     pub content: char,
 }
-impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
+impl<C: Cursor, R: RuleType> TypedNode<C, R> for ANY {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
-        input.next().map(|c| (input, Self { content: c }))
+    fn try_parse_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
+        input.advance_char().map(|c| (input, Self { content: c }))
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
-        input.next().map(|_| input)
+    fn try_check_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
+        input.advance_char().map(|_| input)
     }
 }
 
@@ -472,13 +499,13 @@ impl<'i, R: RuleType> TypedNode<'i, R> for ANY {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct SOI;
-impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
+impl<C: Cursor, R: RuleType> TypedNode<C, R> for SOI {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         if input.at_start() {
             Some((input, Self))
         } else {
@@ -487,11 +514,11 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         if input.at_start() {
             Some(input)
         } else {
@@ -506,13 +533,13 @@ impl<'i, R: RuleType> TypedNode<'i, R> for SOI {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct EOI;
-impl<'i, R: RuleType> TypedNode<'i, R> for EOI {
+impl<C: Cursor, R: RuleType> TypedNode<C, R> for EOI {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         if input.at_end() {
             Some((input, Self))
         } else {
@@ -521,11 +548,11 @@ impl<'i, R: RuleType> TypedNode<'i, R> for EOI {
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         if input.at_end() {
             Some(input)
         } else {
@@ -554,13 +581,13 @@ pub struct NEWLINE {
     /// Type of matched character.
     pub content: NewLineType,
 }
-impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE {
+impl<C: Cursor, R: RuleType> TypedNode<C, R> for NEWLINE {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         let (input, t) = if input.match_string("\r\n") {
             (input, NewLineType::CRLF)
         } else if input.match_string("\n") {
@@ -574,11 +601,11 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE {
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        mut input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        mut input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         if input.match_string("\r\n") || input.match_string("\n") || input.match_string("\r") {
             Some(input)
         } else {
@@ -590,36 +617,36 @@ impl<'i, R: RuleType> TypedNode<'i, R> for NEWLINE {
 /// Peek all spans in stack reversely.
 /// Will consume input.
 #[allow(non_camel_case_types)]
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct PEEK_ALL<'i> {
+#[derive_where(Clone, Debug, Hash, PartialEq, Eq; S: RefStr)]
+pub struct PEEK_ALL<S> {
     /// Pair span.
-    pub span: Span<'i>,
+    pub span: Span<S>,
 }
-impl<'i> From<Span<'i>> for PEEK_ALL<'i> {
-    fn from(span: Span<'i>) -> Self {
+impl<S> From<Span<S>> for PEEK_ALL<S> {
+    fn from(span: Span<S>) -> Self {
         Self { span }
     }
 }
-impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
+impl<C: Cursor, R: RuleType> TypedNode<C, R> for PEEK_ALL<C::String> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         let spans = stack[0..stack.len()].iter().rev();
-        let (input, span) = peek_spans::<I, R>(input, spans, tracker)?;
+        let (input, span) = peek_spans::<C, R>(input, spans, tracker)?;
         Some((input, Self::from(span)))
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         let spans = stack[0..stack.len()].iter().rev();
-        let (input, _) = peek_spans::<I, R>(input, spans, tracker)?;
+        let (input, _) = peek_spans::<C, R>(input, spans, tracker)?;
         Some(input)
     }
 }
@@ -627,27 +654,30 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK_ALL<'i> {
 /// Peek top span in stack.
 /// Will consume input.
 #[allow(non_camel_case_types)]
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct PEEK<'i> {
+#[derive_where(Clone, Debug, Hash, PartialEq, Eq; S: RefStr)]
+pub struct PEEK<S> {
     /// Pair span.
-    pub span: Span<'i>,
+    pub span: Span<S>,
 }
-impl<'i> From<Span<'i>> for PEEK<'i> {
-    fn from(span: Span<'i>) -> Self {
+impl<S> From<Span<S>> for PEEK<S> {
+    fn from(span: Span<S>) -> Self {
         Self { span }
     }
 }
-impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
+impl<C: Cursor, R: RuleType> TypedNode<C, R> for PEEK<C::String> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        mut input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
-        let start = input;
+    fn try_parse_partial_with(
+        mut input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
+        let start = input.clone();
         match stack.peek() {
-            Some(string) => match input.match_string(string.as_str()) {
-                true => Some((input, Self::from(start.span(input)))),
+            Some(string) => match input.match_string(string.as_str().as_str()) {
+                true => {
+                    let span = Self::from(start.span(&input));
+                    Some((input, span))
+                }
                 false => None,
             },
             None => {
@@ -658,13 +688,13 @@ impl<'i, R: RuleType> TypedNode<'i, R> for PEEK<'i> {
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        mut input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        mut input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         match stack.peek() {
-            Some(string) => match input.match_string(string.as_str()) {
+            Some(string) => match input.match_string(string.as_str().as_str()) {
                 true => Some(input),
                 false => None,
             },
@@ -687,7 +717,7 @@ pub struct Skipped<T, Skip, const SKIP: usize> {
     pub matched: T,
 }
 impl<T: Debug, Skip: Debug, const SKIP: usize> Debug for Skipped<T, Skip, SKIP> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if SKIP > 0 {
             f.debug_struct("Skipped")
                 .field("skipped", &self.skipped)
@@ -705,13 +735,13 @@ impl<T: Debug, Skip: Debug, const SKIP: usize> Debug for Skipped<T, Skip, SKIP> 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct DROP;
-impl<'i, R: RuleType> TypedNode<'i, R> for DROP {
+impl<C: Cursor, R: RuleType> TypedNode<C, R> for DROP {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         match stack.pop() {
             Some(_) => Some((input, Self)),
             None => {
@@ -722,11 +752,11 @@ impl<'i, R: RuleType> TypedNode<'i, R> for DROP {
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         match stack.pop() {
             Some(_) => Some(input),
             None => {
@@ -738,26 +768,26 @@ impl<'i, R: RuleType> TypedNode<'i, R> for DROP {
 }
 
 /// Match and pop the top span of the stack.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct POP<'i> {
+#[derive_where(Clone, Debug, Hash, PartialEq, Eq; S: RefStr)]
+pub struct POP<S> {
     /// Matched span.
-    pub span: Span<'i>,
+    pub span: Span<S>,
 }
 
-impl<'i> From<Span<'i>> for POP<'i> {
-    fn from(span: Span<'i>) -> Self {
+impl<S> From<Span<S>> for POP<S> {
+    fn from(span: Span<S>) -> Self {
         Self { span }
     }
 }
-impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
+impl<C: Cursor, R: RuleType> TypedNode<C, R> for POP<C::String> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        mut input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        mut input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         match stack.pop() {
-            Some(span) => match input.match_string(span.as_str()) {
+            Some(span) => match input.match_string(span.as_str().as_str()) {
                 true => Some((input, Self::from(span))),
                 false => None,
             },
@@ -769,13 +799,13 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        mut input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        mut input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         match stack.pop() {
-            Some(span) => match input.match_string(span.as_str()) {
+            Some(span) => match input.match_string(span.as_str().as_str()) {
                 true => Some(input),
                 false => None,
             },
@@ -789,34 +819,34 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP<'i> {
 
 /// Match and pop all spans in the stack in top-to-bottom-order.
 #[allow(non_camel_case_types)]
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct POP_ALL<'i> {
+#[derive_where(Clone, Debug, Hash, PartialEq, Eq; S: RefStr)]
+pub struct POP_ALL<S> {
     /// Matched span.
-    pub span: Span<'i>,
+    pub span: Span<S>,
 }
-impl<'i> From<Span<'i>> for POP_ALL<'i> {
-    fn from(span: Span<'i>) -> Self {
+impl<S> From<Span<S>> for POP_ALL<S> {
+    fn from(span: Span<S>) -> Self {
         Self { span }
     }
 }
-impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
+impl<C: Cursor, R: RuleType> TypedNode<C, R> for POP_ALL<C::String> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         let (input, res) = PEEK_ALL::try_parse_partial_with(input, stack, tracker)?;
         while stack.pop().is_some() {}
         Some((input, Self::from(res.span)))
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         let input = PEEK_ALL::try_check_partial_with(input, stack, tracker)?;
         while stack.pop().is_some() {}
         Some(input)
@@ -825,71 +855,76 @@ impl<'i, R: RuleType> TypedNode<'i, R> for POP_ALL<'i> {
 
 /// Always fail.
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-#[derive(Clone, Dbg, Hash, PartialEq, Eq)]
-pub struct AlwaysFail<'i>(#[debug(skip)] PhantomData<&'i char>);
-impl Default for AlwaysFail<'_> {
+#[derive_where(Clone, Hash, PartialEq, Eq)]
+pub struct AlwaysFail<S>(PhantomData<S>);
+impl<S> Default for AlwaysFail<S> {
     fn default() -> Self {
         Self(PhantomData)
     }
 }
-impl<'i, R: RuleType> TypedNode<'i, R> for AlwaysFail<'i> {
+impl<C: Cursor, R: RuleType> TypedNode<C, R> for AlwaysFail<C::String> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        _input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        _input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         None
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        _input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        _input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         None
+    }
+}
+impl<S> Debug for AlwaysFail<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AlwaysFail").finish()
     }
 }
 
 /// Empty.
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-#[derive(Clone, Dbg, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Empty<'i>(#[debug(skip)] PhantomData<&'i char>);
-impl Default for Empty<'_> {
+#[derive_where(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Empty<S>(PhantomData<S>);
+impl<S> Default for Empty<S> {
     fn default() -> Self {
         Self(PhantomData)
     }
 }
-impl<'i, R: RuleType> NeverFailedTypedNode<'i, R> for Empty<'i> {
+impl<C: Cursor, R: RuleType> NeverFailedTypedNode<C, R> for Empty<C::String> {
     #[inline]
-    fn parse_with<I: Input<'i>>(input: I, _stack: &mut Stack<Span<'i>>) -> (I, Self) {
+    fn parse_with(input: C, _stack: &mut Stack<Span<C::String>>) -> (C, Self) {
         (input, Self::default())
     }
 
-    fn check_with<I: Input<'i>>(input: I, _stack: &mut Stack<Span<'i>>) -> I {
+    fn check_with(input: C, _stack: &mut Stack<Span<C::String>>) -> C {
         input
     }
 }
-impl<'i, R: RuleType> TypedNode<'i, R> for Empty<'i> {
+impl<C: Cursor, R: RuleType> TypedNode<C, R> for Empty<C::String> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
-        Some(<Self as NeverFailedTypedNode<'i, R>>::parse_with(
+    fn try_parse_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
+        Some(<Self as NeverFailedTypedNode<C, R>>::parse_with(
             input, stack,
         ))
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
-        Some(<Self as NeverFailedTypedNode<'i, R>>::check_with(
+    fn try_check_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
+        Some(<Self as NeverFailedTypedNode<C, R>>::check_with(
             input, stack,
         ))
     }
@@ -907,28 +942,28 @@ impl<T> From<T> for Push<T> {
         Self { content }
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for Push<T> {
+impl<C: Cursor, R: RuleType, T: TypedNode<C, R>> TypedNode<C, R> for Push<T> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
-        let start = input;
+    fn try_parse_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
+        let start = input.clone();
         let (input, content) = T::try_parse_partial_with(input, stack, tracker)?;
-        stack.push(start.span(input));
+        stack.push(start.span(&input));
         Some((input, Self::from(content)))
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
-        let start = input;
-        let input = T::try_check_partial_with(input, stack, tracker)?;
-        stack.push(start.span(input));
+    fn try_check_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
+        let start = input.clone();
+        let input = T::try_check_partial_with(input.clone(), stack, tracker)?;
+        stack.push(start.span(&input));
         Some(input)
     }
 }
@@ -946,10 +981,9 @@ impl<T> DerefMut for Push<T> {
 
 /// Simply push a literal to the [Stack].
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[derive(Clone, Dbg, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive_where(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PushLiteral<T: StringWrapper + 'static> {
     /// Matched content.
-    #[debug(skip)]
     _phantom: PhantomData<&'static T>,
 }
 impl<T: StringWrapper> PushLiteral<T> {
@@ -962,24 +996,29 @@ impl<T: StringWrapper> PushLiteral<T> {
 impl<T: StringWrapper> StringWrapper for PushLiteral<T> {
     const CONTENT: &'static str = T::CONTENT;
 }
-impl<'i, R: RuleType, T: StringWrapper + 'static> TypedNode<'i, R> for PushLiteral<T> {
+impl<C: Cursor, R: RuleType, T: StringWrapper + 'static> TypedNode<C, R> for PushLiteral<T> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
-        stack.push(Span::new_at_end(T::CONTENT));
+    fn try_parse_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
+        stack.push(Span::new_full(C::String::from_static(T::CONTENT)));
         Some((input, Self::new()))
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        _stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        input: C,
+        _stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         Some(input)
+    }
+}
+impl<T: StringWrapper> Debug for PushLiteral<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PushLiteral").finish()
     }
 }
 
@@ -987,28 +1026,28 @@ impl<'i, R: RuleType, T: StringWrapper + 'static> TypedNode<'i, R> for PushLiter
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PeekSlice2<const START: i32, const END: i32>;
-impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
+impl<C: Cursor, R: RuleType, const START: i32, const END: i32> TypedNode<C, R>
     for PeekSlice2<START, END>
 {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
-        let spans = stack_slice(input, START, Some(END), stack, tracker)?;
-        let (input, _) = peek_spans::<I, R>(input, spans, tracker)?;
+    fn try_parse_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
+        let spans = stack_slice(input.clone(), START, Some(END), stack, tracker)?;
+        let (input, _) = peek_spans::<C, R>(input, spans, tracker)?;
         Some((input, Self))
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
-        let spans = stack_slice(input, START, Some(END), stack, tracker)?;
-        let (input, _) = peek_spans::<I, R>(input, spans, tracker)?;
+    fn try_check_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
+        let spans = stack_slice(input.clone(), START, Some(END), stack, tracker)?;
+        let (input, _) = peek_spans::<C, R>(input, spans, tracker)?;
         Some(input)
     }
 }
@@ -1016,26 +1055,26 @@ impl<'i, R: RuleType, const START: i32, const END: i32> TypedNode<'i, R>
 /// Match `[START..]` in top-to-bottom order of the stack.
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PeekSlice1<const START: i32>;
-impl<'i, R: RuleType, const START: i32> TypedNode<'i, R> for PeekSlice1<START> {
+impl<C: Cursor, R: RuleType, const START: i32> TypedNode<C, R> for PeekSlice1<START> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
-        let spans = stack_slice(input, START, None, stack, tracker)?;
-        let (input, _) = peek_spans::<I, R>(input, spans, tracker)?;
+    fn try_parse_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
+        let spans = stack_slice(input.clone(), START, None, stack, tracker)?;
+        let (input, _) = peek_spans::<C, R>(input, spans, tracker)?;
         Some((input, Self))
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
-        let spans = stack_slice(input, START, None, stack, tracker)?;
-        let (input, _) = peek_spans::<I, R>(input, spans, tracker)?;
+    fn try_check_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
+        let spans = stack_slice(input.clone(), START, None, stack, tracker)?;
+        let (input, _) = peek_spans::<C, R>(input, spans, tracker)?;
         Some(input)
     }
 }
@@ -1058,7 +1097,8 @@ pub type ASCII_OCT_DIGIT = CharRange<'0', '7'>;
 
 use crate::{
     choices::{Choice2, Choice3},
-    Input,
+    input::RefStr,
+    Cursor,
 };
 /// Hexadecimal ASCII Digit. `'0'..'9' | 'a'..'f' | 'A'..'F'`
 #[allow(non_camel_case_types)]
@@ -1087,10 +1127,7 @@ pub type ASCII = CharRange<'\x00', '\x7f'>;
 /// Match char by a predicate.
 ///
 /// Return Some(char) if matched.
-pub fn match_char_by<'i>(
-    position: &mut impl Input<'i>,
-    pred: impl FnOnce(char) -> bool,
-) -> Option<char> {
+pub fn match_char_by(position: &mut impl Cursor, pred: impl FnOnce(char) -> bool) -> Option<char> {
     let mut res = None;
     position.match_char_by(|c| {
         let matched = pred(c);
@@ -1104,9 +1141,9 @@ pub fn match_char_by<'i>(
 
 /// Restore on error.
 #[inline]
-pub fn restore_on_none<'i, T>(
-    stack: &mut Stack<Span<'i>>,
-    f: impl FnOnce(&mut Stack<Span<'i>>) -> Option<T>,
+pub fn restore_on_none<S: RefStr, T>(
+    stack: &mut Stack<Span<S>>,
+    f: impl FnOnce(&mut Stack<Span<S>>) -> Option<T>,
 ) -> Option<T> {
     stack.snapshot();
     let res = f(stack);

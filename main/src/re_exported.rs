@@ -37,3 +37,5 @@ pub use ::std::vec;
 pub use ::std::vec::Vec;
 #[cfg(feature = "serde")]
 pub use serde;
+
+pub use derive_where;

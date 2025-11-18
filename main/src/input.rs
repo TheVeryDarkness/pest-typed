@@ -1,25 +1,35 @@
+//! Abstract input and cursor types.
+//!
+//!! This module defines the [`Str`], [`Input`] and [`Cursor`] traits, which are used to abstract over
+//! different input types for the parser.
+//!
+//! - [`Str`]: A trait for string-like types that can be used as input.
+//! - [`Input`]: A trait for types that may have extra span information, such as [`Position`] and [`Span`].
+//! - [`Cursor`]: A trait for types that can traverse the input, such as [`Position`], [`PositionCursor`] and [`SpanCursor`].
 use crate::{Position, Span};
 use alloc::string::String;
-use core::{ops::Range, str::Chars};
-use derive_where::derive_where;
+use core::{fmt, hash::Hash, ops::Range, ptr, slice::SliceIndex, str::Chars};
 
-/// Input with span information.
+/// Cursor with span information.
 ///
 /// # Safety
 ///
-/// [`byte_offset()`](Input::byte_offset) must be in the range of [`input()`](Input::input).
-pub unsafe trait Input<'i>: Copy {
+/// [`byte_offset()`](Cursor::byte_offset) must be in the range of [`input()`](Cursor::input).
+pub unsafe trait Cursor: Sized + Clone {
+    /// Underlying string type, such as `&str`, `&String`, or your own string type.
+    type String: RefStr;
+
     /// Get byte offset.
     fn byte_offset(&self) -> usize;
     /// Get the full input.
-    fn input(&self) -> &'i str;
+    fn input(&self) -> Self::String;
 
-    /// Get unconsumed characters.
-    fn get(&self) -> &'i str;
-    /// Get characters.
-    fn chars(&self) -> Chars<'i> {
-        self.get().chars()
-    }
+    /// Get unconsumed string.
+    fn get(&self) -> Self::String;
+    // /// Get unconsumed characters.
+    // fn chars(&self) -> Chars<'_> {
+    //     self.get().chars()
+    // }
 
     // /// Get line number and column number.
     // fn line_col(&self) -> (usize, usize);
@@ -27,16 +37,16 @@ pub unsafe trait Input<'i>: Copy {
     // fn line_of(&self) -> &'i str;
 
     /// To position.
-    fn as_position(&self) -> Position<'i> {
+    fn as_position(&self) -> Position<Self::String> {
         unsafe { Position::new_unchecked(self.input(), self.byte_offset()) }
     }
     /// Create a [Span].
-    fn span(&self, end: Self) -> Span<'i> {
+    fn span(&self, end: &Self) -> Span<Self::String> {
         self.as_position().span(&end.as_position())
     }
 
     /// Match a string.
-    fn match_string(&mut self, string: &'i str) -> bool {
+    fn match_string(&mut self, string: &str) -> bool {
         let res = self.get().starts_with(string);
         if res {
             unsafe { *self.cursor() += string.len() };
@@ -44,24 +54,20 @@ pub unsafe trait Input<'i>: Copy {
         res
     }
     /// Match an string insensitively.
-    fn match_insensitive(&mut self, string: &'i str) -> bool {
-        let len = string.len();
-        if let Some(prefix) = self.get().get(..len) {
-            if prefix.eq_ignore_ascii_case(string) {
-                unsafe { *self.cursor() += len };
-                return true;
-            }
+    fn match_insensitive(&mut self, string: &str) -> bool {
+        let res = self.get().starts_with_insensitive(string);
+        if res {
+            unsafe { *self.cursor() += string.len() };
         }
-        false
+        res
     }
     /// Skip until one of several strings.
-    fn skip_until(&mut self, strings: &'i [&'i str]) -> bool {
+    fn skip_until(&mut self, strings: &[&str]) -> bool {
         for from in self.byte_offset()..self.end() {
-            let bytes = if let Some(string) = self.input().get(from..) {
-                string.as_bytes()
-            } else {
+            let Some(string) = self.input().get(from..) else {
                 continue;
             };
+            let bytes = string.as_str().as_bytes();
 
             for slice in strings.iter() {
                 let to = slice.len();
@@ -79,7 +85,8 @@ pub unsafe trait Input<'i>: Copy {
     fn skip(&mut self, n: usize) -> bool {
         let skipped = {
             let mut len = 0;
-            let mut chars = self.chars();
+            let unconsumed = self.get();
+            let mut chars = unconsumed.chars();
             for _ in 0..n {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
@@ -95,7 +102,7 @@ pub unsafe trait Input<'i>: Copy {
     }
     /// Match a character in a range.
     fn match_range(&mut self, range: Range<char>) -> bool {
-        if let Some(c) = self.chars().next() {
+        if let Some(c) = self.get().chars().next() {
             if range.start <= c && c <= range.end {
                 unsafe { *self.cursor() += c.len_utf8() };
                 true
@@ -108,7 +115,7 @@ pub unsafe trait Input<'i>: Copy {
     }
     /// Match a character by a predicate.
     fn match_char_by(&mut self, f: impl FnOnce(char) -> bool) -> bool {
-        if let Some(c) = self.chars().next() {
+        if let Some(c) = self.get().chars().next() {
             if f(c) {
                 unsafe { *self.cursor() += c.len_utf8() };
                 true
@@ -120,8 +127,8 @@ pub unsafe trait Input<'i>: Copy {
         }
     }
     /// Progress to next character.
-    fn next(&mut self) -> Option<char> {
-        let c = self.chars().next();
+    fn advance_char(&mut self) -> Option<char> {
+        let c = self.get().chars().next();
         if let Some(c) = c {
             unsafe { *self.cursor() += c.len_utf8() };
         }
@@ -150,25 +157,23 @@ pub unsafe trait Input<'i>: Copy {
     }
 }
 
-unsafe impl<'i> Input<'i> for Position<'i> {
+unsafe impl<S: RefStr> Cursor for Position<S> {
+    type String = S;
+
     fn byte_offset(&self) -> usize {
         self.pos
     }
 
-    fn input(&self) -> &'i str {
-        self.input
+    fn input(&self) -> S {
+        self.input.clone()
     }
 
-    fn get(&self) -> &'i str {
-        if cfg!(debug_assertions) {
-            &self.input()[self.pos..]
-        } else {
-            unsafe { self.input().get_unchecked(self.pos..) }
-        }
+    fn get(&self) -> S {
+        unsafe { self.input().get_range_unchecked(self.pos..) }
     }
 
-    fn next(&mut self) -> Option<char> {
-        let c = self.chars().next();
+    fn advance_char(&mut self) -> Option<char> {
+        let c = self.get().chars().next();
         if c.is_some() {
             self.skip(1);
         }
@@ -188,53 +193,55 @@ unsafe impl<'i> Input<'i> for Position<'i> {
 }
 
 /// A part of input.
-#[derive_where(Clone, Copy)]
-pub struct SubInput1<'i, S: ?Sized = str> {
-    input: &'i S,
+///
+/// A cursor that is used to traverse a [Position] input, A.K.A. a string slice starting from a certain [`Position`].
+#[derive(Clone, Copy)]
+pub struct PositionCursor<I> {
+    input: I,
     start: usize,
     cursor: usize,
 }
 
 /// A part of input.
-#[derive_where(Clone, Copy)]
-pub struct SubInput2<'i, S: ?Sized = str> {
-    input: &'i S,
+///
+/// A cursor that is used to traverse a [Span] input, A.K.A. a string slice within a certain [`Span`].
+#[derive(Clone, Copy)]
+pub struct SpanCursor<I> {
+    input: I,
     start: usize,
     end: usize,
     cursor: usize,
 }
 
-impl<'i> AsInput<'i> for SubInput1<'i> {
-    type Output = Self;
+// impl<I> Input for SubInput1<I> {
+//     type Cursor = Self;
 
-    fn as_input(&self) -> Self::Output {
-        *self
-    }
-}
+//     fn as_cursor(&self) -> Self::Cursor {
+//         self.clone()
+//     }
+// }
 
-impl<'i> AsInput<'i> for SubInput2<'i> {
-    type Output = Self;
+// impl<I> Input for SubInput2<I> {
+//     type Cursor = Self;
 
-    fn as_input(&self) -> Self::Output {
-        *self
-    }
-}
+//     fn as_cursor(&self) -> Self::Cursor {
+//         self.clone()
+//     }
+// }
 
-unsafe impl<'i> Input<'i> for SubInput1<'i> {
+unsafe impl<S: RefStr> Cursor for PositionCursor<S> {
+    type String = S;
+
     fn byte_offset(&self) -> usize {
         self.cursor
     }
 
-    fn input(&self) -> &'i str {
-        self.input
+    fn input(&self) -> S {
+        self.input.clone()
     }
 
-    fn get(&self) -> &'i str {
-        if cfg!(debug_assertions) {
-            &self.input()[self.cursor..]
-        } else {
-            unsafe { self.input().get_unchecked(self.cursor..) }
-        }
+    fn get(&self) -> S {
+        unsafe { self.input.get_range_unchecked(self.cursor..) }
     }
 
     unsafe fn cursor(&mut self) -> &mut usize {
@@ -249,21 +256,19 @@ unsafe impl<'i> Input<'i> for SubInput1<'i> {
     }
 }
 
-unsafe impl<'i> Input<'i> for SubInput2<'i> {
+unsafe impl<S: RefStr> Cursor for SpanCursor<S> {
+    type String = S;
+
     fn byte_offset(&self) -> usize {
         self.cursor
     }
 
-    fn input(&self) -> &'i str {
-        self.input
+    fn input(&self) -> S {
+        self.input.clone()
     }
 
-    fn get(&self) -> &'i str {
-        if cfg!(debug_assertions) {
-            &self.input()[self.cursor..self.end]
-        } else {
-            unsafe { self.input().get_unchecked(self.cursor..self.end) }
-        }
+    fn get(&self) -> S {
+        unsafe { self.input.get_range_unchecked(self.cursor..self.end) }
     }
 
     unsafe fn cursor(&mut self) -> &mut usize {
@@ -278,39 +283,147 @@ unsafe impl<'i> Input<'i> for SubInput2<'i> {
     }
 }
 
-/// Convert to input.
-pub trait AsInput<'i> {
-    /// Output type.
-    type Output: Input<'i>;
+/// Parser input.
+///
+/// Should be implemented for types that can be used as parser input, such as `&str` and `&String`.
+///
+/// Must be [`Clone`], and should be cheap to clone.
+pub trait Input: Clone {
+    /// Cursor type.
+    type Cursor: Cursor;
+    /// String type.
+    type String: RefStr;
 
     /// Convert to a [Input] type.
-    fn as_input(&self) -> Self::Output;
+    fn as_cursor(&self) -> Self::Cursor;
 }
 
-impl<'i> AsInput<'i> for &'i str {
-    type Output = Position<'i>;
+/// A reference to a [`String`](alloc::string::String)-like type.
+pub unsafe trait RefStr: Clone + Hash + PartialEq + Eq + fmt::Debug {
+    /// Create from a static string.
+    fn from_static(s: &'static str) -> Self;
+    /// Get length in bytes.
+    fn len(&self) -> usize;
+    /// Convert to a string.
+    fn as_str(&self) -> &str;
+    /// Get a substring.
+    ///
+    /// # Safety
+    ///
+    /// The range must be in the bounds of the string.
+    unsafe fn get_range_unchecked(&self, range: impl SliceIndex<str, Output = str>) -> Self;
+    /// Get a substring.
+    fn get(&self, range: impl SliceIndex<str, Output = str>) -> Option<Self>;
+    /// Get a substring.
+    fn get_checked(&self, range: impl SliceIndex<str, Output = str>) -> Self;
+    /// Check if starts with a string.
+    fn starts_with(&self, string: &str) -> bool;
+    /// Check if starts with a string insensitively.
+    fn starts_with_insensitive(&self, string: &str) -> bool;
+    /// Get characters iterator.
+    fn chars(&self) -> Chars<'_>;
+    /// Check if two references point to the same string.
+    fn ptr_eq(&self, other: &Self) -> bool;
+    /// Hash the pointer of the string.
+    fn ptr_hash<H: core::hash::Hasher>(&self, state: &mut H);
+}
 
-    fn as_input(&self) -> Self::Output {
+impl<S: RefStr> Input for S {
+    type Cursor = Position<Self>;
+    type String = Self;
+
+    fn as_cursor(&self) -> Self::Cursor {
+        Position::from_start(self.clone())
+    }
+}
+
+impl<'i> Input for &'i String {
+    type Cursor = Position<&'i str>;
+    type String = &'i str;
+
+    fn as_cursor(&self) -> Self::Cursor {
         Position::from_start(self)
     }
 }
 
-impl<'i> AsInput<'i> for &'i String {
-    type Output = Position<'i>;
+unsafe impl<'i> RefStr for &'i str {
+    fn from_static(s: &'static str) -> Self {
+        s
+    }
 
-    fn as_input(&self) -> Self::Output {
-        Position::from_start(self)
+    fn len(&self) -> usize {
+        str::len(self)
+    }
+
+    fn as_str(&self) -> &str {
+        self
+    }
+
+    unsafe fn get_range_unchecked(&self, range: impl SliceIndex<str, Output = str>) -> Self {
+        &self[range]
+    }
+
+    fn get(&self, range: impl SliceIndex<str, Output = str>) -> Option<Self> {
+        str::get(&self, range)
+    }
+
+    fn get_checked(&self, range: impl SliceIndex<str, Output = str>) -> Self {
+        &self[range]
+    }
+
+    fn starts_with(&self, string: &str) -> bool {
+        str::starts_with(self, string)
+    }
+
+    fn starts_with_insensitive(&self, string: &str) -> bool {
+        self.get(0..string.len())
+            .map_or(false, |prefix| prefix.eq_ignore_ascii_case(string))
+    }
+
+    fn chars(&self) -> Chars<'_> {
+        str::chars(self)
+    }
+
+    fn ptr_eq(&self, other: &Self) -> bool {
+        ptr::eq::<str>(*self, *other)
+    }
+
+    fn ptr_hash<H: core::hash::Hasher>(&self, state: &mut H) {
+        ptr::hash::<str, H>(*self, state);
     }
 }
 
-impl<'i> AsInput<'i> for Position<'i> {
-    type Output = SubInput1<'i>;
+// unsafe impl<'i> Str for &'i String {
+//     fn len(&self) -> usize {
+//         String::len(self)
+//     }
 
-    fn as_input(&self) -> Self::Output {
-        let input = self.input;
+//     unsafe fn get_unchecked(&self, range: Range<usize>) -> &str {
+//         &self[range]
+//     }
+
+//     fn get(&self, range: Range<usize>) -> Option<&str> {
+//         str::get(self, range)
+//     }
+
+//     fn starts_with(&self, string: &str) -> bool {
+//         str::starts_with(self, string)
+//     }
+
+//     fn chars(&self) -> Chars<'_> {
+//         str::chars(self)
+//     }
+// }
+
+impl<S: RefStr> Input for Position<S> {
+    type Cursor = PositionCursor<S>;
+    type String = S;
+
+    fn as_cursor(&self) -> Self::Cursor {
+        let input = self.input.clone();
         let start = self.pos();
         let cursor = start;
-        SubInput1 {
+        PositionCursor {
             input,
             start,
             cursor,
@@ -318,19 +431,165 @@ impl<'i> AsInput<'i> for Position<'i> {
     }
 }
 
-impl<'i> AsInput<'i> for Span<'i> {
-    type Output = SubInput2<'i>;
+impl<S: RefStr> Input for Span<S> {
+    type Cursor = SpanCursor<S>;
+    type String = S;
 
-    fn as_input(&self) -> Self::Output {
+    fn as_cursor(&self) -> Self::Cursor {
         let input = self.get_input();
         let start = self.start();
         let end = self.end();
         let cursor = start;
-        SubInput2 {
+        SpanCursor {
             input,
             start,
             end,
             cursor,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn span_match_string() {
+        let input = "hello, world!";
+        let span = Span::new(input, 7, 12).unwrap();
+        let mut cursor = span.as_cursor();
+
+        assert_eq!(cursor.byte_offset(), 7);
+        assert_eq!(cursor.get(), "world");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.match_string("world"));
+        assert_eq!(cursor.byte_offset(), 12);
+        assert_eq!(cursor.get(), "");
+
+        assert!(cursor.at_end());
+    }
+
+    #[test]
+    fn span_match_string_insensitive() {
+        let input = "hello, world!";
+        let span = Span::new(input, 7, 12).unwrap();
+        let mut cursor = span.as_cursor();
+
+        assert_eq!(cursor.byte_offset(), 7);
+        assert_eq!(cursor.get(), "world");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.match_insensitive("WORLD"));
+        assert_eq!(cursor.byte_offset(), 12);
+        assert_eq!(cursor.get(), "");
+
+        assert!(cursor.at_end());
+    }
+
+    #[test]
+    fn span_skip_until() {
+        let input = "abcde12345xyz";
+        let span = Span::new_full(input);
+        let mut cursor = span.as_cursor();
+
+        assert_eq!(cursor.byte_offset(), 0);
+        assert_eq!(cursor.get(), "abcde12345xyz");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.skip_until(&["123", "xyz"]));
+        assert_eq!(cursor.byte_offset(), 5);
+        assert_eq!(cursor.get(), "12345xyz");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.skip_until(&["xyz"]));
+        assert_eq!(cursor.byte_offset(), 10);
+        assert_eq!(cursor.get(), "xyz");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.skip_until(&["notfound", "also_notfound", "xyz"]));
+        assert_eq!(cursor.byte_offset(), 10);
+        assert_eq!(cursor.get(), "xyz");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.match_string("xyz"));
+        assert_eq!(cursor.byte_offset(), 13);
+        assert_eq!(cursor.get(), "");
+
+        assert!(cursor.at_end());
+    }
+
+    #[test]
+    fn position_match_string() {
+        let input = "hello, world!";
+        let span = Position::new(input, 7).unwrap();
+        let mut cursor = span.as_cursor();
+
+        assert_eq!(cursor.byte_offset(), 7);
+        assert_eq!(cursor.get(), "world!");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.match_string("world"));
+        assert_eq!(cursor.byte_offset(), 12);
+        assert_eq!(cursor.get(), "!");
+
+        assert!(!cursor.at_end());
+        cursor.match_string("!");
+        assert_eq!(cursor.byte_offset(), 13);
+        assert_eq!(cursor.get(), "");
+        assert!(cursor.at_end());
+    }
+
+    #[test]
+    fn position_match_string_insensitive() {
+        let input = "hello, world!";
+        let span = Position::new(input, 7).unwrap();
+        let mut cursor = span.as_cursor();
+
+        assert_eq!(cursor.byte_offset(), 7);
+        assert_eq!(cursor.get(), "world!");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.match_insensitive("WORLD"));
+        assert_eq!(cursor.byte_offset(), 12);
+        assert_eq!(cursor.get(), "!");
+
+        assert!(!cursor.at_end());
+        cursor.match_insensitive("!");
+        assert_eq!(cursor.byte_offset(), 13);
+        assert_eq!(cursor.get(), "");
+        assert!(cursor.at_end());
+    }
+
+    #[test]
+    fn position_skip_until() {
+        let input = "abcde12345xyz";
+        let span = Position::new(input, 0).unwrap();
+        let mut cursor = span.as_cursor();
+
+        assert_eq!(cursor.byte_offset(), 0);
+        assert_eq!(cursor.get(), "abcde12345xyz");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.skip_until(&["123", "xyz"]));
+        assert_eq!(cursor.byte_offset(), 5);
+        assert_eq!(cursor.get(), "12345xyz");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.skip_until(&["xyz"]));
+        assert_eq!(cursor.byte_offset(), 10);
+        assert_eq!(cursor.get(), "xyz");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.skip_until(&["notfound", "also_notfound", "xyz"]));
+        assert_eq!(cursor.byte_offset(), 10);
+        assert_eq!(cursor.get(), "xyz");
+
+        assert!(!cursor.at_end());
+        assert!(cursor.match_string("xyz"));
+        assert_eq!(cursor.byte_offset(), 13);
+        assert_eq!(cursor.get(), "");
+
+        assert!(cursor.at_end());
     }
 }

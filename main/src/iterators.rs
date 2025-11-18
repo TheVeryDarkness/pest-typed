@@ -10,19 +10,21 @@
 //! Simulates [`pest::iterators`].
 
 use crate::{
+    input::RefStr,
     predefined_node::{
         AlwaysFail, AtomicRepeat, CharRange, Empty, Insens, Negative, PeekSlice1, PeekSlice2,
         Positive, Push, RepeatMin, RepeatMinMax, Skip, Skipped, Str, ANY, DROP, NEWLINE, PEEK,
         PEEK_ALL, POP, POP_ALL, SOI,
     },
     typed_node::{RuleStorage, RuleStruct, Spanned},
-    RuleType, Span, StringArrayWrapper, StringWrapper, TypedNode,
+    RuleType, Span, StringArrayWrapper, StringWrapper,
 };
 use alloc::{boxed::Box, collections::VecDeque, string::String, vec::Vec};
 use core::{
     iter::{once, Iterator},
     mem::swap,
 };
+use derive_where::derive_where;
 #[cfg(feature = "serde")]
 use serde::ser::SerializeStruct;
 
@@ -40,17 +42,17 @@ pub struct ThinToken<R: RuleType> {
 }
 
 /// Token.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Token<'i, R: RuleType> {
+#[derive_where(Clone, Debug, Hash, Eq, PartialEq; S: RefStr)]
+pub struct Token<S, R: RuleType> {
     /// Rule.
     pub rule: R,
     /// Span.
-    pub span: Span<'i>,
+    pub span: Span<S>,
     /// Children.
     pub children: Vec<Self>,
 }
 
-impl<R: RuleType> Token<'_, R> {
+impl<S, R: RuleType> Token<S, R> {
     /// To [`ThinToken`].
     pub fn to_thin(&self) -> ThinToken<R> {
         let rule = self.rule;
@@ -67,7 +69,7 @@ impl<R: RuleType> Token<'_, R> {
 }
 
 #[cfg(feature = "serde")]
-impl<'i, R: RuleType> serde::Serialize for Token<'i, R> {
+impl<Str: RefStr, R: RuleType> serde::Serialize for Token<Str, R> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -75,7 +77,7 @@ impl<'i, R: RuleType> serde::Serialize for Token<'i, R> {
         let mut seq = serializer.serialize_struct(self.rule.name(), 3)?;
 
         seq.serialize_field("type", self.rule.name())?;
-        seq.serialize_field("content", self.span.as_str())?;
+        seq.serialize_field("content", self.span.as_str().as_str())?;
         seq.serialize_field("children", &self.children)?;
 
         seq.end()
@@ -83,11 +85,11 @@ impl<'i, R: RuleType> serde::Serialize for Token<'i, R> {
 }
 
 /// Simulate [`pest::iterators::Pairs`].
-pub trait Pairs<'i, R: RuleType> {
+pub trait Pairs<S, R: RuleType> {
     /// For each inner pair by reference if this is a container, otherwise for self.
-    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>));
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>));
     /// Collect inner pairs and make them into a [`Vec`].
-    fn self_or_children(&self) -> Vec<Token<'i, R>> {
+    fn self_or_children(&self) -> Vec<Token<S, R>> {
         let mut children = Vec::new();
         self.for_self_or_each_child(&mut |token| children.push(token));
         children
@@ -95,19 +97,19 @@ pub trait Pairs<'i, R: RuleType> {
 }
 
 /// Simulate [`pest::iterators::Pair`].
-pub trait Pair<'i, R: RuleType>: Spanned<'i, R> + RuleStorage<R> {
+pub trait Pair<S: RefStr, R: RuleType>: Spanned<S, R> + RuleStorage<R> {
     /// Iterate over all inner children.
-    fn for_each_child(&self, f: impl FnMut(Token<'i, R>));
+    fn for_each_child(&self, f: impl FnMut(Token<S, R>));
     /// Collect inner [Token]s and make them into a [`Vec`].
-    fn children(&self) -> Vec<Token<'i, R>> {
+    fn children(&self) -> Vec<Token<S, R>> {
         let mut children = Vec::new();
         self.for_each_child(|token| children.push(token));
         children
     }
     /// As [Token]s. Call [`Pair::children`] inside.
-    fn as_token(&self) -> Token<'i, R> {
+    fn as_token(&self) -> Token<S, R> {
         let children = self.children();
-        Token::<R> {
+        Token::<S, R> {
             rule: self.rule(),
             span: self.span(),
             children,
@@ -119,11 +121,11 @@ pub trait Pair<'i, R: RuleType>: Spanned<'i, R> + RuleStorage<R> {
     }
 }
 
-fn iterate_level_order<'i, R: RuleType, E>(
-    p: &impl Pair<'i, R>,
-    mut f: impl FnMut(&Token<'i, R>, usize) -> Result<(), E>,
+fn iterate_level_order<S: RefStr, R: RuleType, E>(
+    p: &impl Pair<S, R>,
+    mut f: impl FnMut(&Token<S, R>, usize) -> Result<(), E>,
 ) -> Result<(), E> {
-    let mut queue: VecDeque<Token<'i, R>> = VecDeque::new();
+    let mut queue: VecDeque<Token<S, R>> = VecDeque::new();
     let mut next = VecDeque::new();
     queue.push_back(p.as_token());
     loop {
@@ -138,14 +140,14 @@ fn iterate_level_order<'i, R: RuleType, E>(
     }
 }
 /// Pre-order traversal
-fn iterate_pre_order<'i, R: RuleType, E>(
-    p: &impl Pair<'i, R>,
-    mut f: impl FnMut(&Token<'i, R>, usize) -> Result<(), E>,
+fn iterate_pre_order<S: RefStr, R: RuleType, E>(
+    p: &impl Pair<S, R>,
+    mut f: impl FnMut(&Token<S, R>, usize) -> Result<(), E>,
 ) -> Result<(), E> {
-    let mut stack: Vec<VecDeque<Token<'i, R>>> = Vec::new();
+    let mut stack: Vec<VecDeque<Token<S, R>>> = Vec::new();
 
-    let root: Token<'i, R> = p.as_token();
-    stack.push(VecDeque::<Token<'i, R>>::from_iter(once(root)));
+    let root: Token<S, R> = p.as_token();
+    stack.push(VecDeque::<Token<S, R>>::from_iter(once(root)));
 
     loop {
         if let Some(parent) = stack.last_mut() {
@@ -162,8 +164,8 @@ fn iterate_pre_order<'i, R: RuleType, E>(
 }
 
 /// Write the tree to.
-fn write_tree_to<'i: 'n, 'n, R: RuleType + 'n>(
-    p: &'n impl Pair<'i, R>,
+fn write_tree_to<'n, S: RefStr, R: RuleType + 'n>(
+    p: &'n impl Pair<S, R>,
     buf: &mut impl core::fmt::Write,
 ) -> core::fmt::Result {
     iterate_pre_order(p, |p, depth| {
@@ -181,18 +183,18 @@ fn write_tree_to<'i: 'n, 'n, R: RuleType + 'n>(
 }
 
 /// A trait to traverse the pair as the root of a tree.
-pub trait PairTree<'i, R: RuleType>: Pair<'i, R> + Sized {
+pub trait PairTree<S: RefStr, R: RuleType>: Pair<S, R> + Sized {
     /// Level order traversal
     fn iterate_level_order<E>(
         &self,
-        f: impl FnMut(&Token<'i, R>, usize) -> Result<(), E>,
+        f: impl FnMut(&Token<S, R>, usize) -> Result<(), E>,
     ) -> Result<(), E> {
         iterate_level_order(self, f)
     }
     /// Pre-order traversal
     fn iterate_pre_order<E>(
         &self,
-        f: impl FnMut(&Token<'i, R>, usize) -> Result<(), E>,
+        f: impl FnMut(&Token<S, R>, usize) -> Result<(), E>,
     ) -> Result<(), E> {
         iterate_pre_order(self, f)
     }
@@ -210,20 +212,20 @@ pub trait PairTree<'i, R: RuleType>: Pair<'i, R> + Sized {
     }
 }
 
-impl<'i, R: RuleType, T: RuleStruct<'i, R> + Pairs<'i, R> + Pair<'i, R>> PairTree<'i, R> for T {}
+impl<S: RefStr, R: RuleType, T: RuleStruct<S, R> + Pairs<S, R> + Pair<S, R>> PairTree<S, R> for T {}
 
 macro_rules! impl_empty {
     ($node:ty $(, $($tt:tt)*)?) => {
-        impl<'i, R: RuleType $(, $($tt)*)?> Pairs<'i, R> for $node {
-            fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<'i, R>)) {}
+        impl<S: RefStr, R: RuleType $(, $($tt)*)?> Pairs<S, R> for $node {
+            fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<S, R>)) {}
         }
     };
 }
 
 macro_rules! impl_forward_inner {
     ($node:ident) => {
-        impl<'i, R: RuleType, T: TypedNode<'i, R> + Pairs<'i, R>> Pairs<'i, R> for $node<T> {
-            fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+        impl<S: RefStr, R: RuleType, T: Pairs<S, R>> Pairs<S, R> for $node<T> {
+            fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
                 self.content.for_self_or_each_child(f)
             }
         }
@@ -231,48 +233,48 @@ macro_rules! impl_forward_inner {
 }
 
 impl_empty!(Str<T>, T: StringWrapper);
-impl_empty!(Insens<'i, T>, T: StringWrapper);
+impl_empty!(Insens<S, T>, T: StringWrapper);
 impl_empty!(PeekSlice2<START, END>, const START: i32, const END: i32);
 impl_empty!(PeekSlice1<START>, const START: i32);
 impl_forward_inner!(Push);
-impl_empty!(Skip<'i, Strings>, Strings: StringArrayWrapper);
+impl_empty!(Skip<S, Strings>, Strings: StringArrayWrapper);
 impl_empty!(CharRange<MIN, MAX>, const MIN: char, const MAX: char);
-impl_empty!(Positive<T>, T: TypedNode<'i, R>);
-impl_empty!(Negative<T>, T: TypedNode<'i, R>);
+impl_empty!(Positive<T>, T);
+impl_empty!(Negative<T>, T);
 
-impl<'i, R: RuleType, T1: Pairs<'i, R>, T2: Pairs<'i, R>> Pairs<'i, R> for (T1, T2) {
-    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+impl<S: RefStr, R: RuleType, T1: Pairs<S, R>, T2: Pairs<S, R>> Pairs<S, R> for (T1, T2) {
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
         self.0.for_self_or_each_child(f);
         self.1.for_self_or_each_child(f);
     }
 }
 
-impl<'i, R: RuleType, T: Pairs<'i, R>, const N: usize> Pairs<'i, R> for [T; N] {
-    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+impl<S, R: RuleType, T: Pairs<S, R>, const N: usize> Pairs<S, R> for [T; N] {
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
         self.as_slice()
             .iter()
             .for_each(|n| n.for_self_or_each_child(f))
     }
 }
 
-impl<'i, R: RuleType, T: TypedNode<'i, R> + Pairs<'i, R>> Pairs<'i, R> for Box<T> {
-    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+impl<S, R: RuleType, T: Pairs<S, R>> Pairs<S, R> for Box<T> {
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
         self.as_ref().for_self_or_each_child(f)
     }
 }
 
-impl<'i, R: RuleType, T: TypedNode<'i, R> + Pairs<'i, R>> Pairs<'i, R> for Option<T> {
-    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+impl<S, R: RuleType, T: Pairs<S, R>> Pairs<S, R> for Option<T> {
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
         if let Some(node) = self {
             node.for_self_or_each_child(f)
         }
     }
 }
 
-impl<'i, R: RuleType, T: Pairs<'i, R>, Skip: Pairs<'i, R>, const SKIP: usize> Pairs<'i, R>
+impl<S, R: RuleType, T: Pairs<S, R>, Skip: Pairs<S, R>, const SKIP: usize> Pairs<S, R>
     for Skipped<T, Skip, SKIP>
 {
-    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+    fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
         self.skipped.for_self_or_each_child(f);
         self.matched.for_self_or_each_child(f);
     }
@@ -281,13 +283,13 @@ impl<'i, R: RuleType, T: Pairs<'i, R>, Skip: Pairs<'i, R>, const SKIP: usize> Pa
 macro_rules! impl_with_vec {
     ($name:ident, $(const $args:ident : $t:ty,)*) => {
         impl<
-                'i,
+                S,
                 R: RuleType,
-                T: Pairs<'i, R>,
+                T: Pairs<S, R>,
                 $(const $args: $t, )*
-            > Pairs<'i, R> for $name<T, $($args, )*>
+            > Pairs<S, R> for $name<T, $($args, )*>
         {
-            fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<'i, R>)) {
+            fn for_self_or_each_child(&self, f: &mut impl FnMut(Token<S, R>)) {
                 self.content.iter().for_each(|n| n.for_self_or_each_child(f));
             }
         }
@@ -301,14 +303,14 @@ impl_with_vec!(AtomicRepeat,);
 impl_empty!(ANY);
 impl_empty!(SOI);
 impl_empty!(NEWLINE);
-impl_empty!(PEEK<'i>);
-impl_empty!(PEEK_ALL<'i>);
-impl_empty!(POP<'i>);
-impl_empty!(POP_ALL<'i>);
+impl_empty!(PEEK<S>);
+impl_empty!(PEEK_ALL<S>);
+impl_empty!(POP<S>);
+impl_empty!(POP_ALL<S>);
 impl_empty!(DROP);
 
-impl_empty!(AlwaysFail<'i>);
-impl_empty!(Empty<'i>);
+impl_empty!(AlwaysFail<S>);
+impl_empty!(Empty<S>);
 
 /// An iterator that maybe contain another iterator.
 pub struct Maybe<Item, T: Iterator<Item = Item>>(Option<T>);

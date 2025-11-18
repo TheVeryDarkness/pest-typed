@@ -10,12 +10,12 @@
 //! Copied from pest/pest/src/position.rs (commit ac0aed3eecf435fd93ba575a39704aaa88a375b7)
 //! and modified.
 
-use crate::{formatter::FormatOption, line_indexer::LineIndexer, position};
+use crate::{formatter::FormatOption, input::RefStr, line_indexer::LineIndexer, position};
 use core::{
     fmt::{self, Write},
     hash::{Hash, Hasher},
     ops::{Bound, Range, RangeBounds},
-    ptr, str,
+    str,
 };
 
 /// A span over a `&str`. It is created from either [two `Position`s] or from a [`Pair`].
@@ -23,8 +23,8 @@ use core::{
 /// [two `Position`s]: struct.Position.html#method.span
 /// [`Pair`]: ../iterators/struct.Pair.html#method.span
 #[derive(Clone, Copy)]
-pub struct Span<'i> {
-    input: &'i str,
+pub struct Span<S> {
+    input: S,
     /// # Safety
     ///
     /// Must be a valid character boundary index into `input`.
@@ -35,13 +35,13 @@ pub struct Span<'i> {
     end: usize,
 }
 
-impl<'i> Span<'i> {
+impl<S: RefStr> Span<S> {
     /// Create a new `Span` without checking invariants. (Checked with `debug_assertions`.)
     ///
     /// # Safety
     ///
     /// `input[start..end]` must be a valid subslice; that is, said indexing should not panic.
-    pub(crate) unsafe fn new_unchecked(input: &'i str, start: usize, end: usize) -> Self {
+    pub(crate) unsafe fn new_unchecked(input: S, start: usize, end: usize) -> Self {
         debug_assert!(input.get(start..end).is_some());
         Span { input, start, end }
     }
@@ -56,11 +56,11 @@ impl<'i> Span<'i> {
     /// let span = Span::new_full(input);
     /// assert_eq!(span.as_str(), input);
     /// ```
-    pub const fn new_full(input: &'i str) -> Self {
+    pub fn new_full(input: S) -> Self {
         Span {
-            input,
             start: 0,
             end: input.len(),
+            input,
         }
     }
 
@@ -74,11 +74,11 @@ impl<'i> Span<'i> {
     /// let span = Span::new_at_end(input);
     /// assert_eq!(span.as_str(), "");
     /// ```
-    pub const fn new_at_end(input: &'i str) -> Self {
+    pub fn new_at_end(input: S) -> Self {
         Span {
-            input,
             start: input.len(),
             end: input.len(),
+            input,
         }
     }
 
@@ -93,7 +93,7 @@ impl<'i> Span<'i> {
     /// assert_eq!(None, Span::new(input, 100, 0));
     /// assert!(Span::new(input, 0, input.len()).is_some());
     /// ```
-    pub fn new(input: &'i str, start: usize, end: usize) -> Option<Self> {
+    pub fn new(input: S, start: usize, end: usize) -> Option<Self> {
         if input.get(start..end).is_some() {
             Some(Span { input, start, end })
         } else {
@@ -126,12 +126,14 @@ impl<'i> Span<'i> {
         };
 
         self.as_str().get(start..end).map(|_| Span {
-            input: self.input,
+            input: self.input.clone(),
             start: self.start + start,
             end: self.start + end,
         })
     }
+}
 
+impl<S> Span<S> {
     /// Returns the `Span`'s start byte position as a `usize`.
     ///
     /// # Examples
@@ -167,7 +169,9 @@ impl<'i> Span<'i> {
     pub const fn end(&self) -> usize {
         self.end
     }
+}
 
+impl<S: RefStr> Span<S> {
     /// Returns the `Span`'s start `Position`.
     ///
     /// # Examples
@@ -182,9 +186,9 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.start_pos(), start);
     /// ```
     #[inline]
-    pub fn start_pos(&self) -> position::Position<'i> {
+    pub fn start_pos(&self) -> position::Position<S> {
         // Span's start position is always a UTF-8 border.
-        unsafe { position::Position::new_unchecked(self.input, self.start) }
+        unsafe { position::Position::new_unchecked(self.input.clone(), self.start) }
     }
 
     /// Returns the `Span`'s end `Position`.
@@ -201,9 +205,9 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.end_pos(), end);
     /// ```
     #[inline]
-    pub fn end_pos(&self) -> position::Position<'i> {
+    pub fn end_pos(&self) -> position::Position<S> {
         // Span's end position is always a UTF-8 border.
-        unsafe { position::Position::new_unchecked(self.input, self.end) }
+        unsafe { position::Position::new_unchecked(self.input.clone(), self.end) }
     }
 
     /// Splits the `Span` into a pair of `Position`s.
@@ -220,10 +224,10 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.split(), (start, end));
     /// ```
     #[inline]
-    pub fn split(self) -> (position::Position<'i>, position::Position<'i>) {
+    pub fn split(self) -> (position::Position<S>, position::Position<S>) {
         // Span's start and end positions are always a UTF-8 borders.
-        let pos1 = unsafe { position::Position::new_unchecked(self.input, self.start) };
-        let pos2 = unsafe { position::Position::new_unchecked(self.input, self.end) };
+        let pos1 = unsafe { position::Position::new_unchecked(self.input.clone(), self.start) };
+        let pos2 = unsafe { position::Position::new_unchecked(self.input.clone(), self.end) };
 
         (pos1, pos2)
     }
@@ -246,9 +250,9 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.as_str(), "b");
     /// ```
     #[inline]
-    pub fn as_str(&self) -> &'i str {
+    pub fn as_str(&self) -> S {
         // Span's start and end positions are always a UTF-8 borders.
-        &self.input[self.start..self.end]
+        self.input.get_checked(self.start..self.end)
     }
 
     /// Returns the input string of the `Span`.
@@ -268,8 +272,8 @@ impl<'i> Span<'i> {
     /// let span = Span::new(input, 1, 7).unwrap();
     /// assert_eq!(span.get_input(), input);
     /// ```
-    pub const fn get_input(&self) -> &'i str {
-        self.input
+    pub fn get_input(&self) -> S {
+        self.input.clone()
     }
 
     /// Iterates over all lines (partially) covered by this span. Yielding a `&str` for each line.
@@ -290,7 +294,7 @@ impl<'i> Span<'i> {
     /// assert_eq!(span.lines().collect::<Vec<_>>(), vec!["b\n", "c"]);
     /// ```
     #[inline]
-    pub const fn lines<L: LineIndexer<'i>>(&self, indexer: L) -> Lines<'_, 'i, L> {
+    pub const fn lines<L: LineIndexer<S>>(&self, indexer: L) -> Lines<'_, S, L> {
         Lines {
             inner: self.lines_span(indexer),
         }
@@ -314,7 +318,7 @@ impl<'i> Span<'i> {
     /// let span = start_pos.span(&state.position().clone());
     /// assert_eq!(span.lines_span().collect::<Vec<_>>(), vec![Span::new(input, 2, 4).unwrap(), Span::new(input, 4, 5).unwrap()]);
     /// ```
-    pub const fn lines_span<L: LineIndexer<'i>>(&self, indexer: L) -> LinesSpan<'_, 'i, L> {
+    pub const fn lines_span<L: LineIndexer<S>>(&self, indexer: L) -> LinesSpan<'_, S, L> {
         LinesSpan {
             span: self,
             indexer,
@@ -329,8 +333,9 @@ impl<'i> Span<'i> {
     pub(crate) fn skip(&mut self, n: usize) -> bool {
         let skipped = {
             let mut len = 0;
+            let slice = self.input.get_checked(self.start..self.end);
             // Position's pos is always a UTF-8 border.
-            let mut chars = self.input[self.start..self.end].chars();
+            let mut chars = slice.chars();
             for _ in 0..n {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
@@ -406,11 +411,10 @@ impl<'i> Span<'i> {
     fn skip_until_basic(&mut self, strings: &[&str]) -> bool {
         // TODO: optimize with Aho-Corasick, e.g. https://crates.io/crates/daachorse?
         for from in self.start..self.end {
-            let bytes = if let Some(string) = self.input.get(from..) {
-                string.as_bytes()
-            } else {
+            let Some(string) = self.input.get(from..) else {
                 continue;
             };
+            let bytes = string.as_str().as_bytes();
 
             for slice in strings.iter() {
                 let to = slice.len();
@@ -431,7 +435,8 @@ impl<'i> Span<'i> {
     #[inline]
     #[allow(dead_code)]
     pub(crate) fn match_char(&self, c: char) -> bool {
-        matches!(self.input[self.start..self.end].chars().next(), Some(cc) if c == cc)
+        let slice = self.input.get_checked(self.start..self.end);
+        matches!(slice.chars().next(), Some(cc) if c == cc)
     }
 
     /// Matches the char at the `Position` against a filter function and returns `true` if a match
@@ -442,7 +447,8 @@ impl<'i> Span<'i> {
     where
         F: FnOnce(char) -> bool,
     {
-        if let Some(c) = self.input[self.start..self.end].chars().next() {
+        let slice = self.input.get_checked(self.start..self.end);
+        if let Some(c) = slice.chars().next() {
             if f(c) {
                 self.start += c.len_utf8();
                 true
@@ -463,7 +469,7 @@ impl<'i> Span<'i> {
 
         if self.end < to {
             false
-        } else if Some(string.as_bytes()) == self.input.as_bytes().get(self.start..to) {
+        } else if Some(string) == self.input.get(self.start..to).as_ref().map(S::as_str) {
             self.start = to;
             true
         } else {
@@ -477,12 +483,8 @@ impl<'i> Span<'i> {
     #[allow(dead_code)]
     pub(crate) fn match_insensitive(&mut self, string: &str) -> bool {
         let matched = {
-            let slice = &self.input[self.start..self.end];
-            if let Some(slice) = slice.get(0..string.len()) {
-                slice.eq_ignore_ascii_case(string)
-            } else {
-                false
-            }
+            let slice = &self.input.get_checked(self.start..self.end);
+            slice.starts_with_insensitive(string)
         };
 
         if matched {
@@ -498,7 +500,7 @@ impl<'i> Span<'i> {
     #[inline]
     #[allow(dead_code)]
     pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
-        if let Some(c) = self.input[self.start..self.end].chars().next() {
+        if let Some(c) = self.input.get_checked(self.start..self.end).chars().next() {
             if range.start <= c && c <= range.end {
                 self.start += c.len_utf8();
                 return true;
@@ -509,7 +511,7 @@ impl<'i> Span<'i> {
     }
 }
 
-impl fmt::Debug for Span<'_> {
+impl<S: RefStr> fmt::Debug for Span<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Span")
             .field("str", &self.as_str())
@@ -519,25 +521,23 @@ impl fmt::Debug for Span<'_> {
     }
 }
 
-impl PartialEq for Span<'_> {
+impl<S: RefStr> PartialEq for Span<S> {
     fn eq(&self, other: &Self) -> bool {
-        ptr::eq::<str>(self.input, other.input)
-            && self.start == other.start
-            && self.end == other.end
+        self.input.ptr_eq(&other.input) && self.start == other.start && self.end == other.end
     }
 }
 
-impl Eq for Span<'_> {}
+impl<S: RefStr> Eq for Span<S> {}
 
-impl Hash for Span<'_> {
+impl<S: RefStr> Hash for Span<S> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.input as *const str).hash(state);
+        self.input.ptr_hash(state);
         self.start.hash(state);
         self.end.hash(state);
     }
 }
 
-impl<'i> Span<'i> {
+impl<S: RefStr> Span<S> {
     /// Format span with given option.
     #[inline]
     pub fn display<L, Writer, SF, MF, NF>(
@@ -547,7 +547,7 @@ impl<'i> Span<'i> {
         opt: FormatOption<SF, MF, NF>,
     ) -> fmt::Result
     where
-        L: LineIndexer<'i>,
+        L: LineIndexer<S>,
         Writer: Write,
         SF: FnMut(&str, &mut Writer) -> fmt::Result,
         MF: FnMut(&str, &mut Writer) -> fmt::Result,
@@ -557,7 +557,7 @@ impl<'i> Span<'i> {
     }
 }
 
-impl fmt::Display for Span<'_> {
+impl<S: RefStr> fmt::Display for Span<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let opt = FormatOption::default();
         opt.display_span(self, (), f)
@@ -605,7 +605,7 @@ impl fmt::Display for Span<'_> {
 /// let merged = merge_spans(&span1, &span2);
 /// assert!(merged.is_none());
 /// ```
-pub fn merge_spans<'i>(a: &Span<'i>, b: &Span<'i>) -> Option<Span<'i>> {
+pub fn merge_spans<S: RefStr>(a: &Span<S>, b: &Span<S>) -> Option<Span<S>> {
     if a.end() >= b.start() && a.start() <= b.end() {
         // The spans overlap or are contiguous, so they can be merged.
         Span::new(
@@ -624,19 +624,19 @@ pub fn merge_spans<'i>(a: &Span<'i>, b: &Span<'i>) -> Option<Span<'i>> {
 /// Iterates all lines that are at least _partially_ covered by the span. Yielding a `Span` for each.
 ///
 /// [`Span::lines_span()`]: struct.Span.html#method.lines_span
-pub struct LinesSpan<'s, 'i, L> {
-    span: &'s Span<'i>,
+pub struct LinesSpan<'s, S, L> {
+    span: &'s Span<S>,
     indexer: L,
     pos: usize,
 }
 
-impl<'i, L: LineIndexer<'i>> Iterator for LinesSpan<'_, 'i, L> {
-    type Item = Span<'i>;
+impl<S: RefStr, L: LineIndexer<S>> Iterator for LinesSpan<'_, S, L> {
+    type Item = Span<S>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.pos > self.span.end {
             return None;
         }
-        let pos = position::Position::new(self.span.input, self.pos)?;
+        let pos = position::Position::new(self.span.input.clone(), self.pos)?;
         if pos.at_end() {
             return None;
         }
@@ -644,7 +644,7 @@ impl<'i, L: LineIndexer<'i>> Iterator for LinesSpan<'_, 'i, L> {
         let line_start = pos.find_line_start(&self.indexer);
         self.pos = pos.find_line_end(&self.indexer);
 
-        Span::new(self.span.input, line_start, self.pos)
+        Span::new(self.span.input.clone(), line_start, self.pos)
     }
 }
 
@@ -653,12 +653,12 @@ impl<'i, L: LineIndexer<'i>> Iterator for LinesSpan<'_, 'i, L> {
 /// Iterates all lines that are at least _partially_ covered by the span. Yielding a `&str` for each.
 ///
 /// [`Span::lines()`]: struct.Span.html#method.lines
-pub struct Lines<'s, 'i, L> {
-    inner: LinesSpan<'s, 'i, L>,
+pub struct Lines<'s, S, L> {
+    inner: LinesSpan<'s, S, L>,
 }
 
-impl<'i, L: LineIndexer<'i>> Iterator for Lines<'_, 'i, L> {
-    type Item = &'i str;
+impl<S: RefStr, L: LineIndexer<S>> Iterator for Lines<'_, S, L> {
+    type Item = S;
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|span| span.as_str())
     }

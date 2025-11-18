@@ -15,7 +15,7 @@ c  = { #a = item ~ ("," ~ #a = item)* }
 struct Parser;
 
 fn main() -> Result<(), Error> {
-    let a = Parser::try_parse::<pairs::a>("abbb")?;
+    let a = Parser::try_parse::<&str, pairs::a<&str>>("abbb")?;
     // Tags enabled.
     #[cfg(feature = "grammar-extras")]
     {

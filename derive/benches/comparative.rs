@@ -42,21 +42,28 @@ macro_rules! case {
                 println!("Input string has {} characters.", s.len());
                 group.bench_function("pest-typed-parse", |b| {
                     b.iter(|| {
-                        let pair = pest_typed::Parser::try_parse::<pest_typed::rules::$name>(&s)
-                            .unwrap_or_else(|err| panic!("{}", err));
+                        let pair = pest_typed::Parser::try_parse::<
+                            &str,
+                            pest_typed::rules::$name<&str>,
+                        >(&s)
+                        .unwrap_or_else(|err| panic!("{}", err));
                         assert_eq!(pair.span().as_str().len(), s.len());
                     })
                 });
                 group.bench_function("pest-typed-check", |b| {
                     b.iter(|| {
-                        let _pair = pest_typed::Parser::try_check::<pest_typed::rules::$name>(&s)
-                            .unwrap_or_else(|err| panic!("{}", err));
+                        let _pair = pest_typed::Parser::try_check::<
+                            &str,
+                            pest_typed::rules::$name<&str>,
+                        >(&s)
+                        .unwrap_or_else(|err| panic!("{}", err));
                     })
                 });
                 group.bench_function("pest-typed-optimized-parse", |b| {
                     b.iter(|| {
                         let pair = pest_typed_optimized::Parser::try_parse::<
-                            pest_typed_optimized::rules::$name,
+                            &str,
+                            pest_typed_optimized::rules::$name<&str>,
                         >(&s)
                         .unwrap_or_else(|err| panic!("{}", err));
                         assert_eq!(pair.span().as_str().len(), s.len());
@@ -65,7 +72,8 @@ macro_rules! case {
                 group.bench_function("pest-typed-optimized-check", |b| {
                     b.iter(|| {
                         let _pair = pest_typed_optimized::Parser::try_check::<
-                            pest_typed_optimized::rules::$name,
+                            &str,
+                            pest_typed_optimized::rules::$name<&str>,
                         >(&s)
                         .unwrap_or_else(|err| panic!("{}", err));
                     })

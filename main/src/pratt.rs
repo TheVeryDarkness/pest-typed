@@ -9,17 +9,17 @@
 
 //! For Pratt Parser. See [`pest::pratt_parser`].
 
-use crate::{RuleType, TypedNode};
+// use crate::{RuleType, TypedNode};
 
-/// Pratt parser for those nodes with prefix, infix and postfix.
-#[allow(dead_code)]
-#[expect(unreachable_pub)]
-pub trait PrattPrefixInfixPostfix<
-    'i,
-    R: RuleType,
-    Prefix: TypedNode<'i, R>,
-    InFix: TypedNode<'i, R>,
-    Postfix: TypedNode<'i, R>,
->
-{
-}
+// /// Pratt parser for those nodes with prefix, infix and postfix.
+// #[allow(dead_code)]
+// #[expect(unreachable_pub)]
+// pub trait PrattPrefixInfixPostfix<
+//     'i,
+//     R: RuleType,
+//     Prefix: TypedNode<'i, R>,
+//     InFix: TypedNode<'i, R>,
+//     Postfix: TypedNode<'i, R>,
+// >
+// {
+// }

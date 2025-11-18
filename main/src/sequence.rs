@@ -31,13 +31,13 @@ macro_rules! seq {
             }
         }
         impl<
-                'i,
+                C: $crate::Cursor,
                 R: $crate::RuleType,
-                $T0: $crate::TypedNode<'i, R>,
-                $($T: $crate::TypedNode<'i, R>, )*
-                Skip: $crate::NeverFailedTypedNode<'i, R> + ::core::default::Default,
+                $T0: $crate::TypedNode<C, R>,
+                $($T: $crate::TypedNode<C, R>, )*
+                Skip: $crate::NeverFailedTypedNode<C, R> + ::core::default::Default,
                 const SKIP: ::core::primitive::usize,
-            > $crate::TypedNode<'i, R> for $name<
+            > $crate::TypedNode<C, R> for $name<
                 $crate::predefined_node::Skipped<$T0, Skip, SKIP>,
                 $(
                     $crate::predefined_node::Skipped<$T, Skip, SKIP>,
@@ -45,67 +45,67 @@ macro_rules! seq {
             >
         {
             #[inline]
-            fn try_parse_partial_with<I: $crate::Input<'i>>(
-                mut input: I,
-                stack: &mut $crate::Stack<$crate::Span<'i>>,
-                tracker: &mut $crate::tracker::Tracker<'i, R>,
-            ) -> ::core::option::Option<(I, Self)> {
+            fn try_parse_partial_with(
+                mut cursor: C,
+                stack: &mut $crate::Stack<$crate::Span<C::String>>,
+                tracker: &mut $crate::tracker::Tracker<C::String, R>,
+            ) -> ::core::option::Option<(C, Self)> {
                 let content =
                 (
                     {
                         let skipped = ::core::array::from_fn(|_| Skip::default());
-                        let (next, matched) = T0::try_parse_partial_with(input, stack, tracker)?;
-                        input = next;
+                        let (next, matched) = T0::try_parse_partial_with(cursor, stack, tracker)?;
+                        cursor = next;
                         $crate::predefined_node::Skipped { skipped, matched }
                     },
                     $(
                         {
                             let skipped = ::core::array::from_fn(|_| {
-                                let (next, skipped) = Skip::parse_with(input, stack);
-                                input = next;
+                                let (next, skipped) = Skip::parse_with(cursor.clone(), stack);
+                                cursor = next;
                                 skipped
                             });
-                            let (next, matched) = $T::try_parse_partial_with(input, stack, tracker)?;
-                            input = next;
+                            let (next, matched) = $T::try_parse_partial_with(cursor, stack, tracker)?;
+                            cursor = next;
                             $crate::predefined_node::Skipped { skipped, matched }
                         },
                     )*
                 );
 
-                Some((input, Self::from(content)))
+                Some((cursor, Self::from(content)))
             }
             #[inline]
-            fn try_check_partial_with<I: $crate::Input<'i>>(
-                mut input: I,
-                stack: &mut $crate::Stack<$crate::Span<'i>>,
-                tracker: &mut $crate::tracker::Tracker<'i, R>,
-            ) -> ::core::option::Option<I> {
+            fn try_check_partial_with(
+                mut cursor: C,
+                stack: &mut $crate::Stack<$crate::Span<C::String>>,
+                tracker: &mut $crate::tracker::Tracker<C::String, R>,
+            ) -> ::core::option::Option<C> {
                 {
-                    let next = T0::try_check_partial_with(input, stack, tracker)?;
-                    input = next;
+                    let next = T0::try_check_partial_with(cursor, stack, tracker)?;
+                    cursor = next;
                 }
                 $(
                     {
                         for _ in 0..SKIP {
-                            let next = Skip::check_with(input, stack);
-                            input = next;
+                            let next = Skip::check_with(cursor, stack);
+                            cursor = next;
                         }
-                        let next = $T::try_check_partial_with(input, stack, tracker)?;
-                        input = next;
+                        let next = $T::try_check_partial_with(cursor, stack, tracker)?;
+                        cursor = next;
                     }
                 )*
 
-                Some(input)
+                Some(cursor)
             }
         }
         impl<
-                'i,
+                I,
                 R: $crate::RuleType,
-                $T0: $crate::iterators::Pairs<'i, R>,
-                $($T: $crate::iterators::Pairs<'i, R>),*,
-            > $crate::iterators::Pairs<'i, R> for $name<$T0, $($T, )*>
+                $T0: $crate::iterators::Pairs<I, R>,
+                $($T: $crate::iterators::Pairs<I, R>),*,
+            > $crate::iterators::Pairs<I, R> for $name<$T0, $($T, )*>
         {
-            fn for_self_or_each_child(&self, f: &mut impl $crate::re_exported::FnMut($crate::iterators::Token<'i, R>)) {
+            fn for_self_or_each_child(&self, f: &mut impl $crate::re_exported::FnMut($crate::iterators::Token<I, R>)) {
                 self.content.0.for_self_or_each_child(f);
                 $(
                     self.content.$t.for_self_or_each_child(f);

@@ -11,7 +11,7 @@ fn main() {
 use crate::{
     iterators::{Pairs, Token},
     tracker::Tracker,
-    Input, RuleType, Span, Stack, TypedNode,
+    Cursor, RuleType, Span, Stack, TypedNode,
 };
 use core::fmt;
 
@@ -19,10 +19,11 @@ macro_rules! unicode {
     ($property_ident:ident) => {
         #[allow(non_camel_case_types)]
         #[doc = concat!("Auto generated. Unicode property ", stringify!($property_ident))]
+        #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         #[derive(Clone, Hash, PartialEq, Eq)]
         pub struct $property_ident {
             /// Matched character.
-            /// 
+            ///
             /// Do not trust this field as it may be assigned to after creation.
             pub content: char,
         }
@@ -31,24 +32,24 @@ macro_rules! unicode {
                 Self { content }
             }
         }
-        impl<'i, R: RuleType, S: ?Sized + Borrow<str>> TypedNode<'i, R, S> for $property_ident {
+        impl<C: Cursor, R: RuleType> TypedNode<C, R> for $property_ident {
             #[inline]
-            fn try_parse_partial_with<I: Input<'i, S>>(
-                mut input: I,
-                _stack: &mut Stack<Span<'i, S>>,
-                _tracker: &mut Tracker<'i, R, S>,
-            ) -> Option<(I, Self)> {
+            fn try_parse_partial_with(
+                mut input: C,
+                _stack: &mut Stack<Span<C::String>>,
+                _tracker: &mut Tracker<C::String, R>,
+            ) -> Option<(C, Self)> {
                 match super::match_char_by(&mut input, pest::unicode::$property_ident) {
                     Some(content) => Some((input, Self::from(content))),
                     None => None,
                 }
             }
             #[inline]
-            fn try_check_partial_with<I: Input<'i, S>>(
-                mut input: I,
-                _stack: &mut Stack<Span<'i, S>>,
-                _tracker: &mut Tracker<'i, R, S>,
-            ) -> Option<I> {
+            fn try_check_partial_with(
+                mut input: C,
+                _stack: &mut Stack<Span<C::String>>,
+                _tracker: &mut Tracker<C::String, R>,
+            ) -> Option<C> {
                 match super::match_char_by(&mut input, pest::unicode::$property_ident) {
                     Some(_) => Some(input),
                     None => None,
@@ -62,8 +63,8 @@ macro_rules! unicode {
                     .finish()
             }
         }
-        impl<'i, R: RuleType> Pairs<'i, R> for $property_ident {
-            fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<'i, R>)) {}
+        impl<S, R: RuleType> Pairs<S, R> for $property_ident {
+            fn for_self_or_each_child(&self, _f: &mut impl FnMut(Token<S, R>)) {}
         }
     };
 }

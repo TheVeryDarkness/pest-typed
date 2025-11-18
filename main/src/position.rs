@@ -11,36 +11,31 @@
 //! and modified.
 
 use super::span;
-use crate::{formatter::FormatOption, line_indexer::LineIndexer};
+use crate::{formatter::FormatOption, input::RefStr, line_indexer::LineIndexer};
 use core::{
-    borrow::Borrow,
     cmp::Ordering,
     fmt::{self, Write},
     hash::{Hash, Hasher},
-    ops::Range,
-    ptr, str,
+    str,
 };
 
 /// A cursor position in a `&str` which provides useful methods to manually parse that string.
 #[derive(Clone, Copy)]
-pub struct Position<'i> {
-    pub(crate) input: &'i str,
+pub struct Position<S> {
+    pub(crate) input: S,
     /// # Safety:
     ///
     /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
     pub(crate) pos: usize,
 }
 
-impl<'i> Position<'i>
-where
-    str: Borrow<str>,
-{
+impl<S: RefStr> Position<S> {
     /// Create a new `Position` without checking invariants. (Checked with `debug_assertions`.)
     ///
     /// # Safety:
     ///
     /// `input[pos..]` must be a valid codepoint boundary (should not panic when indexing thus).
-    pub(crate) unsafe fn new_unchecked(input: &'i str, pos: usize) -> Self {
+    pub(crate) unsafe fn new_unchecked(input: S, pos: usize) -> Self {
         debug_assert!(input.get(pos..).is_some());
 
         Position { input, pos }
@@ -58,15 +53,15 @@ where
     /// assert_eq!(Position::new(heart, 1), None);
     /// assert_ne!(Position::new(heart, cheart.len_utf8()), None);
     /// ```
-    pub fn new(input: &'i str, pos: usize) -> Option<Self> {
+    pub fn new(input: S, pos: usize) -> Option<Self> {
         input.get(pos..).map(|_| Position { input, pos })
     }
 
     /// Create a new `Position` at the end of the input.
-    pub const fn new_at_end(input: &'i str) -> Self {
+    pub fn new_at_end(input: S) -> Self {
         Position {
-            input,
             pos: input.len(),
+            input,
         }
     }
 
@@ -80,7 +75,7 @@ where
     /// assert_eq!(start.pos(), 0);
     /// ```
     #[inline]
-    pub const fn from_start(input: &'i str) -> Self {
+    pub const fn from_start(input: S) -> Self {
         // Position 0 is always safe because it's always a valid UTF-8 border.
         Position { input, pos: 0 }
     }
@@ -119,36 +114,36 @@ where
     /// assert_eq!(span.end(), 0);
     /// ```
     #[inline]
-    pub fn span(&self, other: &Self) -> span::Span<'i> {
-        if ptr::eq(self.input, other.input)
-        /* && self.input.get(self.pos..other.pos).is_some() */
-        {
-            // This is safe because the pos field of a Position should always be a valid str index.
-            unsafe { span::Span::new_unchecked(self.input, self.pos, other.pos) }
-        } else {
-            // TODO: maybe a panic if self.pos < other.pos
+    pub fn span(&self, other: &Self) -> span::Span<S> {
+        // TODO: maybe a panic if self.pos < other.pos
+        if !self.input.ptr_eq(&other.input) {
             panic!("span created from positions from different inputs")
         }
+        if !self.input.get(self.pos..other.pos).is_some() {
+            panic!("span created with positions in wrong order")
+        }
+        // This is safe because the pos field of a Position should always be a valid str index.
+        unsafe { span::Span::new_unchecked(self.input.clone(), self.pos, other.pos) }
     }
 
     /// Returns the line and column number of this [`Position`] using [LineIndexer::line_col].
     #[inline]
-    pub fn line_col(&self, indexer: impl LineIndexer<'i>) -> (usize, usize) {
-        indexer.line_col(self.input, self.pos)
+    pub fn line_col(&self, indexer: impl LineIndexer<S>) -> (usize, usize) {
+        indexer.line_col(&self.input, self.pos)
     }
 
     /// Returns the entire line of the input that contains this `Position`.
     #[inline]
-    pub fn line_of(&self, indexer: impl LineIndexer<'i>) -> &'i str {
-        indexer.line_of(self.input, self.pos)
+    pub fn line_of(&self, indexer: impl LineIndexer<S>) -> S {
+        indexer.line_of(&self.input, self.pos)
     }
 
-    pub(crate) fn find_line_start(&self, indexer: impl LineIndexer<'i>) -> usize {
-        indexer.find_line_start(self.input, self.pos)
+    pub(crate) fn find_line_start(&self, indexer: impl LineIndexer<S>) -> usize {
+        indexer.find_line_start(&self.input, self.pos)
     }
 
-    pub(crate) fn find_line_end(&self, indexer: impl LineIndexer<'i>) -> usize {
-        indexer.find_line_end(self.input, self.pos)
+    pub(crate) fn find_line_end(&self, indexer: impl LineIndexer<S>) -> usize {
+        indexer.find_line_end(&self.input, self.pos)
     }
 
     /// Returns `true` when the `Position` points to the start of the input `&str`.
@@ -160,7 +155,7 @@ where
 
     /// Returns `true` when the `Position` points to the end of the input `&str`.
     #[inline]
-    pub(crate) const fn at_end(&self) -> bool {
+    pub(crate) fn at_end(&self) -> bool {
         self.pos == self.input.len()
     }
 
@@ -170,8 +165,9 @@ where
     pub(crate) fn skip(&mut self, n: usize) -> bool {
         let skipped = {
             let mut len = 0;
+            let input = unsafe { self.input.get_range_unchecked(self.pos..) };
             // Position's pos is always a UTF-8 border.
-            let mut chars = self.input[self.pos..].chars();
+            let mut chars = input.chars();
             for _ in 0..n {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
@@ -193,8 +189,9 @@ where
     pub(crate) fn skip_back(&mut self, n: usize) -> bool {
         let skipped = {
             let mut len = 0;
+            let input = unsafe { self.input.get_range_unchecked(..self.pos) };
             // Position's pos is always a UTF-8 border.
-            let mut chars = self.input[..self.pos].chars().rev();
+            let mut chars = input.chars().rev();
             for _ in 0..n {
                 if let Some(c) = chars.next() {
                     len += c.len_utf8();
@@ -269,11 +266,10 @@ where
     fn skip_until_basic(&mut self, strings: &[&str]) -> bool {
         // TODO: optimize with Aho-Corasick, e.g. https://crates.io/crates/daachorse?
         for from in self.pos..self.input.len() {
-            let bytes = if let Some(string) = self.input.get(from..) {
-                string.as_bytes()
-            } else {
+            let Some(string) = self.input.get(from..) else {
                 continue;
             };
+            let bytes = string.as_str().as_bytes();
 
             for slice in strings.iter() {
                 let to = <str>::len(slice);
@@ -294,7 +290,8 @@ where
     #[inline]
     #[allow(dead_code)]
     pub(crate) fn match_char(&self, c: char) -> bool {
-        matches!(self.input[self.pos..].chars().next(), Some(cc) if c == cc)
+        let input = unsafe { self.input.get_range_unchecked(self.pos..) };
+        matches!(input.chars().next(), Some(cc) if c == cc)
     }
 
     /// Matches the char at the `Position` against a filter function and returns `true` if a match
@@ -305,7 +302,8 @@ where
     where
         F: FnOnce(char) -> bool,
     {
-        if let Some(c) = self.input[self.pos..].chars().next() {
+        let input = unsafe { self.input.get_range_unchecked(self.pos..) };
+        if let Some(c) = input.chars().next() {
             if f(c) {
                 self.pos += c.len_utf8();
                 true
@@ -316,67 +314,15 @@ where
             false
         }
     }
-
-    /// Matches `string` from the `Position` and returns `true` if a match was made or `false`
-    /// otherwise. If no match was made, `pos` will not be updated.
-    #[inline]
-    #[allow(dead_code)]
-    pub(crate) fn match_string(&mut self, string: &str) -> bool {
-        let to = self.pos + string.len();
-
-        if Some(string.as_bytes()) == self.input.as_bytes().get(self.pos..to) {
-            self.pos = to;
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Case-insensitively matches `string` from the `Position` and returns `true` if a match was
-    /// made or `false` otherwise. If no match was made, `pos` will not be updated.
-    #[inline]
-    #[allow(dead_code)]
-    pub(crate) fn match_insensitive(&mut self, string: &str) -> bool {
-        let matched = {
-            let slice = &self.input[self.pos..];
-            if let Some(slice) = slice.get(0..string.len()) {
-                slice.eq_ignore_ascii_case(string)
-            } else {
-                false
-            }
-        };
-
-        if matched {
-            self.pos += string.len();
-            true
-        } else {
-            false
-        }
-    }
-
-    /// Matches `char` `range` from the `Position` and returns `true` if a match was made or `false`
-    /// otherwise. If no match was made, `pos` will not be updated.
-    #[inline]
-    #[allow(dead_code)]
-    pub(crate) fn match_range(&mut self, range: Range<char>) -> bool {
-        if let Some(c) = self.input[self.pos..].chars().next() {
-            if range.start <= c && c <= range.end {
-                self.pos += c.len_utf8();
-                return true;
-            }
-        }
-
-        false
-    }
 }
 
-impl fmt::Debug for Position<'_> {
+impl<S> fmt::Debug for Position<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Position").field("pos", &self.pos).finish()
     }
 }
 
-impl<'i> Position<'i> {
+impl<S: RefStr> Position<S> {
     /// Format position with given option.
     #[inline]
     pub fn display<L, Writer, SF, MF, NF>(
@@ -386,7 +332,7 @@ impl<'i> Position<'i> {
         opt: FormatOption<SF, MF, NF>,
     ) -> fmt::Result
     where
-        L: LineIndexer<'i>,
+        L: LineIndexer<S>,
         Writer: Write,
         SF: FnMut(&str, &mut Writer) -> fmt::Result,
         MF: FnMut(&str, &mut Writer) -> fmt::Result,
@@ -396,69 +342,64 @@ impl<'i> Position<'i> {
     }
 }
 
-impl<'i> fmt::Display for Position<'i> {
+impl<S: RefStr> fmt::Display for Position<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         FormatOption::default().display_position(self, (), f)
     }
 }
 
-impl PartialEq for Position<'_> {
+impl<S: RefStr> PartialEq for Position<S> {
     fn eq(&self, other: &Self) -> bool {
-        ptr::eq::<str>(self.input, other.input) && self.pos == other.pos
+        self.input.ptr_eq(&other.input) && self.pos == other.pos
     }
 }
 
-impl Eq for Position<'_> {}
+impl<S: RefStr> Eq for Position<S> {}
 
-impl PartialOrd for Position<'_> {
+impl<S: RefStr> PartialOrd for Position<S> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Position<'_> {
+impl<S: RefStr> Ord for Position<S> {
     fn cmp(&self, other: &Self) -> Ordering {
-        assert_eq!(
+        debug_assert_eq!(
             self.input, other.input,
-            "cannot compare positions from different strs"
+            "cannot compare positions from different strings"
         );
         self.pos.cmp(&other.pos)
     }
 }
 
-impl Hash for Position<'_> {
+impl<S: RefStr> Hash for Position<S> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        (self.input as *const str).hash(state);
+        self.input.ptr_hash(state);
         self.pos.hash(state);
     }
 }
 
 #[expect(clippy::fallible_impl_from)]
-impl<'i> From<Position<'i>> for pest::Position<'i> {
-    fn from(pos: Position<'i>) -> Self {
+impl<'i> From<Position<&'i str>> for pest::Position<'i> {
+    #[inline]
+    fn from(pos: Position<&'i str>) -> Self {
         //FIXME: eliminate the check
         pest::Position::new(pos.input, pos.pos).unwrap()
+    }
+}
+
+impl<S: RefStr> Position<S> {
+    /// Convert to [`pest::Position`].
+    #[inline]
+    pub fn as_pest_position(&self) -> pest::Position<'_> {
+        //FIXME: eliminate the check
+        pest::Position::new(self.input.as_str(), self.pos).unwrap()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn empty() {
-        let input = "";
-        assert!(Position::new(input, 0).unwrap().match_string(""));
-        assert!(!Position::new(input, 0).unwrap().match_string("a"));
-    }
-
-    #[test]
-    fn parts() {
-        let input = "asdasdf";
-
-        assert!(Position::new(input, 0).unwrap().match_string("asd"));
-        assert!(Position::new(input, 3).unwrap().match_string("asdf"));
-    }
 
     #[test]
     fn line_col() {
@@ -565,25 +506,6 @@ mod tests {
         test_pos = pos;
         assert!(!test_pos.skip_until(&["z"]));
         assert_eq!(test_pos.pos(), 5);
-    }
-
-    #[test]
-    fn match_range() {
-        let input = "b";
-
-        assert!(Position::new(input, 0).unwrap().match_range('a'..'c'));
-        assert!(Position::new(input, 0).unwrap().match_range('b'..'b'));
-        assert!(!Position::new(input, 0).unwrap().match_range('a'..'a'));
-        assert!(!Position::new(input, 0).unwrap().match_range('c'..'c'));
-        assert!(Position::new(input, 0).unwrap().match_range('a'..'嗨'));
-    }
-
-    #[test]
-    fn match_insensitive() {
-        let input = "AsdASdF";
-
-        assert!(Position::new(input, 0).unwrap().match_insensitive("asd"));
-        assert!(Position::new(input, 3).unwrap().match_insensitive("asdf"));
     }
 
     #[test]

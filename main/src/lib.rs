@@ -74,7 +74,7 @@ mod parser_state;
 mod position;
 mod span;
 
-pub use input::{AsInput, Input};
+pub use input::{Cursor, Input, RefStr};
 // Re-export unicode.
 pub use pest::unicode;
 pub use pest::{error, Stack};
@@ -92,18 +92,18 @@ pub trait RuleType: pest::RuleType {
 /// A trait with a single method that parses strings into typed concrete syntax tree.
 pub trait TypedParser<R: RuleType> {
     /// Try to parse a `&str` into a tree starting from T.
-    fn try_parse<'i, T: ParsableTypedNode<'i, R>>(
-        input: &'i str,
+    fn try_parse<I: Input, T: ParsableTypedNode<I::Cursor, R>>(
+        input: I,
     ) -> Result<T, Box<error::Error<R>>> {
         T::try_parse(input)
     }
     /// Parse a `&str` into a tree starting from T.
-    fn parse<'i, T: NeverFailedParsableTypedNode<'i, R>>(input: &'i str) -> T {
-        T::parse(input)
+    fn parse<I: Input, T: NeverFailedParsableTypedNode<I::Cursor, R>>(input: I) -> T {
+        T::parse(input.as_cursor())
     }
     /// Check whether a `&str` can be parsed into a tree starting from T.
-    fn try_check<'i, T: ParsableTypedNode<'i, R>>(
-        input: &'i str,
+    fn try_check<I: Input, T: ParsableTypedNode<I::Cursor, R>>(
+        input: I,
     ) -> Result<(), Box<error::Error<R>>> {
         T::try_check(input)
     }

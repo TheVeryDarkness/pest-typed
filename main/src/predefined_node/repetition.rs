@@ -15,7 +15,7 @@ use crate::{
     predefined_node::{restore_on_none, Skipped},
     tracker::Tracker,
     wrapper::BoundWrapper,
-    Input, NeverFailedTypedNode, RuleType, Span, Stack, TypedNode,
+    Cursor, NeverFailedTypedNode, RuleType, Span, Stack, TypedNode,
 };
 use alloc::vec::Vec;
 use core::ops::{Deref, DerefMut};
@@ -42,14 +42,14 @@ impl<T> Default for AtomicRepeat<T> {
         Self { content }
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for AtomicRepeat<T> {
-    fn parse_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> (I, Self) {
+impl<C: Cursor, R: RuleType, T: TypedNode<C, R>> NeverFailedTypedNode<C, R> for AtomicRepeat<T> {
+    fn parse_with(mut input: C, stack: &mut Stack<Span<C::String>>) -> (C, Self) {
         let mut vec = Vec::new();
-        let mut tracker = Tracker::new(input);
+        let mut tracker = Tracker::new(input.as_position());
 
         for _ in 0usize.. {
             match restore_on_none(stack, |stack| {
-                T::try_parse_partial_with(input, stack, &mut tracker)
+                T::try_parse_partial_with(input.clone(), stack, &mut tracker)
             }) {
                 Some((next, matched)) => {
                     input = next;
@@ -61,12 +61,12 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for Atomi
         (input, Self { content: vec })
     }
 
-    fn check_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> I {
-        let mut tracker = Tracker::new(input);
+    fn check_with(mut input: C, stack: &mut Stack<Span<C::String>>) -> C {
+        let mut tracker = Tracker::new(input.as_position());
 
         for _ in 0usize.. {
             match restore_on_none(stack, |stack| {
-                T::try_check_partial_with(input, stack, &mut tracker)
+                T::try_check_partial_with(input.clone(), stack, &mut tracker)
             }) {
                 Some(next) => {
                     input = next;
@@ -77,22 +77,22 @@ impl<'i, R: RuleType, T: TypedNode<'i, R>> NeverFailedTypedNode<'i, R> for Atomi
         input
     }
 }
-impl<'i, R: RuleType, T: TypedNode<'i, R>> TypedNode<'i, R> for AtomicRepeat<T> {
+impl<C: Cursor, R: RuleType, T: TypedNode<C, R>> TypedNode<C, R> for AtomicRepeat<T> {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         Some(Self::parse_with(input, stack))
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        _tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        _tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         Some(Self::check_with(input, stack))
     }
 }
@@ -120,19 +120,21 @@ pub struct RepeatMin<T, const MIN: usize> {
     pub content: Vec<T>,
 }
 impl<
-        'i,
+        C: Cursor,
         R: RuleType,
-        T: TypedNode<'i, R>,
-        Skip: NeverFailedTypedNode<'i, R>,
+        T: TypedNode<C, R>,
+        Skip: NeverFailedTypedNode<C, R>,
         const SKIP: usize,
-    > NeverFailedTypedNode<'i, R> for RepeatMin<Skipped<T, Skip, SKIP>, 0>
+    > NeverFailedTypedNode<C, R> for RepeatMin<Skipped<T, Skip, SKIP>, 0>
 {
-    fn parse_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> (I, Self) {
+    fn parse_with(mut input: C, stack: &mut Stack<Span<C::String>>) -> (C, Self) {
         let mut vec = Vec::new();
-        let mut tracker = Tracker::new(input);
+        let mut tracker = Tracker::new(input.as_position());
 
         for i in 0usize.. {
-            match restore_on_none(stack, |stack| try_parse_unit(input, stack, &mut tracker, i)) {
+            match restore_on_none(stack, |stack| {
+                try_parse_unit(input.clone(), stack, &mut tracker, i)
+            }) {
                 Some((next, matched)) => {
                     input = next;
                     vec.push(matched);
@@ -143,12 +145,12 @@ impl<
         (input, Self { content: vec })
     }
 
-    fn check_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> I {
-        let mut tracker = Tracker::new(input);
+    fn check_with(mut input: C, stack: &mut Stack<Span<C::String>>) -> C {
+        let mut tracker = Tracker::new(input.as_position());
 
         for i in 0usize.. {
             match restore_on_none(stack, |stack| {
-                try_check_unit::<I, R, T, Skip, SKIP>(input, stack, &mut tracker, i)
+                try_check_unit::<C, R, T, Skip, SKIP>(input.clone(), stack, &mut tracker, i)
             }) {
                 Some(next) => {
                     input = next;
@@ -166,24 +168,26 @@ impl<T> Default for RepeatMin<T, 0> {
     }
 }
 impl<
-        'i,
+        C: Cursor,
         R: RuleType,
-        T: TypedNode<'i, R>,
-        Skip: NeverFailedTypedNode<'i, R>,
+        T: TypedNode<C, R>,
+        Skip: NeverFailedTypedNode<C, R>,
         const SKIP: usize,
         const MIN: usize,
-    > TypedNode<'i, R> for RepeatMin<Skipped<T, Skip, SKIP>, MIN>
+    > TypedNode<C, R> for RepeatMin<Skipped<T, Skip, SKIP>, MIN>
 {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        mut input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        mut input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         let mut vec = Vec::new();
 
         for i in 0usize.. {
-            match restore_on_none(stack, |stack| try_parse_unit(input, stack, tracker, i)) {
+            match restore_on_none(stack, |stack| {
+                try_parse_unit(input.clone(), stack, tracker, i)
+            }) {
                 Some((next, matched)) => {
                     input = next;
                     vec.push(matched);
@@ -202,14 +206,14 @@ impl<
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        mut input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        mut input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         for i in 0usize.. {
             match restore_on_none(stack, |stack| {
-                try_check_unit::<I, R, T, Skip, SKIP>(input, stack, tracker, i)
+                try_check_unit::<C, R, T, Skip, SKIP>(input.clone(), stack, tracker, i)
             }) {
                 Some(next) => {
                     input = next;
@@ -267,22 +271,24 @@ impl<T, const MAX: usize> Default for RepeatMinMax<T, 0, MAX> {
     }
 }
 impl<
-        'i,
+        C: Cursor,
         R: RuleType,
-        T: TypedNode<'i, R>,
-        Skip: NeverFailedTypedNode<'i, R>,
+        T: TypedNode<C, R>,
+        Skip: NeverFailedTypedNode<C, R>,
         const SKIP: usize,
         const MAX: usize,
-    > NeverFailedTypedNode<'i, R> for RepeatMinMax<Skipped<T, Skip, SKIP>, 0, MAX>
+    > NeverFailedTypedNode<C, R> for RepeatMinMax<Skipped<T, Skip, SKIP>, 0, MAX>
 {
     #[inline]
-    fn parse_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> (I, Self) {
+    fn parse_with(mut input: C, stack: &mut Stack<Span<C::String>>) -> (C, Self) {
         let mut vec = Vec::new();
 
-        let mut tracker = Tracker::new(input);
+        let mut tracker = Tracker::new(input.as_position());
 
         for i in 0..MAX {
-            match restore_on_none(stack, |stack| try_parse_unit(input, stack, &mut tracker, i)) {
+            match restore_on_none(stack, |stack| {
+                try_parse_unit(input.clone(), stack, &mut tracker, i)
+            }) {
                 Some((next, matched)) => {
                     input = next;
                     vec.push(matched);
@@ -296,12 +302,12 @@ impl<
         (input, Self { content: vec })
     }
 
-    fn check_with<I: Input<'i>>(mut input: I, stack: &mut Stack<Span<'i>>) -> I {
-        let mut tracker = Tracker::new(input);
+    fn check_with(mut input: C, stack: &mut Stack<Span<C::String>>) -> C {
+        let mut tracker = Tracker::new(input.as_position());
 
         for i in 0..MAX {
             match restore_on_none(stack, |stack| {
-                try_check_unit::<I, R, T, Skip, SKIP>(input, stack, &mut tracker, i)
+                try_check_unit::<C, R, T, Skip, SKIP>(input.clone(), stack, &mut tracker, i)
             }) {
                 Some(next) => {
                     input = next;
@@ -316,25 +322,27 @@ impl<
     }
 }
 impl<
-        'i,
+        C: Cursor,
         R: RuleType,
-        T: TypedNode<'i, R>,
-        Skip: NeverFailedTypedNode<'i, R>,
+        T: TypedNode<C, R>,
+        Skip: NeverFailedTypedNode<C, R>,
         const SKIP: usize,
         const MIN: usize,
         const MAX: usize,
-    > TypedNode<'i, R> for RepeatMinMax<Skipped<T, Skip, SKIP>, MIN, MAX>
+    > TypedNode<C, R> for RepeatMinMax<Skipped<T, Skip, SKIP>, MIN, MAX>
 {
     #[inline]
-    fn try_parse_partial_with<I: Input<'i>>(
-        mut input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<(I, Self)> {
+    fn try_parse_partial_with(
+        mut input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<(C, Self)> {
         let mut vec = Vec::new();
 
         for i in 0..MAX {
-            match restore_on_none(stack, |stack| try_parse_unit(input, stack, tracker, i)) {
+            match restore_on_none(stack, |stack| {
+                try_parse_unit(input.clone(), stack, tracker, i)
+            }) {
                 Some((next, matched)) => {
                     input = next;
                     vec.push(matched);
@@ -353,16 +361,16 @@ impl<
     }
 
     #[inline]
-    fn try_check_partial_with<I: Input<'i>>(
-        input: I,
-        stack: &mut Stack<Span<'i>>,
-        tracker: &mut Tracker<'i, R>,
-    ) -> Option<I> {
+    fn try_check_partial_with(
+        input: C,
+        stack: &mut Stack<Span<C::String>>,
+        tracker: &mut Tracker<C::String, R>,
+    ) -> Option<C> {
         let mut input = input;
 
         for i in 0..MAX {
             match restore_on_none(stack, |stack| {
-                try_check_unit::<I, R, T, Skip, SKIP>(input, stack, tracker, i)
+                try_check_unit::<C, R, T, Skip, SKIP>(input.clone(), stack, tracker, i)
             }) {
                 Some(next) => {
                     input = next;
@@ -424,23 +432,22 @@ pub type Rep<T, IGNORED, const SKIP: usize> = RepeatMin<Skipped<T, IGNORED, SKIP
 pub type RepOnce<T, IGNORED, const SKIP: usize> = RepeatMin<Skipped<T, IGNORED, SKIP>, 1>;
 
 fn try_parse_unit<
-    'i,
-    I: Input<'i>,
+    C: Cursor,
     R: RuleType,
-    T: TypedNode<'i, R>,
-    Skip: NeverFailedTypedNode<'i, R>,
+    T: TypedNode<C, R>,
+    Skip: NeverFailedTypedNode<C, R>,
     const SKIP: usize,
 >(
-    mut input: I,
-    stack: &mut Stack<Span<'i>>,
-    tracker: &mut Tracker<'i, R>,
+    mut input: C,
+    stack: &mut Stack<Span<C::String>>,
+    tracker: &mut Tracker<C::String, R>,
     i: usize,
-) -> Option<(I, Skipped<T, Skip, SKIP>)> {
+) -> Option<(C, Skipped<T, Skip, SKIP>)> {
     let skipped = core::array::from_fn(|_| {
         if i == 0 {
             Skip::default()
         } else {
-            let (next, skipped) = Skip::parse_with(input, stack);
+            let (next, skipped) = Skip::parse_with(input.clone(), stack);
             input = next;
             skipped
         }
@@ -452,18 +459,17 @@ fn try_parse_unit<
 }
 
 fn try_check_unit<
-    'i,
-    I: Input<'i>,
+    C: Cursor,
     R: RuleType,
-    T: TypedNode<'i, R>,
-    Skip: NeverFailedTypedNode<'i, R>,
+    T: TypedNode<C, R>,
+    Skip: NeverFailedTypedNode<C, R>,
     const SKIP: usize,
 >(
-    mut input: I,
-    stack: &mut Stack<Span<'i>>,
-    tracker: &mut Tracker<'i, R>,
+    mut input: C,
+    stack: &mut Stack<Span<C::String>>,
+    tracker: &mut Tracker<C::String, R>,
     i: usize,
-) -> Option<I> {
+) -> Option<C> {
     for _ in 0..SKIP {
         if i > 0 {
             let next = Skip::check_with(input, stack);

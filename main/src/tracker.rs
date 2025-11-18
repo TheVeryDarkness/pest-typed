@@ -11,15 +11,15 @@
 
 use crate::{
     error::{Error, ErrorVariant},
+    input::RefStr,
     line_indexer::LineIndexer,
     position::Position,
-    Input, RuleType, RuleWrapper,
+    Cursor, RuleType, RuleWrapper,
 };
-use alloc::{borrow::ToOwned, collections::BTreeMap, format, string::String, vec, vec::Vec};
+use alloc::{borrow::ToOwned, collections::BTreeMap, format, string::String, vec::Vec};
 use core::{
     cmp::Ordering,
     fmt::{self, Display},
-    marker::PhantomData,
 };
 
 /// Some special errors that are not matching failures.
@@ -48,31 +48,28 @@ impl Display for SpecialError {
 type Tracked<R> = (Vec<R>, Vec<R>, Vec<SpecialError>);
 
 /// Error tracker.
-pub struct Tracker<'i, R: RuleType> {
-    position: Position<'i>,
+pub struct Tracker<S, R: RuleType> {
+    position: Position<S>,
     positive: bool,
     /// upper rule -> (positives, negatives)
     attempts: BTreeMap<Option<R>, Tracked<R>>,
     stack: Vec<(R, usize, bool)>,
-    phantom: PhantomData<&'i ()>,
 }
-impl<'i, R: RuleType> Tracker<'i, R> {
+impl<S: RefStr, R: RuleType> Tracker<S, R> {
     /// Create an empty tracker for attempts.
-    pub fn new(pos: impl Input<'i>) -> Self {
+    pub const fn new(position: Position<S>) -> Self {
         Self {
-            position: pos.as_position(),
+            position,
             positive: true,
             attempts: BTreeMap::new(),
-            stack: vec![],
-            phantom: PhantomData,
+            stack: Vec::new(),
         }
     }
     fn clear(&mut self) {
         self.attempts.clear();
     }
-    fn prepare(&mut self, pos: impl Input<'i>) -> bool {
+    fn prepare(&mut self, pos: Position<S>) -> bool {
         debug_assert_eq!(pos.input(), self.position.input());
-        let pos = pos.as_position();
         match pos.cmp(&self.position) {
             Ordering::Less => false,
             Ordering::Equal => true,
@@ -100,7 +97,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     fn get_entry<'s>(
         &'s mut self,
-        pos: impl Input<'i>,
+        pos: impl Cursor,
     ) -> &'s mut (Vec<R>, Vec<R>, Vec<SpecialError>) {
         // Find lowest rule with the different position.
         let mut upper = None;
@@ -114,22 +111,22 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         self.attempts.entry(upper).or_default()
     }
     /// Report a repetition that exceeds the limit.
-    pub fn repeat_too_many_times(&mut self, pos: impl Input<'i>) {
-        if self.prepare(pos) {
+    pub fn repeat_too_many_times(&mut self, pos: impl Cursor<String = S>) {
+        if self.prepare(pos.as_position()) {
             self.get_entry(pos).2.push(SpecialError::RepeatTooManyTimes);
         }
     }
     /// Reports a stack slice operation that is out of bound.
-    pub fn out_of_bound(&mut self, pos: impl Input<'i>, start: i32, end: Option<i32>) {
-        if self.prepare(pos) {
+    pub fn out_of_bound(&mut self, pos: impl Cursor<String = S>, start: i32, end: Option<i32>) {
+        if self.prepare(pos.as_position()) {
             self.get_entry(pos)
                 .2
                 .push(SpecialError::SliceOutOfBound(start, end));
         }
     }
     /// Reports accessing operations on empty stack.
-    pub fn empty_stack(&mut self, pos: impl Input<'i>) {
-        if self.prepare(pos) {
+    pub fn empty_stack(&mut self, pos: impl Cursor<String = S>) {
+        if self.prepare(pos.as_position()) {
             self.get_entry(pos).2.push(SpecialError::EmptyStack);
         }
     }
@@ -140,8 +137,8 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         }
     }
     #[inline]
-    fn record(&mut self, rule: R, pos: impl Input<'i>, succeeded: bool) {
-        if self.prepare(pos) && succeeded != self.positive {
+    fn record(&mut self, rule: R, pos: impl Cursor<String = S>, succeeded: bool) {
+        if self.prepare(pos.as_position()) && succeeded != self.positive {
             let positive = self.positive;
             let value = self.get_entry(pos);
             let vec = if positive { &mut value.0 } else { &mut value.1 };
@@ -152,9 +149,9 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     /// Record if the result doesn't match the state during calling `f`.
     #[inline]
-    pub fn record_during_with<Ret, I: Input<'i>>(
+    pub fn record_during_with<Ret>(
         &mut self,
-        pos: I,
+        pos: impl Cursor<String = S>,
         f: impl FnOnce(&mut Self) -> Option<Ret>,
         rule: R,
     ) -> Option<Ret> {
@@ -173,14 +170,14 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     }
     /// Record if the result doesn't match the state during calling `f`.
     #[inline]
-    pub fn record_during<T: RuleWrapper<R>, I: Input<'i>>(
+    pub fn record_during<U, T: RuleWrapper<R>>(
         &mut self,
-        pos: I,
-        f: impl FnOnce(&mut Self) -> Option<(I, T)>,
-    ) -> Option<(I, T)> {
+        pos: impl Cursor<String = S>,
+        f: impl FnOnce(&mut Self) -> Option<(U, T)>,
+    ) -> Option<(U, T)> {
         self.record_during_with(pos, f, T::RULE)
     }
-    fn collect_to_message(self, indexer: impl LineIndexer<'i>) -> String {
+    fn collect_to_message(self, indexer: impl LineIndexer<S>) -> String {
         let (pos, attempts) = self.finish();
         // "{} | "
         // "{} = "
@@ -190,11 +187,12 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         // Will not remove trailing CR or LF.
         let line_string = pos.line_of(&indexer);
         let line_remained_index = line_string
+            .as_str()
             .char_indices()
             .nth(col.saturating_sub(1))
-            .unwrap_or((line_string.len(), '\0'))
-            .0;
-        let line_matched = &line_string[..line_remained_index];
+            .map(|(idx, _)| idx)
+            .unwrap_or(line_string.len());
+        let line_matched = &line_string.as_str()[..line_remained_index];
 
         use core::fmt::Write;
         let mut message = String::new();
@@ -241,19 +239,22 @@ impl<'i, R: RuleType> Tracker<'i, R> {
         message
     }
     /// Collect attempts to [`Error<R>`]
-    pub fn collect(self, indexer: impl LineIndexer<'i>) -> Error<R> {
-        let pos = self.position;
-        match Position::new(pos.input, pos.pos()).ok_or_else(|| {
+    pub fn collect(self, indexer: impl LineIndexer<S>) -> Error<R> {
+        let pos = self.position.clone();
+        match Position::new(pos.input.clone(), pos.pos()).ok_or_else(|| {
             Error::new_from_pos(
                 ErrorVariant::CustomError {
                     message: format!("Internal error (invalid character index {}).", pos.pos()),
                 },
-                pest::Position::from_start(pos.input),
+                pest::Position::from_start(pos.input.as_str()),
             )
         }) {
             Ok(pos) => {
                 let message = self.collect_to_message(indexer);
-                Error::new_from_pos(ErrorVariant::CustomError { message }, pos.into())
+                Error::new_from_pos(
+                    ErrorVariant::CustomError { message },
+                    pos.as_pest_position(),
+                )
             }
             Err(err) => err,
         }
@@ -266,7 +267,7 @@ impl<'i, R: RuleType> Tracker<'i, R> {
     /// - Attempts on current position.
     ///
     /// This information is all you need to generate an [Error].
-    pub fn finish(self) -> (Position<'i>, BTreeMap<Option<R>, Tracked<R>>) {
+    pub fn finish(self) -> (Position<S>, BTreeMap<Option<R>, Tracked<R>>) {
         (self.position, self.attempts)
     }
 }
@@ -321,7 +322,7 @@ mod tests {
     #[test]
     fn negative() -> Result<(), ()> {
         let pos = Position::from_start("abc\ndef\nghi");
-        let mut tracker = Tracker::<'_, Rule>::new(pos);
+        let mut tracker = Tracker::<&str, Rule>::new(pos);
         let _ = tracker
             .record_during(pos, |tracker| {
                 tracker.positive_during(|tracker| {
@@ -349,7 +350,7 @@ mod tests {
     #[test]
     fn positive() -> Result<(), ()> {
         let pos = Position::from_start("abc\ndef\nghi");
-        let mut tracker = Tracker::<'_, Rule>::new(pos);
+        let mut tracker = Tracker::<&str, Rule>::new(pos);
         let _ = tracker
             .record_during(pos, |tracker| {
                 let _ = tracker.positive_during(|tracker| {
@@ -385,7 +386,7 @@ mod tests {
     #[test]
     fn unicode() -> Result<(), ()> {
         let mut pos = Position::from_start("αβψ\nδεφ\nγηι");
-        let mut tracker = Tracker::<'_, Rule>::new(pos);
+        let mut tracker = Tracker::<&str, Rule>::new(pos);
         let _ = tracker
             .record_during(pos, |tracker| {
                 let suc = pos.match_string("α");
@@ -415,7 +416,7 @@ mod tests {
     #[test]
     fn nested() -> Result<(), ()> {
         let mut pos = Position::from_start("αβψ\nδεφ\nγηι");
-        let mut tracker = Tracker::<'_, Rule>::new(pos);
+        let mut tracker = Tracker::<&str, Rule>::new(pos);
         let _ = tracker
             .record_during(pos, |tracker| {
                 let suc = pos.match_string("α");

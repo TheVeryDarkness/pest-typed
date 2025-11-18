@@ -20,7 +20,7 @@ pub(super) fn process_single_alias<'g>(
         let def = rule(rule_config, type_name, &getters, emission);
         map.insert(def, rule_config.clone());
         let rules = rules_mod();
-        (quote! {#root::#rules::#rule_id::<'i>}, getters)
+        (quote! {#root::#rules::#rule_id::<S>}, getters)
     } else {
         (type_name, getters)
     }

@@ -9,7 +9,7 @@ use std::iter::once;
 struct Csv;
 
 fn main() -> Result<(), Error> {
-    let file = Csv::try_parse::<pairs::file>(
+    let file = Csv::try_parse::<&str, pairs::file<&str>>(
         r#"1,2,3
 a,b,c
 A,B,C
@@ -21,7 +21,7 @@ A,B,C
         .map(|row| {
             let (first, following) = row.item();
             let columns = once(first).chain(following);
-            let columns = columns.map(|item: &pairs::item<'_>| {
+            let columns = columns.map(|item: &pairs::item<&str>| {
                 item.if_then(|escaped| {
                     let (_, content, _) = escaped.as_ref();
                     content.span.as_str()
