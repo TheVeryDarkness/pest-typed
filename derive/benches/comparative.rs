@@ -131,7 +131,7 @@ case!(
 WHITESPACE = _{ " " | "\t" }
 cell       = @{ ('0'..'9' | 'a'..'z' | 'A'..'Z')+ }
 table      =  { (cell ~ ("," ~ cell)* ~ ","? ~ NEWLINE)+ }"#,
-    ('a'..'z')
+    ('a'..='z')
         .flat_map(|c| once(c)
             .chain(", ".chars())
             .cycle()
@@ -147,7 +147,7 @@ case!(
     r#"
 compact_cell       = @{ ('0'..'9' | 'a'..'z' | 'A'..'Z')+ }
 compact_table      =  { (compact_cell ~ ("," ~ compact_cell)* ~ ","? ~ NEWLINE)+ }"#,
-    ('a'..'z')
+    ('a'..='z')
         .flat_map(|c| once(c)
             .chain(",".chars())
             .cycle()

@@ -281,6 +281,7 @@ impl<S: RefStr, R: RuleType> Tracker<S, R> {
 mod tests {
     use super::*;
     #[derive(Clone, Copy, Debug, Hash, Eq, Ord, PartialEq, PartialOrd)]
+    #[expect(clippy::upper_case_acronyms)]
     enum Rule {
         Program,
         SOI,
@@ -291,11 +292,11 @@ mod tests {
     impl RuleType for Rule {
         fn name(&self) -> &'static str {
             match self {
-                Rule::Program => "Program",
-                Rule::SOI => "SOI",
-                Rule::Main => "Main",
-                Rule::Body => "Body",
-                Rule::EOI => "EOI",
+                Self::Program => "Program",
+                Self::SOI => "SOI",
+                Self::Main => "Main",
+                Self::Body => "Body",
+                Self::EOI => "EOI",
             }
         }
     }
@@ -304,7 +305,7 @@ mod tests {
         use crate::RuleWrapper;
 
         macro_rules! wrap {
-            ($(#[$meta:meta])? $name:ident) => {
+            ($(#[$meta:meta])* $name:ident) => {
                 #[derive(Clone, PartialEq)]
                 $(#[$meta])?
                 pub(super) struct $name;
@@ -321,6 +322,7 @@ mod tests {
 
         wrap!(
             #[expect(dead_code)]
+            #[expect(clippy::upper_case_acronyms)]
             EOI
         );
     }

@@ -334,6 +334,10 @@ impl<'g> Getter<'g> {
             };
             let src = quote! {
                 #[allow(non_snake_case)]
+                #[allow(clippy::needless_lifetimes)]
+                #[allow(clippy::type_complexity)]
+                #[allow(clippy::let_and_return)]
+                #[allow(clippy::missing_const_for_fn)]
                 pub fn #id<'s>(&'s self) -> #types {
                     let res = #content;
                     #paths
@@ -552,7 +556,7 @@ impl<'g> Output<'g> {
         let wrapper = quote! {
             #[doc = #doc]
             #[allow(non_camel_case_types)]
-            #[derive(Clone, PartialEq)]
+            #[derive(Clone, Hash, PartialEq, Eq)]
             pub struct #s;
             impl #pest_typed::StringArrayWrapper for #s {
                 const CONTENT: &'static [&'static #str] = &[ #(#strings),* ];

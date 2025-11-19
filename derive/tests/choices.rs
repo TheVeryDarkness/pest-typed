@@ -86,6 +86,7 @@ test!(c11, "a""b""c""d""e""f""g""h""i""j""k");
 test!(c12, "a""b""c""d""e""f""g""h""i""j""k""l");
 
 #[test]
+#[expect(clippy::just_underscores_and_digits)]
 fn choices() {
     let c4 = Parser::try_parse::<&str, pairs::c4<&str>>("abcd").unwrap();
     let (_0, _1, _2, _3) = c4.as_ref();

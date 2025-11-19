@@ -39,11 +39,7 @@ fn main() -> Result<(), Error> {
         })
         .collect::<Vec<_>>();
     // Recover input from sheet.
-    let recovered = table
-        .into_iter()
-        .map(|row| row.join(","))
-        .collect::<Vec<_>>()
-        .join("\n");
+    let recovered = table.into_iter().map(|row| row.join(",")).join("\n");
     assert_eq!(recovered, input);
     Ok(())
 }
