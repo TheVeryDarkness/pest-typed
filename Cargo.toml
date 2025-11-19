@@ -34,6 +34,7 @@ version = "1.0"
 
 [workspace.lints.rust]
 unreachable_pub = { level = "deny", priority = 1 }
+unconditional_recursion = { level = "deny", priority = 1 }
 
 [workspace.lints.clippy]
 equatable_if_let = { level = "allow", priority = 1 }
