@@ -8,7 +8,13 @@
 //! - [`Cursor`]: A trait for types that can traverse the input, such as [`Position`], [`PositionCursor`] and [`SpanCursor`].
 use crate::{Position, Span};
 use alloc::string::String;
-use core::{fmt, hash::Hash, ops::Range, ptr, slice::SliceIndex, str::Chars};
+use core::{
+    fmt,
+    hash::Hash,
+    ops::{Range, RangeBounds},
+    ptr,
+    str::Chars,
+};
 
 /// Cursor with span information.
 ///
@@ -350,11 +356,11 @@ pub unsafe trait RefStr: Clone + Hash + PartialEq + Eq + fmt::Debug {
     /// # Safety
     ///
     /// The range must be in the bounds of the string and aligned to UTF-8 character boundaries.
-    unsafe fn get_range_unchecked(&self, range: impl SliceIndex<str, Output = str>) -> Self;
+    unsafe fn get_range_unchecked(&self, range: impl RangeBounds<usize>) -> Self;
     /// Get a substring.
-    fn get(&self, range: impl SliceIndex<str, Output = str>) -> Option<Self>;
+    fn get(&self, range: impl RangeBounds<usize>) -> Option<Self>;
     /// Get a substring.
-    fn get_checked(&self, range: impl SliceIndex<str, Output = str>) -> Self;
+    fn get_checked(&self, range: impl RangeBounds<usize>) -> Self;
     /// Check if starts with a string.
     fn starts_with(&self, string: &str) -> bool;
     /// Check if starts with a string insensitively.
@@ -404,18 +410,88 @@ unsafe impl RefStr for &str {
     }
 
     #[inline(always)]
-    unsafe fn get_range_unchecked(&self, range: impl SliceIndex<str, Output = str>) -> Self {
-        &self[range]
+    unsafe fn get_range_unchecked(&self, range: impl RangeBounds<usize>) -> Self {
+        match (range.start_bound(), range.end_bound()) {
+            (core::ops::Bound::Included(&start), core::ops::Bound::Included(&end)) => {
+                self.get_unchecked(start..=end)
+            }
+            (core::ops::Bound::Included(&start), core::ops::Bound::Excluded(&end)) => {
+                self.get_unchecked(start..end)
+            }
+            (core::ops::Bound::Included(&start), core::ops::Bound::Unbounded) => {
+                self.get_unchecked(start..)
+            }
+            (core::ops::Bound::Excluded(&start), core::ops::Bound::Included(&end)) => {
+                self.get_unchecked(start + 1..=end)
+            }
+            (core::ops::Bound::Excluded(&start), core::ops::Bound::Excluded(&end)) => {
+                self.get_unchecked(start + 1..end)
+            }
+            (core::ops::Bound::Excluded(&start), core::ops::Bound::Unbounded) => {
+                self.get_unchecked(start + 1..)
+            }
+            (core::ops::Bound::Unbounded, core::ops::Bound::Included(&end)) => {
+                self.get_unchecked(..=end)
+            }
+            (core::ops::Bound::Unbounded, core::ops::Bound::Excluded(&end)) => {
+                self.get_unchecked(..end)
+            }
+            (core::ops::Bound::Unbounded, core::ops::Bound::Unbounded) => self,
+        }
     }
 
     #[inline(always)]
-    fn get(&self, range: impl SliceIndex<str, Output = str>) -> Option<Self> {
-        str::get(self, range)
+    fn get(&self, range: impl RangeBounds<usize>) -> Option<Self> {
+        match (range.start_bound(), range.end_bound()) {
+            (core::ops::Bound::Included(&start), core::ops::Bound::Included(&end)) => {
+                str::get(self, start..=end)
+            }
+            (core::ops::Bound::Included(&start), core::ops::Bound::Excluded(&end)) => {
+                str::get(self, start..end)
+            }
+            (core::ops::Bound::Included(&start), core::ops::Bound::Unbounded) => {
+                str::get(self, start..)
+            }
+            (core::ops::Bound::Excluded(&start), core::ops::Bound::Included(&end)) => {
+                str::get(self, start + 1..=end)
+            }
+            (core::ops::Bound::Excluded(&start), core::ops::Bound::Excluded(&end)) => {
+                str::get(self, start + 1..end)
+            }
+            (core::ops::Bound::Excluded(&start), core::ops::Bound::Unbounded) => {
+                str::get(self, start + 1..)
+            }
+            (core::ops::Bound::Unbounded, core::ops::Bound::Included(&end)) => {
+                str::get(self, ..=end)
+            }
+            (core::ops::Bound::Unbounded, core::ops::Bound::Excluded(&end)) => {
+                str::get(self, ..end)
+            }
+            (core::ops::Bound::Unbounded, core::ops::Bound::Unbounded) => Some(self),
+        }
     }
 
     #[inline(always)]
-    fn get_checked(&self, range: impl SliceIndex<str, Output = str>) -> Self {
-        &self[range]
+    fn get_checked(&self, range: impl RangeBounds<usize>) -> Self {
+        match (range.start_bound(), range.end_bound()) {
+            (core::ops::Bound::Included(&start), core::ops::Bound::Included(&end)) => {
+                &self[start..=end]
+            }
+            (core::ops::Bound::Included(&start), core::ops::Bound::Excluded(&end)) => {
+                &self[start..end]
+            }
+            (core::ops::Bound::Included(&start), core::ops::Bound::Unbounded) => &self[start..],
+            (core::ops::Bound::Excluded(&start), core::ops::Bound::Included(&end)) => {
+                &self[start + 1..=end]
+            }
+            (core::ops::Bound::Excluded(&start), core::ops::Bound::Excluded(&end)) => {
+                &self[start + 1..end]
+            }
+            (core::ops::Bound::Excluded(&start), core::ops::Bound::Unbounded) => &self[start + 1..],
+            (core::ops::Bound::Unbounded, core::ops::Bound::Included(&end)) => &self[..=end],
+            (core::ops::Bound::Unbounded, core::ops::Bound::Excluded(&end)) => &self[..end],
+            (core::ops::Bound::Unbounded, core::ops::Bound::Unbounded) => self,
+        }
     }
 
     #[inline(always)]
@@ -442,6 +518,141 @@ unsafe impl RefStr for &str {
     #[inline(always)]
     fn ptr_hash<H: core::hash::Hasher>(&self, state: &mut H) {
         ptr::hash::<str, H>(*self, state);
+    }
+}
+
+#[cfg(feature = "shared-string")]
+mod impl_shared_string {
+    use super::*;
+    use crate::RefStr;
+    use shared_string::{RefCounter, SharedGenString};
+
+    unsafe impl<R: RefCounter> RefStr for SharedGenString<R> {
+        #[inline(always)]
+        fn from_static(s: &'static str) -> Self {
+            unsafe { Self::from_utf8_unchecked(s.as_bytes().to_vec()) }
+        }
+
+        #[inline(always)]
+        fn len(&self) -> usize {
+            str::len(self)
+        }
+
+        #[inline(always)]
+        fn as_str(&self) -> &str {
+            self
+        }
+
+        #[inline(always)]
+        unsafe fn get_range_unchecked(&self, range: impl RangeBounds<usize>) -> Self {
+            // `SharedGenString` does not expose an unchecked get method, so we use the checked one.
+            self.idx(range)
+        }
+
+        #[inline(always)]
+        fn get(&self, range: impl RangeBounds<usize>) -> Option<Self> {
+            self.get(range)
+        }
+
+        #[inline(always)]
+        fn get_checked(&self, range: impl RangeBounds<usize>) -> Self {
+            self.get(range)
+                .unwrap_or_else(|| panic!("Range out of bounds"))
+        }
+
+        #[inline(always)]
+        fn starts_with(&self, string: &str) -> bool {
+            str::starts_with(self, string)
+        }
+
+        #[inline]
+        fn starts_with_insensitive(&self, string: &str) -> bool {
+            self.get(0..string.len())
+                .is_some_and(|prefix| prefix.eq_ignore_ascii_case(string))
+        }
+
+        #[inline(always)]
+        fn chars(&self) -> Chars<'_> {
+            str::chars(self)
+        }
+
+        #[inline(always)]
+        fn ptr_eq(&self, other: &Self) -> bool {
+            ptr::eq::<str>(self.as_full_str(), other.as_full_str())
+        }
+
+        #[inline(always)]
+        fn ptr_hash<H: core::hash::Hasher>(&self, state: &mut H) {
+            ptr::hash::<str, H>(self.as_full_str(), state);
+        }
+    }
+}
+
+#[cfg(feature = "shared-vec")]
+mod impl_shared_vec {
+    use super::*;
+    use crate::RefStr;
+    use shared_vec::{Counter, String};
+    use std::borrow::ToOwned;
+
+    unsafe impl<C: Counter<usize>> RefStr for String<C> {
+        #[inline(always)]
+        fn from_static(s: &'static str) -> Self {
+            Self::from_boxed_str(s.to_owned().into_boxed_str())
+        }
+
+        #[inline(always)]
+        fn len(&self) -> usize {
+            str::len(self)
+        }
+
+        #[inline(always)]
+        fn as_str(&self) -> &str {
+            self
+        }
+
+        #[inline(always)]
+        unsafe fn get_range_unchecked(&self, range: impl RangeBounds<usize>) -> Self {
+            // `SharedGenString` does not expose an unchecked get method, so we use the checked one.
+            self.idx(range)
+        }
+
+        #[inline(always)]
+        fn get(&self, range: impl RangeBounds<usize>) -> Option<Self> {
+            self.get(range)
+        }
+
+        #[inline(always)]
+        fn get_checked(&self, range: impl RangeBounds<usize>) -> Self {
+            self.get(range)
+                .unwrap_or_else(|| panic!("Range out of bounds"))
+        }
+
+        #[inline(always)]
+        fn starts_with(&self, string: &str) -> bool {
+            str::starts_with(self, string)
+        }
+
+        #[inline]
+        fn starts_with_insensitive(&self, string: &str) -> bool {
+            self.get(0..string.len())
+                .is_some_and(|prefix| prefix.eq_ignore_ascii_case(string))
+        }
+
+        #[inline(always)]
+        fn chars(&self) -> Chars<'_> {
+            str::chars(self)
+        }
+
+        #[inline(always)]
+        fn ptr_eq(&self, other: &Self) -> bool {
+            ptr::eq::<str>(self.as_original_str(), other.as_original_str())
+        }
+
+        #[inline(always)]
+        fn ptr_hash<H: core::hash::Hasher>(&self, state: &mut H) {
+            ptr::hash::<str, H>(self.as_original_str(), state);
+        }
     }
 }
 
