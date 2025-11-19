@@ -53,12 +53,12 @@ pub(crate) fn generate_enum<R: Generate>(rules: &[R], doc_comment: &DocComment) 
     let rules = rules.iter().map(|rule| {
         let rule_name = format_ident!("r#{}", rule.name());
 
-        match doc_comment.line_docs.get(rule.name()) {
-            Some(doc) => quote! {
-                #[doc = #doc]
+        match doc_comment.line_docs.get(rule.name()).map(String::as_str) {
+            None | Some("") => quote! {
                 #rule_name
             },
-            None => quote! {
+            Some(doc) => quote! {
+                #[doc = #doc]
                 #rule_name
             },
         }
@@ -67,6 +67,11 @@ pub(crate) fn generate_enum<R: Generate>(rules: &[R], doc_comment: &DocComment) 
     let pest_typed = pest_typed();
 
     let grammar_doc = &doc_comment.grammar_doc;
+    let grammar_doc = if grammar_doc.is_empty() {
+        "Auto-generated pest-typed parser rule enum."
+    } else {
+        grammar_doc
+    };
     quote! {
         #[doc = #grammar_doc]
         #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]

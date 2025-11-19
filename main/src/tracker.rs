@@ -308,6 +308,7 @@ mod tests {
             ($(#[$meta:meta])* $name:ident) => {
                 #[derive(Clone, PartialEq)]
                 $(#[$meta])?
+                #[allow(clippy::upper_case_acronyms)]
                 pub(super) struct $name;
                 impl RuleWrapper<Rule> for $name {
                     const RULE: Rule = Rule::$name;
@@ -322,7 +323,6 @@ mod tests {
 
         wrap!(
             #[expect(dead_code)]
-            #[expect(clippy::upper_case_acronyms)]
             EOI
         );
     }

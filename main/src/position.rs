@@ -546,6 +546,7 @@ mod tests {
 
         let input = "a";
         let start = Position::from_start(input);
+        #[allow(clippy::collection_is_never_read)]
         let mut positions = HashSet::new();
 
         positions.insert(start);

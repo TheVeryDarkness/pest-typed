@@ -334,10 +334,13 @@ impl<'g> Getter<'g> {
             };
             let src = quote! {
                 #[allow(non_snake_case)]
-                #[allow(clippy::needless_lifetimes)]
-                #[allow(clippy::type_complexity)]
                 #[allow(clippy::let_and_return)]
                 #[allow(clippy::missing_const_for_fn)]
+                #[allow(clippy::map_flatten)]
+                #[allow(clippy::map_identity)]
+                #[allow(clippy::needless_lifetimes)]
+                #[allow(clippy::type_complexity)]
+                #[allow(clippy::use_self)]
                 pub fn #id<'s>(&'s self) -> #types {
                     let res = #content;
                     #paths
@@ -1003,7 +1006,7 @@ mod tests {
     fn used_rules() {
         let rules = &PARSE_RESULT.1;
         let implicit = Implicit::from(rules.as_slice());
-        let used = collect_used_rules(&rules, implicit);
+        let used = collect_used_rules(rules, implicit);
         let expected = include!("../tests/syntax.used.rules.txt");
         let expected = BTreeSet::from(expected);
         assert_eq!(used, expected);

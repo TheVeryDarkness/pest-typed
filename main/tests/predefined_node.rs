@@ -9,6 +9,7 @@
 
 //! Test for [`pest_typed::predefined_node`].
 #![cfg(test)]
+#![allow(clippy::upper_case_acronyms)]
 
 extern crate alloc;
 
@@ -27,6 +28,7 @@ use pest_typed::{
 use std::{fmt::Write, ops::Deref, string::String};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[expect(clippy::upper_case_acronyms)]
 enum Rule {
     Foo,
     RepFoo,
@@ -43,17 +45,17 @@ enum Rule {
 impl RuleType for Rule {
     fn name(&self) -> &'static str {
         match self {
-            Rule::Foo => "Foo",
-            Rule::RepFoo => "RepFoo",
-            Rule::NotFooBar => "NotFooBar",
-            Rule::Life => "Life",
-            Rule::WHITESPACE => "WHITESPACE",
-            Rule::COMMENT => "COMMENT",
-            Rule::EOI => "EOI",
-            Rule::String => "String",
-            Rule::Quote => "Quote",
-            Rule::NestedRep => "NestedRep",
-            Rule::Bar => "Bar",
+            Self::Foo => "Foo",
+            Self::RepFoo => "RepFoo",
+            Self::NotFooBar => "NotFooBar",
+            Self::Life => "Life",
+            Self::WHITESPACE => "WHITESPACE",
+            Self::COMMENT => "COMMENT",
+            Self::EOI => "EOI",
+            Self::String => "String",
+            Self::Quote => "Quote",
+            Self::NestedRep => "NestedRep",
+            Self::Bar => "Bar",
         }
     }
 }
@@ -196,7 +198,9 @@ fn test_repetition<S: RefStr>() {
     assert_eq!(format(&rep1), format(&rep2));
     assert_eq!(format(&rep1), format(&rep3));
 
-    for i in rep1.clone().children() {
+    assert_eq!(rep1.clone(), rep1);
+
+    for i in rep1.children() {
         assert_eq!(i.rule, Rule::Foo);
     }
 
@@ -365,10 +369,7 @@ fn positive_predicate() {
     assert_eq!(any.content, 'i');
     assert_eq!(name.iter().map(|c| c.content).collect::<String>(), "i");
     assert_eq!(
-        name.deref()
-            .into_iter()
-            .map(|c| c.content)
-            .collect::<String>(),
+        name.deref().iter().map(|c| c.content).collect::<String>(),
         "i"
     );
 

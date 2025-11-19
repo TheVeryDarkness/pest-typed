@@ -34,8 +34,7 @@ fn main() -> Result<(), Error> {
             // Join columns as a single iterator.
             let items = iter::once(first_item).chain(following_items);
             // Extract string from each cell.
-            let row = items.map(|cell| cell.span.as_str()).collect::<Vec<_>>();
-            row
+            items.map(|cell| cell.span.as_str()).collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
     // Recover input from sheet.

@@ -1,7 +1,7 @@
 //! Test `syntax`.
 #![cfg(not(feature = "grammar-extras"))]
 #![allow(unused_parens)]
-#[doc = ""]
+#[doc = "Auto-generated pest-typed parser rule enum."]
 #[allow(dead_code, non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Rule {
@@ -239,6 +239,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#Regular<S, INHERITED> {
             #[doc = "A helper function to access [`CharRange`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#CharRange<'s>(
                 &'s self,
             ) -> (
@@ -311,6 +318,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#CompoundAtomic<S, INHERITED> {
             #[doc = "A helper function to access [`ANY`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#ANY<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Vec<&'s super::super::rules::r#ANY> {
@@ -338,6 +352,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#Tag<S, INHERITED> {
             #[doc = "A helper function to access [`Any`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Any<'s>(
                 &'s self,
             ) -> (
@@ -372,6 +393,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`CompoundAtomic`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#CompoundAtomic<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<
@@ -394,6 +422,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`NonAtomic`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#NonAtomic<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<
@@ -423,6 +458,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`Regular`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Regular<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<(
@@ -462,6 +504,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`Silent`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Silent<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<&'s super::super::rules::r#Silent<S, INHERITED>>
@@ -486,6 +535,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#NonAtomic<S, INHERITED> {
             #[doc = "A helper function to access [`Any`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Any<'s>(
                 &'s self,
             ) -> (
@@ -525,6 +581,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`CaseInsensitive`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#CaseInsensitive<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<&'s super::super::rules::r#CaseInsensitive<S, 1>>
@@ -549,6 +612,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`CharRange`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#CharRange<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<(
@@ -591,6 +661,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`Tag`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Tag<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<
@@ -629,6 +706,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#Any<S, INHERITED> {
             #[doc = "A helper function to access [`ANY`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#ANY<'s>(&'s self) -> &'s super::super::rules::r#ANY {
                 let res = &*self.content;
                 res
@@ -640,6 +724,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#Choice<S, INHERITED> {
             #[doc = "A helper function to access [`Choice`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Choice<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<&'s super::super::rules::r#Choice<S, INHERITED>>
@@ -655,6 +746,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`Drop`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Drop<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<&'s super::super::rules::r#Drop<S, INHERITED>>
@@ -667,6 +765,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`Opt`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Opt<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<&'s super::super::rules::r#Opt<S, INHERITED>>
@@ -682,6 +787,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`Peek`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Peek<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<&'s super::super::rules::r#Peek<S, INHERITED>>
@@ -694,6 +806,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`PeekAll`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#PeekAll<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<&'s super::super::rules::r#PeekAll<S, INHERITED>>
@@ -706,6 +825,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`PeekLeft`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#PeekLeft<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<&'s super::super::rules::r#PeekLeft<S, INHERITED>>
@@ -718,6 +844,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`PeekLeftRight`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#PeekLeftRight<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<
@@ -731,6 +864,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`PeekRight`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#PeekRight<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<&'s super::super::rules::r#PeekRight<S, INHERITED>>
@@ -743,6 +883,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`Rep`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Rep<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<&'s super::super::rules::r#Rep<S, INHERITED>>
@@ -758,6 +905,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`RepAtLeastOnce`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#RepAtLeastOnce<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Option<
@@ -783,6 +937,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#RepExact<S, INHERITED> {
             #[doc = "A helper function to access [`RepAtLeastOnce`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#RepAtLeastOnce<'s>(
                 &'s self,
             ) -> (
@@ -814,6 +975,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#RepLeft<S, INHERITED> {
             #[doc = "A helper function to access [`RepExact`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#RepExact<'s>(
                 &'s self,
             ) -> (
@@ -850,6 +1018,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#RepRight<S, INHERITED> {
             #[doc = "A helper function to access [`RepLeft`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#RepLeft<'s>(
                 &'s self,
             ) -> (
@@ -882,6 +1057,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#RepLeftRight<S, INHERITED> {
             #[doc = "A helper function to access [`RepRight`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#RepRight<'s>(
                 &'s self,
             ) -> (
@@ -913,6 +1095,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#Pos<S, INHERITED> {
             #[doc = "A helper function to access [`RepLeftRight`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#RepLeftRight<'s>(
                 &'s self,
             ) -> (
@@ -959,6 +1148,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`SOI`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#SOI<'s>(&'s self) -> &'s super::super::rules::r#SOI {
                 let res = &*self.content;
                 {
@@ -976,6 +1172,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#Push<S, INHERITED> {
             #[doc = "A helper function to access [`ExactString`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#ExactString<'s>(
                 &'s self,
             ) -> (
@@ -1017,6 +1220,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`Neg`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Neg<'s>(&'s self) -> &'s super::super::rules::r#Neg<S, INHERITED> {
                 let res = &*self.content;
                 {
@@ -1029,6 +1239,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`Pop`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Pop<'s>(&'s self) -> &'s super::super::rules::r#Pop<S, INHERITED> {
                 let res = &*self.content;
                 {
@@ -1041,6 +1258,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`PopAll`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#PopAll<'s>(&'s self) -> &'s super::super::rules::r#PopAll<S, INHERITED> {
                 let res = &*self.content;
                 {
@@ -1053,6 +1277,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`Push`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#Push<'s>(
                 &'s self,
             ) -> (
@@ -1079,6 +1310,13 @@ pub mod rules_impl {
             }
             #[doc = "A helper function to access [`RepLeft`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#RepLeft<'s>(
                 &'s self,
             ) -> ::pest_typed::re_exported::Vec<&'s super::super::rules::r#RepLeft<S, INHERITED>>
@@ -1107,6 +1345,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#Pop<S, INHERITED> {
             #[doc = "A helper function to access [`POP`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#POP<'s>(&'s self) -> &'s super::super::rules::r#POP<S> {
                 let res = &*self.content;
                 res
@@ -1116,6 +1361,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#PopAll<S, INHERITED> {
             #[doc = "A helper function to access [`POP_ALL`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#POP_ALL<'s>(&'s self) -> &'s super::super::rules::r#POP_ALL<S> {
                 let res = &*self.content;
                 res
@@ -1133,6 +1385,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#Drop<S, INHERITED> {
             #[doc = "A helper function to access [`DROP`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#DROP<'s>(&'s self) -> &'s super::super::rules::r#DROP {
                 let res = &*self.content;
                 res
@@ -1142,6 +1401,13 @@ pub mod rules_impl {
         impl<S, const INHERITED: ::core::primitive::usize> r#PeekAll<S, INHERITED> {
             #[doc = "A helper function to access [`PEEK_ALL`]."]
             #[allow(non_snake_case)]
+            #[allow(clippy::let_and_return)]
+            #[allow(clippy::missing_const_for_fn)]
+            #[allow(clippy::map_flatten)]
+            #[allow(clippy::map_identity)]
+            #[allow(clippy::needless_lifetimes)]
+            #[allow(clippy::type_complexity)]
+            #[allow(clippy::use_self)]
             pub fn r#PEEK_ALL<'s>(&'s self) -> &'s super::super::rules::r#PEEK_ALL<S> {
                 let res = &*self.content;
                 res

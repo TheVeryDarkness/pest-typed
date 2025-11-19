@@ -46,7 +46,7 @@ fn generate(name: &'static str) {
         let mut f = std::fs::File::create(&path_generated).unwrap();
         writeln!(f, "//! Test `{}`.", name).unwrap();
         writeln!(f, "{}", feature).unwrap();
-        writeln!(f, "{}", "#![allow(unused_parens)]").unwrap();
+        writeln!(f, "#![allow(unused_parens)]").unwrap();
         writeln!(f, "{}", actual).unwrap();
         drop(f);
         let output = std::process::Command::new("cargo")
