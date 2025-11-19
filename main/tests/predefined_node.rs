@@ -21,8 +21,8 @@ use pest_typed::{
     predefined_node::*,
     rule_eoi,
     sequence::{Seq2, Seq3},
-    silent_rule, BoundWrapper, ParsableTypedNode, RuleStruct, RuleType, RuleWrapper, Storage,
-    StringArrayWrapper, StringWrapper, TypeWrapper,
+    silent_rule, BoundWrapper, ParsableTypedNode, RefStr, RuleStruct, RuleType, RuleWrapper,
+    Storage, StringArrayWrapper, StringWrapper, TypeWrapper,
 };
 use std::{fmt::Write, ops::Deref, string::String};
 
@@ -109,22 +109,35 @@ fn string() {
     )
 }
 
-#[test]
-fn range() {
-    WHITESPACE::try_check(" ").unwrap();
-    let whitespace = WHITESPACE::try_parse(" ").unwrap();
+fn test_range<S: RefStr>() {
+    WHITESPACE::try_check(S::from_static(" ")).unwrap();
+    let whitespace = WHITESPACE::try_parse(S::from_static(" ")).unwrap();
     assert_eq!(
         format!("{:?}", whitespace),
         "WHITESPACE { span: Span { str: \" \", start: 0, end: 1 } }"
     );
 
-    COMMENT::try_check("\t").unwrap();
-    let comment = COMMENT::try_parse("\t").unwrap();
+    COMMENT::try_check(S::from_static("\t")).unwrap();
+    let comment = COMMENT::try_parse(S::from_static("\t")).unwrap();
     assert_eq!(
-            format!("{:?}", comment),
-            "COMMENT { content: CharRange { content: '\\t' }, span: Span { str: \"\\t\", start: 0, end: 1 } }"
-        );
+        format!("{:?}", comment),
+        "COMMENT { content: CharRange { content: '\\t' }, span: Span { str: \"\\t\", start: 0, end: 1 } }"
+    );
 }
+
+#[test]
+fn range() {
+    test_range::<&str>();
+    #[cfg(feature = "shared-string")]
+    test_range::<shared_string::SharedString>();
+    #[cfg(feature = "shared-string")]
+    test_range::<shared_string::SharedSyncString>();
+    #[cfg(feature = "shared-vec")]
+    test_range::<shared_vec::RcString>();
+    #[cfg(feature = "shared-vec")]
+    test_range::<shared_vec::ArcString>();
+}
+
 type Ignore<S> = AtomicRepeat<Choice2<WHITESPACE<S>, COMMENT<S>>>;
 
 #[test]
@@ -142,8 +155,7 @@ fn ignore() {
     tmp::try_parse(" \t  ").unwrap();
 }
 
-#[test]
-fn repetition() {
+fn test_repetition<S: RefStr>() {
     type REP<S> = Rep<StrFoo<S, 0>, Ignore<S>, 1>;
     non_atomic_rule!(
         R,
@@ -155,7 +167,7 @@ fn repetition() {
         false
     );
 
-    R::try_check("foo").unwrap();
+    R::try_check(S::from_static("foo")).unwrap();
 
     let inputs = [
         "foofoofoo",
@@ -166,16 +178,16 @@ fn repetition() {
         "foo foo\tfoo",
     ];
     for input in inputs {
-        R::try_check(input).unwrap();
+        R::try_check(S::from_static(input)).unwrap();
     }
 
-    let [rep1, rep2, rep3, ..] = inputs.map(|s| R::try_parse(s).unwrap());
+    let [rep1, rep2, rep3, ..] = inputs.map(|s| R::try_parse(S::from_static(s)).unwrap());
 
-    let _ = R::try_parse("").unwrap();
+    let _ = R::try_parse(S::from_static("")).unwrap();
     assert_ne!(rep1, rep2);
     assert_ne!(rep1, rep3);
 
-    let format = |rep: &R<&str, 1>| -> String {
+    let format = |rep: &R<S, 1>| -> String {
         rep.iter_matched()
             .map(|e| e.get_content())
             .collect::<Vec<_>>()
@@ -198,10 +210,23 @@ fn repetition() {
         rep3.iter_matched().collect::<Vec<_>>()
     );
 
-    assert_eq!(REP::<&str>::MIN, 0);
+    assert_eq!(REP::<S>::MIN, 0);
     assert_eq!(rep1.deref().get_min_len(), 0);
     assert_eq!(rep1.deref().get_max_len(), usize::MAX);
-    assert_eq!(<R<&str, 0> as TypeWrapper>::Inner::MIN, 0);
+    assert_eq!(<R<S, 0> as TypeWrapper>::Inner::MIN, 0);
+}
+
+#[test]
+fn repetition() {
+    test_repetition::<&str>();
+    #[cfg(feature = "shared-string")]
+    test_repetition::<shared_string::SharedString>();
+    #[cfg(feature = "shared-string")]
+    test_repetition::<shared_string::SharedSyncString>();
+    #[cfg(feature = "shared-vec")]
+    test_repetition::<shared_vec::RcString>();
+    #[cfg(feature = "shared-vec")]
+    test_repetition::<shared_vec::ArcString>();
 }
 
 #[test]
