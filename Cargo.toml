@@ -4,7 +4,7 @@ resolver = "2"
 package.readme = "./README.md"
 package.version = "0.20.11"
 package.edition = "2021"
-package.rust-version = "1.81.0"
+package.rust-version = "1.87.0"
 package.repository = "https://github.com/theverydarkness/pest-typed"
 
 [workspace.dependencies]
