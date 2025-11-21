@@ -26,7 +26,7 @@ cmp_by_derive = { version = "0.1.0" }
 serde = { version = "1.0", optional = true, features = ["derive"] }
 derive-where = "1.4.0"
 shared-string = { version = "0.1.7", optional = true }
-shared-vec = { version = "0.1.0", optional = true, git = "https://github.com/TheVeryDarkness/shared-vec.git", rev = "15141b1b37dd2477982287bad848e6fd0bf2a0a2" }
+shared-vec = { version = "0.1.0", optional = true }
 
 [dev-dependencies]
 rand.workspace = true
