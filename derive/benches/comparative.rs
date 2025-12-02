@@ -37,7 +37,6 @@ macro_rules! case {
 
             pub(crate) fn bench(c: &mut Criterion) {
                 let mut group = c.benchmark_group(stringify!($name));
-                group.sample_size(10);
                 let s: String = $input;
                 println!("Input string has {} characters.", s.len());
                 group.bench_function("pest-typed-parse", |b| {

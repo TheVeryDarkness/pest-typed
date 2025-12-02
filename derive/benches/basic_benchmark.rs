@@ -21,7 +21,6 @@ pub mod json_pest {
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("sample-size-example");
-    group.sample_size(10);
     let s = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/benches/Canada.json"))
         .unwrap();
 
