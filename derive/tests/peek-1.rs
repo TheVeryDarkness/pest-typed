@@ -28,8 +28,7 @@ fn tree() {
 1 | fooFooFOOFOOFooFoo
   | ^---
   |
-  = ^---
-    Expected [main]."
+  = expected main"
     );
     let b = rules::main::try_parse("foo Foo FOO Foo FOO Foo").unwrap_err();
     assert_eq!(
@@ -39,7 +38,6 @@ fn tree() {
 1 | foo Foo FOO Foo FOO Foo
   | ^---
   |
-  = ^---
-    Expected [main]."
+  = expected main"
     );
 }
