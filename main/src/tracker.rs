@@ -243,6 +243,9 @@ impl<S: RefStr, R: RuleType> Tracker<S, R> {
         message
     }
     /// Collect attempts to [`Error<R>`]
+    ///
+    /// - return [`ErrorVariant::ParsingError`] if no [special errors](SpecialError) are tracked
+    /// - return [`ErrorVariant::CustomError`] otherwise
     pub fn collect(self, indexer: impl LineIndexer<S>) -> Error<R> {
         let pos = self.position.clone();
         match Position::new(pos.input.clone(), pos.pos()).ok_or_else(|| {
@@ -254,11 +257,35 @@ impl<S: RefStr, R: RuleType> Tracker<S, R> {
             )
         }) {
             Ok(pos) => {
-                let message = self.collect_to_message(indexer);
-                Error::new_from_pos(
-                    ErrorVariant::CustomError { message },
-                    pos.as_pest_position(),
-                )
+                if self
+                    .attempts
+                    .values()
+                    .all(|(.., special)| special.is_empty())
+                {
+                    let mut positives = Vec::new();
+                    let mut negatives = Vec::new();
+                    for (_, (mut positive, mut negative, _)) in self.attempts {
+                        positives.append(&mut positive);
+                        negatives.append(&mut negative);
+                    }
+                    positives.sort();
+                    positives.dedup();
+                    negatives.sort();
+                    negatives.dedup();
+                    Error::new_from_pos(
+                        ErrorVariant::ParsingError {
+                            positives,
+                            negatives,
+                        },
+                        pos.as_pest_position(),
+                    )
+                } else {
+                    let message = self.collect_to_message(indexer);
+                    Error::new_from_pos(
+                        ErrorVariant::CustomError { message },
+                        pos.as_pest_position(),
+                    )
+                }
             }
             Err(err) => err,
         }
@@ -349,8 +376,7 @@ mod tests {
 1 | abc
   | ^---
   |
-  = ^---
-    Unexpected [Main]."#
+  = unexpected Main"#
         );
         Ok(())
     }
@@ -385,8 +411,7 @@ mod tests {
 1 | abc
   | ^---
   |
-  = ^---
-    Expected [SOI]."#
+  = expected SOI"#
         );
         Ok(())
     }
@@ -415,8 +440,7 @@ mod tests {
 1 | αβψ
   |  ^---
   |
-  = α^---
-    Unexpected [Main], by Program."#
+  = unexpected Main"#
         );
         Ok(())
     }
@@ -447,8 +471,28 @@ mod tests {
 1 | αβψ
   |  ^---
   |
-  = α^---
-    Unexpected [Body], by Program."#
+  = unexpected Body"#
+        );
+        Ok(())
+    }
+    #[test]
+    fn special_error() -> Result<(), ()> {
+        let pos = Position::from_start("abc\ndef\nghi");
+        let mut tracker = Tracker::<&str, Rule>::new(pos);
+        tracker.out_of_bound(pos, 1, None);
+
+        // Special errors cannot be represented by `ErrorVariant::ParsingError`,
+        // so a detailed `ErrorVariant::CustomError` is collected instead.
+        assert_eq!(
+            format!("{}", tracker.collect(())),
+            r#" --> 1:1
+  |
+1 | abc
+  | ^---
+  |
+  = ^---
+    Unknown error (no rule tracked).
+    Peek slice 1.. out of bound."#
         );
         Ok(())
     }
